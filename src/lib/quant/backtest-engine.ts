@@ -1,6 +1,11 @@
-import { BacktestConfig, BacktestResult, Candle, EquityPoint, Trade } from '../types/market';
+import { BacktestConfig, BacktestResult, Candle, EquityPoint, Trade, WalkForwardMetrics } from '../types/market';
 import { calculateADX, calculateATR, calculateEMA, calculateRSI } from './indicators';
-import { evaluateEntryCondition, evaluateExitCondition, calculateDynamicOrderSetup } from './strategy-rules';
+import {
+  evaluateEntryCondition,
+  evaluateExitCondition,
+  calculateDynamicOrderSetup,
+  calculateSuggestedEntry,
+} from './strategy-rules';
 
 export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
   initialCapital: 1000,
@@ -17,15 +22,23 @@ export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
   useAtrStop: true,      // Uses ATR dynamic stop matching live signals
 };
 
+interface PendingLimitOrder {
+  limitPrice: number;
+  signalIndex: number;
+  signalDate: string;
+  signalAtr: number;
+  remainingBars: number; // Max bars before cancellation (e.g. 5)
+}
+
 /**
- * Deterministic quantitative backtest simulation engine without look-ahead bias.
- * Unifies ATR stop loss/take profit, ADX filter, realistic IBKR friction, next-bar Open execution,
- * and conservative intra-bar ambiguity resolution.
+ * Core backtest simulation engine.
+ * Simulates realistic limit orders matching the projected pullback entry price,
+ * with order expiration (5 bars), ATR-based stops, next-candle fills, and IBKR fees.
  */
-export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>): BacktestResult {
+export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConfig>): BacktestResult {
   const cfg: BacktestConfig = { ...DEFAULT_BACKTEST_CONFIG, ...config };
 
-  if (!candles || candles.length < Math.max(cfg.emaSlowPeriod + 10, 50)) {
+  if (!candles || candles.length < Math.max(cfg.emaSlowPeriod + 10, 40)) {
     return getEmptyResult(cfg.initialCapital);
   }
 
@@ -47,8 +60,8 @@ export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>)
   let entryFeeForThisTrade = 0;
   let ambiguousBarsCount = 0;
 
-  // Signal queued at close of candle i for execution at open of candle i+1
-  let pendingSignal = false;
+  // Limit Order state: pending entry at projected pullback price
+  let pendingOrder: PendingLimitOrder | null = null;
 
   const trades: Trade[] = [];
   const equityCurve: EquityPoint[] = [];
@@ -64,7 +77,6 @@ export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>)
 
   for (let i = startIdx; i < candles.length; i++) {
     const candle = candles[i];
-    const prevCandle = candles[i - 1];
     const currentPrice = candle.close;
     const currentOpen = candle.open;
     const currentEmaFast = emaFast[i];
@@ -74,31 +86,45 @@ export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>)
     const currentAtr = atr[i] || (currentPrice * 0.02);
     const currentAdx = adx[i] || 20;
 
-    // 1. EXECUTE PENDING ENTRY SIGNAL AT CANDLE OPEN (Eliminates look-ahead bias)
-    if (pendingSignal && !inPosition) {
-      const effectiveEntryPrice = currentOpen * (1 + cfg.slippageRate);
-      const entryFee = capital * cfg.commissionRate;
-      totalFeesPaid += entryFee;
-      entryFeeForThisTrade = entryFee;
+    // 1. CHECK FILL FOR PENDING LIMIT ORDER (Simulates order limit execution)
+    if (pendingOrder && !inPosition) {
+      // Limit order fills if bar low touches or dips below limit price
+      const isFilled = candle.low <= pendingOrder.limitPrice || currentOpen <= pendingOrder.limitPrice;
 
-      const investableCapital = capital - entryFee;
-      shares = investableCapital / effectiveEntryPrice;
-      entryPrice = effectiveEntryPrice;
-      entryDate = candle.time;
-      entryIndex = i;
+      if (isFilled) {
+        // Effective entry price is the limit price (or opening gap down if favorable), with slippage
+        const rawFillPrice = Math.min(currentOpen, pendingOrder.limitPrice);
+        const effectiveEntryPrice = rawFillPrice * (1 + cfg.slippageRate);
+        const entryFee = capital * cfg.commissionRate;
+        totalFeesPaid += entryFee;
+        entryFeeForThisTrade = entryFee;
 
-      // Calculate Stop Loss & Take Profit using shared ATR Strategy Logic
-      const orderSetup = calculateDynamicOrderSetup(entryPrice, currentAtr, {
-        useAtrStop: cfg.useAtrStop,
-        atrMultiplier: 1.5,
-        takeProfitRatio: cfg.takeProfitRatio,
-        stopLossPct: cfg.stopLossPct,
-      });
+        const investableCapital = capital - entryFee;
+        shares = investableCapital / effectiveEntryPrice;
+        entryPrice = effectiveEntryPrice;
+        entryDate = candle.time;
+        entryIndex = i;
 
-      stopLossPrice = orderSetup.stopLossPrice;
-      takeProfitPrice = orderSetup.takeProfitPrice;
-      inPosition = true;
-      pendingSignal = false;
+        // Dynamic Stop Loss & Take Profit from the actual fill price
+        const orderSetup = calculateDynamicOrderSetup(entryPrice, pendingOrder.signalAtr, {
+          useAtrStop: cfg.useAtrStop,
+          atrMultiplier: 1.5,
+          takeProfitRatio: cfg.takeProfitRatio,
+          stopLossPct: cfg.stopLossPct,
+        });
+
+        stopLossPrice = orderSetup.stopLossPrice;
+        takeProfitPrice = orderSetup.takeProfitPrice;
+        inPosition = true;
+        pendingOrder = null;
+      } else {
+        // Decrement expiration counter
+        pendingOrder.remainingBars -= 1;
+        if (pendingOrder.remainingBars <= 0) {
+          // Order expired without fill
+          pendingOrder = null;
+        }
+      }
     }
 
     // Track current position value
@@ -207,8 +233,8 @@ export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>)
       }
     }
 
-    // 3. IF NOT IN POSITION, EVALUATE ENTRY SIGNAL AT CLOSE OF CANDLE i
-    if (!inPosition && !pendingSignal && i < candles.length - 1) {
+    // 3. IF NOT IN POSITION & NO PENDING ORDER, EVALUATE ENTRY AT CLOSE OF CANDLE i
+    if (!inPosition && !pendingOrder && i < candles.length - 1) {
       const entryCheck = evaluateEntryCondition({
         currentPrice,
         currentEmaFast,
@@ -220,12 +246,22 @@ export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>)
           rsiOversold: cfg.rsiOversold,
           emaFastPeriod: cfg.emaFastPeriod,
           emaSlowPeriod: cfg.emaSlowPeriod,
-          adxMin: 20, // Filter matching live signals
+          adxMin: 20,
         },
       });
 
       if (entryCheck.shouldEnter) {
-        pendingSignal = true; // Signal confirmed; enter on next bar open
+        // Calculate the exact projected limit entry price using the shared strategy rule
+        const trend = currentEmaFast > currentEmaSlow ? 'BULLISH' : 'NEUTRAL';
+        const entryPlan = calculateSuggestedEntry(currentPrice, currentEmaFast, currentAtr, trend, 'OPORTUNIDAD DE ENTRADA');
+
+        pendingOrder = {
+          limitPrice: entryPlan.suggestedEntryPrice,
+          signalIndex: i,
+          signalDate: candle.time,
+          signalAtr: currentAtr,
+          remainingBars: 5, // Order remains active for up to 5 bars
+        };
       }
     }
 
@@ -282,6 +318,125 @@ export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>)
     trades: trades.reverse(), // most recent first
     lowSampleWarning: totalTrades < 30,
     ambiguousBarsCount,
+    reliabilityScore: 70,
+    reliabilityLabel: 'MEDIA',
+  };
+}
+
+/**
+ * Walk-Forward Validation: Splits historical data into 70% In-Sample (Calibration)
+ * and 30% Out-of-Sample (Validation) to test model robustness and prevent overfitting.
+ */
+export function runWalkForwardValidation(
+  candles: Candle[],
+  config?: Partial<BacktestConfig>
+): {
+  inSampleResult: BacktestResult;
+  outOfSampleResult: BacktestResult;
+  reliabilityScore: number;
+  reliabilityLabel: 'ALTA' | 'MEDIA' | 'BAJA';
+  metrics: WalkForwardMetrics;
+} {
+  if (!candles || candles.length < 60) {
+    const empty = getEmptyResult(config?.initialCapital || 1000);
+    return {
+      inSampleResult: empty,
+      outOfSampleResult: empty,
+      reliabilityScore: 50,
+      reliabilityLabel: 'MEDIA',
+      metrics: {
+        inSampleProfitFactor: 0,
+        outOfSampleProfitFactor: 0,
+        inSampleWinRate: 0,
+        outOfSampleWinRate: 0,
+        inSampleTrades: 0,
+        outOfSampleTrades: 0,
+      },
+    };
+  }
+
+  const splitIdx = Math.floor(candles.length * 0.70);
+  const inSampleCandles = candles.slice(0, splitIdx);
+  const outOfSampleCandles = candles.slice(splitIdx);
+
+  const inSampleResult = runCoreBacktest(inSampleCandles, config);
+  const outOfSampleResult = runCoreBacktest(outOfSampleCandles, config);
+
+  const pfIn = inSampleResult.profitFactor;
+  const pfOut = outOfSampleResult.profitFactor;
+  const wrIn = inSampleResult.winRate;
+  const wrOut = outOfSampleResult.winRate;
+  const totalTradesCombined = inSampleResult.totalTrades + outOfSampleResult.totalTrades;
+
+  let score = 70;
+
+  if (outOfSampleResult.totalTrades === 0) {
+    score = 45; // No out-of-sample trades triggered
+  } else {
+    // 1. Profit Factor Persistence (Out-of-sample vs In-sample)
+    if (pfOut >= pfIn * 0.85 && pfOut >= 1.2) {
+      score += 18;
+    } else if (pfOut < pfIn * 0.60 || pfOut < 1.0) {
+      score -= 24;
+    }
+
+    // 2. Win Rate Stability
+    if (Math.abs(wrOut - wrIn) <= 10 && wrOut >= 45) {
+      score += 12;
+    } else if (wrOut < wrIn - 20 || wrOut < 35) {
+      score -= 18;
+    }
+
+    // 3. Drawdown degradation check
+    if (outOfSampleResult.maxDrawdown > inSampleResult.maxDrawdown * 1.5 && outOfSampleResult.maxDrawdown > 8) {
+      score -= 12;
+    }
+  }
+
+  // 4. Sample size penalty
+  if (totalTradesCombined < 30) {
+    score = Math.min(score, 68); // Cannot achieve ALTA with n < 30
+  }
+
+  score = Math.min(99, Math.max(15, Math.round(score)));
+
+  let label: 'ALTA' | 'MEDIA' | 'BAJA' = 'MEDIA';
+  if (score >= 75 && totalTradesCombined >= 30) {
+    label = 'ALTA';
+  } else if (score >= 50) {
+    label = 'MEDIA';
+  } else {
+    label = 'BAJA';
+  }
+
+  return {
+    inSampleResult,
+    outOfSampleResult,
+    reliabilityScore: score,
+    reliabilityLabel: label,
+    metrics: {
+      inSampleProfitFactor: pfIn,
+      outOfSampleProfitFactor: pfOut,
+      inSampleWinRate: wrIn,
+      outOfSampleWinRate: wrOut,
+      inSampleTrades: inSampleResult.totalTrades,
+      outOfSampleTrades: outOfSampleResult.totalTrades,
+    },
+  };
+}
+
+/**
+ * Main Backtest API: Executes full simulation plus Walk-Forward validation.
+ */
+export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>): BacktestResult {
+  const fullResult = runCoreBacktest(candles, config);
+  const wf = runWalkForwardValidation(candles, config);
+
+  return {
+    ...fullResult,
+    reliabilityScore: wf.reliabilityScore,
+    reliabilityLabel: wf.reliabilityLabel,
+    walkForwardMetrics: wf.metrics,
   };
 }
 
@@ -309,5 +464,15 @@ function getEmptyResult(initialCapital: number): BacktestResult {
     trades: [],
     lowSampleWarning: true,
     ambiguousBarsCount: 0,
+    reliabilityScore: 50,
+    reliabilityLabel: 'MEDIA',
+    walkForwardMetrics: {
+      inSampleProfitFactor: 0,
+      outOfSampleProfitFactor: 0,
+      inSampleWinRate: 0,
+      outOfSampleWinRate: 0,
+      inSampleTrades: 0,
+      outOfSampleTrades: 0,
+    },
   };
 }

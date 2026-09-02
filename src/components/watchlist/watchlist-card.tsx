@@ -1,17 +1,19 @@
 'use client';
 
-import React from 'react';
-import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Clock,
-  Trash2,
-  BarChart2,
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
-import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { ConfidenceBadge } from '@/components/ui/confidence-badge';
+import {
+  TrendingUp,
+  Trash2,
+  BarChart2,
+  ChevronDown,
+  ChevronUp,
+  Target,
+  Shield,
+  Activity,
+} from 'lucide-react';
 
 interface WatchlistCardProps {
   asset: Asset;
@@ -32,77 +34,24 @@ export function WatchlistCard({
 }: WatchlistCardProps) {
   const { settings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
   const analysis = asset.analysis;
   if (!analysis) return null;
 
-  const isBullish = analysis.trend === 'BULLISH';
-  const isBearish = analysis.trend === 'BEARISH';
   const isPositiveChange = asset.change24hPct >= 0;
-
-  // Signal Badge (Context-Aware Apple Pill)
-  let signalConfig = {
-    bg: isDark ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
-    dot: 'bg-blue-500',
-    label: 'Mantener Posición',
-  };
-
-  if (analysis.signal === 'OPORTUNIDAD DE ENTRADA') {
-    signalConfig = {
-      bg: isDark ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      dot: 'bg-emerald-500',
-      label: 'Oportunidad de Compra',
-    };
-  } else if (analysis.signal === 'OPORTUNIDAD DE SALIDA') {
-    signalConfig = {
-      bg: isDark ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200',
-      dot: 'bg-rose-500',
-      label: 'Oportunidad de Salida',
-    };
-  } else {
-    if (analysis.trend === 'BULLISH') {
-      signalConfig = {
-        bg: isDark ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
-        dot: 'bg-blue-500',
-        label: 'Mantener Posición',
-      };
-    } else if (analysis.trend === 'NEUTRAL') {
-      signalConfig = {
-        bg: isDark ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200',
-        dot: 'bg-amber-500',
-        label: 'Esperar Rango',
-      };
-    } else {
-      signalConfig = {
-        bg: isDark ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200',
-        dot: 'bg-rose-500',
-        label: 'Esperar Giro',
-      };
-    }
-  }
-
-  const riskColor = {
-    BAJO: isDark ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-emerald-700 bg-emerald-50 border-emerald-200',
-    MEDIO: isDark ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 'text-amber-700 bg-amber-50 border-amber-200',
-    ALTO: isDark ? 'text-rose-400 bg-rose-500/10 border-rose-500/20' : 'text-rose-700 bg-rose-50 border-rose-200',
-  }[analysis.reversalRisk.level];
-
-  const riskBarColor = {
-    BAJO: 'bg-emerald-500',
-    MEDIO: 'bg-amber-500',
-    ALTO: 'bg-rose-500',
-  }[analysis.reversalRisk.level];
+  const order = analysis.orderSetup;
 
   const typeBadge = {
-    crypto: isDark ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-purple-50 text-purple-700 border-purple-200',
-    stock: isDark ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-700 border-blue-200',
-    etf: isDark ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    crypto: isDark ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200',
+    stock: isDark ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
+    etf: isDark ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
   }[asset.type];
 
   return (
     <div
       onClick={onSelect}
-      className={`group relative flex flex-col justify-between rounded-3xl border p-5 transition-all duration-200 cursor-pointer ${
+      className={`group relative flex flex-col justify-between rounded-3xl border p-5 shadow-xs transition-all duration-200 cursor-pointer ${
         isSelected
           ? isDark
             ? 'border-blue-500 bg-[#1c1c1e] shadow-lg shadow-blue-500/10 ring-1 ring-blue-500'
@@ -113,26 +62,30 @@ export function WatchlistCard({
       }`}
     >
       <div>
-        {/* Top bar */}
-        <div className="flex items-center justify-between">
+        {/* Top bar: Asset Type & Single Unified Confidence Badge */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <span className={`rounded-xl border px-2 py-0.5 text-[10px] font-bold uppercase ${typeBadge}`}>
               {asset.type}
             </span>
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Score: <strong className="text-blue-500">{analysis.opportunityScore}</strong>
-            </span>
           </div>
 
-          <button
-            onClick={onRemove}
-            title="Eliminar de favoritos"
-            className={`opacity-0 group-hover:opacity-100 rounded-full p-1.5 transition-all ${
-              isDark ? 'text-slate-500 hover:bg-rose-500/10 hover:text-rose-400' : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'
-            }`}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <ConfidenceBadge
+              opportunityScore={analysis.opportunityScore}
+              isSimulated={asset.isSimulated}
+              size="sm"
+            />
+            <button
+              onClick={onRemove}
+              title="Eliminar de favoritos"
+              className={`opacity-0 group-hover:opacity-100 rounded-full p-1.5 transition-all ${
+                isDark ? 'text-slate-500 hover:bg-rose-500/10 hover:text-rose-400' : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'
+              }`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Symbol & Price (iOS Stocks Style) */}
@@ -157,79 +110,107 @@ export function WatchlistCard({
           </div>
         </div>
 
-        <div className={`my-3.5 h-[1px] ${isDark ? 'bg-slate-800/80' : 'bg-slate-100'}`} />
+        <div className={`my-3 h-[1px] ${isDark ? 'bg-slate-800/80' : 'bg-slate-100'}`} />
 
-        {/* 5 Core Items with iOS minimal styling and InfoTooltips */}
-        <div className="space-y-2.5 text-xs">
-          {/* 1. Tendencia Actual */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Tendencia:</span>
-              <InfoTooltip text="Dirección dominante del activo según las Medias Móviles EMA 20 y EMA 50." title="Tendencia Actual" />
-            </div>
-            <span
-              className={`inline-flex items-center gap-1 rounded-xl px-2 py-0.5 text-xs font-semibold border ${
-                isBullish
-                  ? isDark ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : isBearish
-                  ? isDark ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                  : isDark ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}
-            >
-              {isBullish ? <TrendingUp className="h-3 w-3" /> : isBearish ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-              {analysis.trendLabel}
+        {/* Actionable Strategy Setup */}
+        <div
+          className={`rounded-2xl border p-3 space-y-2 mb-3 transition-colors ${
+            isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200/80 bg-slate-50/80'
+          }`}
+        >
+          {/* Suggested Entry */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-blue-500 font-bold flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              Entrada:
             </span>
-          </div>
-
-          {/* 2. Tiempo en Tendencia */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Tiempo:</span>
-              <InfoTooltip text="Días o velas continuas respetando la misma tendencia." title="Tiempo en Tendencia" />
-            </div>
-            <div className={`flex items-center gap-1 font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-              <Clock className="h-3.5 w-3.5 text-blue-500" />
-              <span>{analysis.daysInTrend} días</span>
-            </div>
-          </div>
-
-          {/* 3. Riesgo de Giro */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Riesgo de Giro:</span>
-                <InfoTooltip text="Probabilidad de agotamiento de la tendencia actual (por divergencias de RSI o medias aplanadas)." title="Riesgo de Cambio" />
-              </div>
-              <span className={`rounded-lg border px-1.5 py-0.2 text-[11px] font-bold ${riskColor}`}>
-                {analysis.reversalRisk.level} ({analysis.reversalRisk.percentage}%)
+            <div className="text-right">
+              <span className={`font-mono font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {formatCurrency(order.suggestedEntryPrice)}
               </span>
-            </div>
-            <div className={`h-1.5 w-full overflow-hidden rounded-full ${isDark ? 'bg-[#2c2c2e]' : 'bg-slate-100'}`}>
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${riskBarColor}`}
-                style={{ width: `${analysis.reversalRisk.percentage}%` }}
-              />
+              {order.distanceToEntryPct !== 0 && (
+                <span className="text-[10px] text-amber-500 font-bold ml-1 font-mono">
+                  ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
+                </span>
+              )}
             </div>
           </div>
 
-          {/* 4. Fuerza ADX / ATR */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Fuerza (ADX):</span>
-              <InfoTooltip text="Mide la fuerza del impulso (ADX > 25 indica tendencia fuerte; ADX < 20 indica rango/debilidad)." title="Fuerza & Volatilidad" />
+          {/* Target Take Profit & Stop Loss */}
+          <div className="flex items-center justify-between text-xs pt-0.5 border-t border-slate-800/40">
+            <div className="flex items-center gap-1 text-emerald-500 font-semibold">
+              <Target className="h-3 w-3" />
+              <span className="font-mono font-bold">{formatCurrency(order.suggestedTakeProfit)}</span>
+              <span className="text-[10px] text-emerald-600 font-bold">(+{order.suggestedTakeProfitPct}%)</span>
             </div>
-            <span className={`font-mono font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-              {analysis.volatilityMetrics.adx} <span className={`text-[10px] font-normal ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>({analysis.volatilityMetrics.strengthLabel})</span>
+            <div className="flex items-center gap-1 text-rose-500 font-semibold">
+              <Shield className="h-3 w-3" />
+              <span className="font-mono font-bold">{formatCurrency(order.suggestedStopLoss)}</span>
+              <span className="text-[10px] text-rose-500 font-bold">(-{order.suggestedStopLossPct}%)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Collapsible Technical Details Trigger */}
+        <div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowTechnicalDetails(!showTechnicalDetails);
+            }}
+            className={`w-full flex items-center justify-between rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition-all ${
+              isDark ? 'bg-[#2c2c2e]/40 text-slate-300 hover:bg-[#2c2c2e]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <Activity className="h-3 w-3 text-blue-500" />
+              <span>Detalle técnico</span>
             </span>
-          </div>
+            {showTechnicalDetails ? (
+              <ChevronUp className="h-3.5 w-3.5 opacity-70" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+            )}
+          </button>
 
-          {/* 5. Señal Actual */}
-          <div className="pt-1">
-            <div className={`flex items-center gap-2 rounded-2xl border p-2 text-xs font-semibold ${signalConfig.bg}`}>
-              <span className={`h-2 w-2 rounded-full ${signalConfig.dot}`} />
-              <span className="flex-1 font-bold">{signalConfig.label}</span>
+          {/* Expanded Technical Details */}
+          {showTechnicalDetails && (
+            <div
+              className={`mt-2 rounded-2xl border p-3 space-y-2 text-xs transition-all ${
+                isDark ? 'border-slate-800 bg-[#1c1c1e] text-slate-300' : 'border-slate-200 bg-white text-slate-700'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between text-[11px]">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Estructura:</span>
+                <span className="font-semibold">
+                  {analysis.trendLabel} ({analysis.daysInTrend} días en tendencia)
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px]">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>RSI (14) / ADX:</span>
+                <span className="font-mono font-semibold">
+                  {analysis.indicators.rsi} / {analysis.volatilityMetrics.adx} ({analysis.volatilityMetrics.strengthLabel})
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px]">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>EMA 20 / EMA 50:</span>
+                <span className="font-mono font-semibold">
+                  ${analysis.indicators.ema20.toFixed(2)} / ${analysis.indicators.ema50.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/30">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Ratio Riesgo:Beneficio:</span>
+                <span className="font-mono font-bold text-blue-500">
+                  1:{order.riskRewardRatio}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

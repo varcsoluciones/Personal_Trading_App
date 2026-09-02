@@ -137,3 +137,64 @@ export function calculateDynamicOrderSetup(
     potentialRewardUSD: Number(rewardDistance.toFixed(2)),
   };
 }
+
+export type EntryStrategyType = 'INMEDIATA' | 'PULLBACK_ESPERADO' | 'REBOTE_SOPORTE';
+
+export interface SuggestedEntryResult {
+  suggestedEntryPrice: number;
+  entryType: EntryStrategyType;
+  entryLabel: string;
+  distanceToEntryPct: number;
+}
+
+/**
+ * Shared suggested entry price calculator.
+ * Used identically by live indicators/screener and the backtest limit order execution simulator.
+ */
+export function calculateSuggestedEntry(
+  currentPrice: number,
+  currentEma20: number,
+  currentAtr: number,
+  trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL',
+  signal: 'OPORTUNIDAD DE ENTRADA' | 'OPORTUNIDAD DE SALIDA' | 'ESPERAR / MANTENER'
+): SuggestedEntryResult {
+  let suggestedEntryPrice = currentPrice;
+  let entryType: EntryStrategyType = 'PULLBACK_ESPERADO';
+  let entryLabel = 'Esperar retroceso';
+
+  if (signal === 'OPORTUNIDAD DE ENTRADA') {
+    suggestedEntryPrice = currentPrice;
+    entryType = 'INMEDIATA';
+    entryLabel = 'Comprar en Mercado (Pullback Confirmado)';
+  } else if (trend === 'BULLISH') {
+    // In bullish trend, target pullback to EMA 20 dynamic support
+    const pullbackTarget = currentEma20 > 0 && currentPrice > currentEma20
+      ? currentEma20
+      : currentPrice * 0.985;
+    suggestedEntryPrice = Math.min(currentPrice, pullbackTarget);
+    entryType = 'PULLBACK_ESPERADO';
+    entryLabel = 'Esperar retroceso a EMA 20';
+  } else if (trend === 'NEUTRAL') {
+    // In range/lateral trend, target lower boundary support
+    const rangeLowTarget = Math.max(0.0001, currentPrice - currentAtr * 1.2);
+    suggestedEntryPrice = Math.min(currentPrice, rangeLowTarget);
+    entryType = 'REBOTE_SOPORTE';
+    entryLabel = 'Esperar base del rango';
+  } else {
+    // In bearish trend, wait for extreme oversold reversal level
+    suggestedEntryPrice = Math.max(0.0001, currentPrice * 0.95);
+    entryType = 'REBOTE_SOPORTE';
+    entryLabel = 'Esperar suelo de sobreventa';
+  }
+
+  const distanceToEntryPct = Number(
+    (((suggestedEntryPrice - currentPrice) / currentPrice) * 100).toFixed(2)
+  );
+
+  return {
+    suggestedEntryPrice: Number(suggestedEntryPrice.toFixed(4)),
+    entryType,
+    entryLabel,
+    distanceToEntryPct,
+  };
+}

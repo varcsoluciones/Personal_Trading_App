@@ -11,7 +11,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-import { HelpCircle, AlertTriangle } from 'lucide-react';
+import { HelpCircle, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw } from 'lucide-react';
+import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { useSettings } from '@/lib/context/settings-context';
 
 interface BacktestDashboardProps {

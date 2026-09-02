@@ -115,6 +115,15 @@ export interface EquityPoint {
   drawdownPct: number;
 }
 
+export interface WalkForwardMetrics {
+  inSampleProfitFactor: number;
+  outOfSampleProfitFactor: number;
+  inSampleWinRate: number;
+  outOfSampleWinRate: number;
+  inSampleTrades: number;
+  outOfSampleTrades: number;
+}
+
 export interface BacktestResult {
   initialCapital: number;
   finalCapital: number;
@@ -138,4 +147,7 @@ export interface BacktestResult {
   trades: Trade[];
   lowSampleWarning?: boolean;
   ambiguousBarsCount?: number;
+  reliabilityScore: number; // 0 - 100
+  reliabilityLabel: 'ALTA' | 'MEDIA' | 'BAJA';
+  walkForwardMetrics?: WalkForwardMetrics;
 }
