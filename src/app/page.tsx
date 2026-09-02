@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMarketData } from '@/lib/hooks/use-market-data';
 import { useSettings } from '@/lib/context/settings-context';
 import { Header } from '@/components/header';
@@ -20,9 +20,12 @@ import {
   Search,
   TrendingUp,
   TrendingDown,
+  Minus,
   Sparkles,
   Layers,
   BookOpen,
+  Database,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function Home() {
@@ -41,14 +44,26 @@ export default function Home() {
     removeAsset,
   } = useMarketData();
 
-  const { settings, formatCurrency } = useSettings();
+  const { settings, accent, lastSavedTimestamp, updateSettings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
 
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+
+  // Sync viewMode with saved user preference
+  useEffect(() => {
+    if (settings.defaultView) {
+      setViewMode(settings.defaultView);
+    }
+  }, [settings.defaultView]);
+
+  const handleToggleViewMode = (mode: 'grid' | 'table') => {
+    setViewMode(mode);
+    updateSettings({ defaultView: mode });
+  };
 
   // Filter assets by search query
   const filteredAssets = assets.filter(
@@ -59,6 +74,7 @@ export default function Home() {
 
   // Market Summary stats
   const bullishCount = assets.filter((a) => a.analysis?.trend === 'BULLISH').length;
+  const neutralCount = assets.filter((a) => a.analysis?.trend === 'NEUTRAL').length;
   const bearishCount = assets.filter((a) => a.analysis?.trend === 'BEARISH').length;
   const topAsset = [...assets].sort(
     (a, b) => (b.analysis?.opportunityScore || 0) - (a.analysis?.opportunityScore || 0)
@@ -85,8 +101,9 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         
-        {/* Quick Summary Widgets (iOS Widgets Style) */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Quick Summary Widgets (5 Key Metrics including Lateral/Range) */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {/* 1. Radar Total */}
           <div
             className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
               isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
@@ -96,13 +113,14 @@ export default function Home() {
               <Layers className="h-5 w-5" />
             </div>
             <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Activos en Radar
               </p>
               <h4 className={`text-xl font-bold font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>{assets.length}</h4>
             </div>
           </div>
 
+          {/* 2. Alcistas */}
           <div
             className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
               isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
@@ -112,7 +130,7 @@ export default function Home() {
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Alcistas
               </p>
               <h4 className="text-xl font-bold text-emerald-500 font-mono">
@@ -121,8 +139,28 @@ export default function Home() {
             </div>
           </div>
 
+          {/* 3. Laterales / En Rango */}
           <div
-            className={`flex items-center gap-3 rounded-2xl border p-4 transition-colors ${
+            className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
+              isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
+            }`}
+          >
+            <div className="rounded-2xl bg-amber-500/10 p-2.5 text-amber-500">
+              <Minus className="h-5 w-5 stroke-[3]" />
+            </div>
+            <div>
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Laterales / Rango
+              </p>
+              <h4 className="text-xl font-bold text-amber-500 font-mono">
+                {neutralCount} <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>/ {assets.length}</span>
+              </h4>
+            </div>
+          </div>
+
+          {/* 4. Bajistas */}
+          <div
+            className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
               isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
             }`}
           >
@@ -130,7 +168,7 @@ export default function Home() {
               <TrendingDown className="h-5 w-5" />
             </div>
             <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Bajistas
               </p>
               <h4 className="text-xl font-bold text-rose-500 font-mono">
@@ -139,19 +177,23 @@ export default function Home() {
             </div>
           </div>
 
+          {/* 5. Mejor Score */}
           <div
-            className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
+            className={`flex items-center gap-3 rounded-3xl border p-4 col-span-2 sm:col-span-1 transition-colors ${
               isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
             }`}
           >
-            <div className="rounded-2xl bg-purple-500/10 p-2.5 text-purple-500">
+            <div
+              className="rounded-2xl p-2.5 text-white shadow-xs"
+              style={{ backgroundColor: accent.hex }}
+            >
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Mejor Score
               </p>
-              <h4 className={`text-base font-bold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <h4 className={`text-sm font-bold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {topAsset ? `${topAsset.symbol} (${topAsset.analysis?.opportunityScore})` : '--'}
               </h4>
             </div>
@@ -178,45 +220,44 @@ export default function Home() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <div
-                  className={`flex items-center rounded-2xl border p-1 transition-colors ${
-                    isDark ? 'border-slate-800 bg-[#1c1c1e]' : 'border-slate-200 bg-white shadow-xs'
+              {/* View Switcher (Grid vs Table) */}
+              <div
+                className={`flex items-center p-1 rounded-2xl border ${
+                  isDark ? 'border-slate-800 bg-[#1c1c1e]' : 'border-slate-200 bg-white shadow-xs'
+                }`}
+              >
+                <button
+                  onClick={() => handleToggleViewMode('grid')}
+                  className={`rounded-xl p-1.5 transition-all ${
+                    viewMode === 'grid'
+                      ? isDark ? 'bg-[#2c2c2e] text-white shadow-xs' : 'bg-slate-100 text-slate-900 shadow-xs'
+                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
                   }`}
+                  title="Vista en Tarjetas"
                 >
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`rounded-xl p-1.5 transition-all ${
-                      viewMode === 'grid'
-                        ? isDark ? 'bg-[#2c2c2e] text-blue-400' : 'bg-slate-100 text-blue-600'
-                        : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                    title="Vista en Tarjetas"
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('table')}
-                    className={`rounded-xl p-1.5 transition-all ${
-                      viewMode === 'table'
-                        ? isDark ? 'bg-[#2c2c2e] text-blue-400' : 'bg-slate-100 text-blue-600'
-                        : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                    title="Vista en Tabla"
-                  >
-                    <TableIcon className="h-4 w-4" />
-                  </button>
-                </div>
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleToggleViewMode('table')}
+                  className={`rounded-xl p-1.5 transition-all ${
+                    viewMode === 'table'
+                      ? isDark ? 'bg-[#2c2c2e] text-white shadow-xs' : 'bg-slate-100 text-slate-900 shadow-xs'
+                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                  title="Vista en Lista / Tabla"
+                >
+                  <TableIcon className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
-            {/* Content: Grid or Table */}
+            {/* Asset Content List / Grid */}
             {isLoading ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[1, 2, 3, 4, 5, 6].map((n) => (
                   <div
                     key={n}
-                    className={`h-64 animate-pulse rounded-3xl border ${
+                    className={`h-48 rounded-3xl border animate-pulse ${
                       isDark ? 'border-slate-800 bg-[#1c1c1e]/60' : 'border-slate-200 bg-white'
                     }`}
                   />
@@ -234,8 +275,14 @@ export default function Home() {
                       e.stopPropagation();
                       removeAsset(asset.id);
                     }}
-                    onOpenChart={() => setActiveTab('chart')}
-                    onOpenBacktest={() => setActiveTab('backtest')}
+                    onOpenChart={() => {
+                      setSelectedAssetId(asset.id);
+                      setActiveTab('chart');
+                    }}
+                    onOpenBacktest={() => {
+                      setSelectedAssetId(asset.id);
+                      setActiveTab('backtest');
+                    }}
                   />
                 ))}
               </div>
@@ -244,7 +291,7 @@ export default function Home() {
                 assets={filteredAssets}
                 selectedAssetId={selectedAssetId}
                 onSelectAsset={(id) => setSelectedAssetId(id)}
-                onRemoveAsset={removeAsset}
+                onRemoveAsset={(id) => removeAsset(id)}
                 onOpenChart={(id) => {
                   setSelectedAssetId(id);
                   setActiveTab('chart');
@@ -258,72 +305,37 @@ export default function Home() {
           </div>
         )}
 
-        {/* TAB 2: BUSCADOR DE OPORTUNIDADES (SCREENER INTELIGENTE) */}
+        {/* TAB 2: OPPORTUNITY SCREENER */}
         {activeTab === 'screener' && (
-          <div className="space-y-6">
-            <OpportunityScreener
-              assets={assets}
-              onSelectAsset={(id) => setSelectedAssetId(id)}
-              onOpenChart={(id) => {
-                setSelectedAssetId(id);
-                setActiveTab('chart');
-              }}
-              onOpenBacktest={(id) => {
-                setSelectedAssetId(id);
-                setActiveTab('backtest');
-              }}
-            />
-          </div>
+          <OpportunityScreener
+            assets={assets}
+            onSelectAsset={(id) => setSelectedAssetId(id)}
+            onOpenChart={(id) => {
+              setSelectedAssetId(id);
+              setActiveTab('chart');
+            }}
+            onOpenBacktest={(id) => {
+              setSelectedAssetId(id);
+              setActiveTab('backtest');
+            }}
+          />
         )}
 
-        {/* TAB 3: GRÁFICO TÉCNICO INTERACTIVO & SEÑALES */}
+        {/* TAB 3: CHART VIEW WITH EMAs 20/50/200 */}
         {activeTab === 'chart' && selectedAsset && (
-          <div className="space-y-6">
-            {/* Asset Selector Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="space-y-4">
+            {/* Quick asset pill bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
               {assets.map((a) => (
                 <button
                   key={a.id}
                   onClick={() => setSelectedAssetId(a.id)}
                   className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
                     a.id === selectedAssetId
-                      ? 'border-blue-500 bg-blue-500/15 text-blue-600 font-bold'
+                      ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold shadow-xs`
                       : isDark
                       ? 'border-slate-800 bg-[#1c1c1e] text-slate-400 hover:border-slate-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  <span>{a.symbol}</span>
-                  <span
-                    className={`font-mono text-[11px] ${
-                      a.change24hPct >= 0 ? 'text-emerald-500' : 'text-rose-500'
-                    }`}
-                  >
-                    {a.change24hPct >= 0 ? '+' : ''}{a.change24hPct.toFixed(1)}%
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <TradingChart asset={selectedAsset} />
-          </div>
-        )}
-
-        {/* TAB 4: SIMULADOR DE BACKTESTING & EFECTIVIDAD */}
-        {activeTab === 'backtest' && selectedAsset && (
-          <div className="space-y-6">
-            {/* Asset Selector Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {assets.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => setSelectedAssetId(a.id)}
-                  className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
-                    a.id === selectedAssetId
-                      ? 'border-blue-500 bg-blue-500/15 text-blue-600 font-bold'
-                      : isDark
-                      ? 'border-slate-800 bg-[#1c1c1e] text-slate-400 hover:border-slate-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 shadow-xs'
                   }`}
                 >
                   <span>{a.symbol}</span>
@@ -334,7 +346,36 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Real-time Strategy Sliders */}
+            <TradingChart asset={selectedAsset} />
+          </div>
+        )}
+
+        {/* TAB 4: BACKTESTING LAB (INTERACTIVE BROKERS REALISTIC PRICING) */}
+        {activeTab === 'backtest' && selectedAsset && (
+          <div className="space-y-6">
+            {/* Asset Selector Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              {assets.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => setSelectedAssetId(a.id)}
+                  className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                    a.id === selectedAssetId
+                      ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold shadow-xs`
+                      : isDark
+                      ? 'border-slate-800 bg-[#1c1c1e] text-slate-400 hover:border-slate-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 shadow-xs'
+                  }`}
+                >
+                  <span>{a.symbol}</span>
+                  <span className={`font-mono text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    ({formatCurrency(a.price, 0)})
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Real-time Strategy Sliders & IBKR Cost Model */}
             <StrategyControls
               config={backtestConfig}
               onChange={updateBacktestConfig}
@@ -355,32 +396,54 @@ export default function Home() {
 
       </main>
 
-      {/* Footer */}
+      {/* Footer with App Version, Last Saved Timestamp & Status */}
       <footer
-        className={`border-t py-6 text-center text-xs transition-colors ${
+        className={`border-t py-6 text-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#000000] text-slate-500' : 'border-slate-200/80 bg-white text-slate-500'
         }`}
       >
-        <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className={`font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Personal Trading Pro</span>
-            <span>· Análisis Cuantitativo con Fricción Real</span>
+        <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Personal Trading Pro
+              </span>
+              <span className="rounded-lg bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-500 font-mono">
+                v2.1.0
+              </span>
+            </div>
+            <span className="hidden sm:inline text-slate-400">•</span>
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <Database className="h-3.5 w-3.5 text-emerald-500" />
+              <span>Último guardado local:</span>
+              <strong className={`font-mono ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                {lastSavedTimestamp || 'Guardado'}
+              </strong>
+            </div>
           </div>
-          <button
-            onClick={() => setIsGuideModalOpen(true)}
-            className="text-blue-500 hover:underline flex items-center gap-1"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            <span>Guía de Indicadores</span>
-          </button>
+
+          <div className="flex items-center gap-4 text-xs font-semibold">
+            <div className="flex items-center gap-1 text-emerald-500 text-[11px]">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Navegador Sincronizado</span>
+            </div>
+            <button
+              onClick={() => setIsGuideModalOpen(true)}
+              className="text-blue-500 hover:underline flex items-center gap-1"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span>Guía de Indicadores</span>
+            </button>
+          </div>
         </div>
       </footer>
 
-      {/* Add Asset Modal with Live Dropdown Search */}
+      {/* Add Asset Modal with Multi-Add and Green Checks */}
       <AddAssetModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAdd={addAsset}
+        existingSymbols={assets.map((a) => a.symbol)}
       />
 
       {/* Settings Modal */}

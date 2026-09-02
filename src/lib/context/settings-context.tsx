@@ -11,27 +11,41 @@ import {
 interface SettingsContextType {
   settings: AppSettings;
   accent: typeof APPLE_ACCENT_PALETTE[0];
+  lastSavedTimestamp: string;
   updateSettings: (updates: Partial<AppSettings>) => void;
   toggleTheme: () => void;
   formatCurrency: (amount: number, minimumFractionDigits?: number) => string;
+  recordSaveAction: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-const SETTINGS_STORAGE_KEY = 'quantpulse_user_settings_v2';
+const SETTINGS_STORAGE_KEY = 'personal_trading_user_settings_v3';
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [lastSavedTimestamp, setLastSavedTimestamp] = useState<string>('');
   const [isHydrated, setIsHydrated] = useState(false);
+
+  const formatCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const recordSaveAction = () => {
+    const timeStr = formatCurrentTime();
+    setLastSavedTimestamp(timeStr);
+  };
 
   // Load from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY) || localStorage.getItem('quantpulse_user_settings_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         setSettings((prev) => ({ ...prev, ...parsed }));
       }
+      setLastSavedTimestamp(formatCurrentTime());
     } catch (e) {
       console.warn('Failed to read settings from localStorage', e);
     }
@@ -72,6 +86,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const next = { ...prev, ...updates };
       try {
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+        recordSaveAction();
       } catch (e) {}
       return next;
     });
@@ -109,9 +124,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       value={{
         settings,
         accent: currentAccent,
+        lastSavedTimestamp,
         updateSettings,
         toggleTheme,
         formatCurrency,
+        recordSaveAction,
       }}
     >
       {children}

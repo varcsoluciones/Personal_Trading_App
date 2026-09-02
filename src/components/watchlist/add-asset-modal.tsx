@@ -2,15 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  X,
   Search,
-  Sparkles,
   Plus,
   Check,
+  X,
   TrendingUp,
   Coins,
   Layers,
-  ArrowRight,
 } from 'lucide-react';
 import { POPULAR_ASSETS_CATALOG, AssetDefinition } from '@/lib/api/default-data';
 import { useSettings } from '@/lib/context/settings-context';
@@ -19,36 +17,46 @@ interface AddAssetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (symbol: string, name: string, type: 'crypto' | 'stock' | 'etf') => void;
+  existingSymbols?: string[];
 }
 
-export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
-  const { settings } = useSettings();
+export function AddAssetModal({ isOpen, onClose, onAdd, existingSymbols = [] }: AddAssetModalProps) {
+  const { settings, accent } = useSettings();
   const isDark = settings.theme === 'dark';
 
   const [query, setQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'crypto' | 'stock' | 'etf'>('all');
+  const [justAdded, setJustAdded] = useState<Set<string>>(new Set());
 
-  // Filter catalog live based on query and type filter
+  // Filter catalog based on search query and type filter
   const matches = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
     return POPULAR_ASSETS_CATALOG.filter((item) => {
       const matchType = selectedTypeFilter === 'all' || item.type === selectedTypeFilter;
-      if (!matchType) return false;
-      if (!trimmed) return true;
-      return (
-        item.symbol.toLowerCase().includes(trimmed) ||
-        item.id.toLowerCase().includes(trimmed) ||
-        item.name.toLowerCase().includes(trimmed)
-      );
+      const matchQuery =
+        !query.trim() ||
+        item.symbol.toLowerCase().includes(query.toLowerCase()) ||
+        item.name.toLowerCase().includes(query.toLowerCase());
+      return matchType && matchQuery;
     });
   }, [query, selectedTypeFilter]);
 
   if (!isOpen) return null;
 
+  const isSymbolAdded = (symbol: string) => {
+    const cleanSym = symbol.replace('/', '').toUpperCase();
+    return (
+      justAdded.has(symbol) ||
+      justAdded.has(cleanSym) ||
+      existingSymbols.some(
+        (s) => s.toUpperCase() === symbol.toUpperCase() || s.replace('/', '').toUpperCase() === cleanSym
+      )
+    );
+  };
+
   const handleSelectAsset = (item: AssetDefinition) => {
+    if (isSymbolAdded(item.symbol)) return;
     onAdd(item.symbol, item.name, item.type);
-    setQuery('');
-    onClose();
+    setJustAdded((prev) => new Set(prev).add(item.symbol).add(item.id));
   };
 
   const handleAddCustom = () => {
@@ -57,8 +65,8 @@ export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
     const isCrypto = cleanSym.includes('USDT') || cleanSym.includes('BTC') || cleanSym.includes('ETH');
     const type = isCrypto ? 'crypto' : selectedTypeFilter === 'all' ? 'stock' : selectedTypeFilter;
     onAdd(cleanSym, cleanSym, type);
+    setJustAdded((prev) => new Set(prev).add(cleanSym));
     setQuery('');
-    onClose();
   };
 
   return (
@@ -66,23 +74,31 @@ export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
       <div
         className={`relative flex flex-col max-h-[85vh] w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden transition-all ${
           isDark
-            ? 'border-slate-800 bg-[#1c1c1e] text-white shadow-black/60'
-            : 'border-slate-200/80 bg-white text-slate-900 shadow-slate-300/60'
+            ? "border-slate-800 bg-[#1c1c1e] text-white shadow-black/60"
+            : "border-slate-200/80 bg-white text-slate-900 shadow-slate-300/60"
         }`}
       >
-        {/* Header & Search Bar (iOS Spotlight Style) */}
-        <div className={`p-5 pb-3 border-b ${isDark ? 'border-slate-800/80' : 'border-slate-100'}`}>
+        {/* Header & Search Bar */}
+        <div className={`p-5 pb-3 border-b ${isDark ? "border-slate-800/80" : "border-slate-100"}`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-xl text-white shadow-xs"
+                style={{ backgroundColor: accent.hex }}
+              >
                 <Plus className="h-4 w-4" />
               </div>
-              <h3 className="text-base font-bold">Buscar y Agregar Activo</h3>
+              <div>
+                <h3 className="text-base font-bold">Agregar a Watchlist</h3>
+                <p className={`text-[11px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  Puedes seleccionar varios activos sin cerrar la ventana
+                </p>
+              </div>
             </div>
             <button
               onClick={onClose}
               className={`rounded-full p-1.5 transition-colors ${
-                isDark ? 'text-slate-400 hover:bg-[#2c2c2e] hover:text-white' : 'text-slate-500 hover:bg-slate-100'
+                isDark ? "text-slate-400 hover:bg-[#2c2c2e] hover:text-white" : "text-slate-500 hover:bg-slate-100"
               }`}
             >
               <X className="h-4 w-4" />
@@ -91,11 +107,11 @@ export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
 
           {/* Search Input */}
           <div className="relative">
-            <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? 'text-slate-400' : 'text-slate-400'}`} />
+            <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? "text-slate-400" : "text-slate-400"}`} />
             <input
               type="text"
               autoFocus
-              placeholder="Escribe el ticker o nombre (ej. VOO, BTC, NVDA, TSLA)..."
+              placeholder="Escribe el ticker o nombre (ej. VOO, BTC, SOL, NVDA)..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -104,10 +120,10 @@ export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
                   else handleAddCustom();
                 }
               }}
-              className={`w-full rounded-2xl border py-2.5 pl-10 pr-9 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all ${
+              className={`w-full rounded-2xl border py-2.5 pl-10 pr-9 text-xs font-medium focus:outline-none focus:ring-2 transition-all ${
                 isDark
-                  ? 'border-slate-700/80 bg-[#2c2c2e]/70 text-white placeholder-slate-500'
-                  : 'border-slate-200 bg-slate-100 text-slate-900 placeholder-slate-400'
+                  ? "border-slate-700/80 bg-[#2c2c2e]/70 text-white placeholder-slate-500 focus:border-blue-500/60"
+                  : "border-slate-200 bg-slate-100 text-slate-900 placeholder-slate-400 focus:border-blue-500/60"
               }`}
             />
             {query && (
@@ -131,12 +147,13 @@ export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
               <button
                 key={f.id}
                 onClick={() => setSelectedTypeFilter(f.id as any)}
+                style={selectedTypeFilter === f.id ? { backgroundColor: accent.hex, color: '#ffffff' } : {}}
                 className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold transition-all ${
                   selectedTypeFilter === f.id
-                    ? 'bg-blue-500 text-white shadow-xs'
+                    ? "shadow-xs"
                     : isDark
-                    ? 'bg-[#2c2c2e]/60 text-slate-400 hover:text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? "bg-[#2c2c2e]/60 text-slate-400 hover:text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
                 {f.label}
@@ -149,31 +166,38 @@ export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
         <div className="flex-1 overflow-y-auto p-3 space-y-1 max-h-80">
           {matches.length > 0 ? (
             matches.map((item) => {
+              const added = isSymbolAdded(item.symbol);
               const typeBadge = {
-                crypto: isDark ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200',
-                stock: isDark ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
-                etf: isDark ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200',
+                crypto: isDark ? "bg-purple-500/15 text-purple-300 border-purple-500/30" : "bg-purple-50 text-purple-700 border-purple-200",
+                stock: isDark ? "bg-blue-500/15 text-blue-300 border-blue-500/30" : "bg-blue-50 text-blue-700 border-blue-200",
+                etf: isDark ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30" : "bg-cyan-50 text-cyan-700 border-cyan-200",
               }[item.type];
 
               const TypeIcon = item.type === 'crypto' ? Coins : item.type === 'etf' ? Layers : TrendingUp;
 
               return (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => handleSelectAsset(item)}
+                  onClick={() => !added && handleSelectAsset(item)}
                   className={`w-full flex items-center justify-between rounded-2xl p-3 text-left transition-all ${
-                    isDark
-                      ? 'hover:bg-[#2c2c2e]/70 active:bg-[#3a3a3c]'
-                      : 'hover:bg-slate-50 active:bg-slate-100'
+                    added
+                      ? isDark
+                        ? "bg-emerald-500/5 border border-emerald-500/20"
+                        : "bg-emerald-50/60 border border-emerald-200"
+                      : isDark
+                      ? "hover:bg-[#2c2c2e]/70 active:bg-[#3a3a3c] cursor-pointer"
+                      : "hover:bg-slate-50 active:bg-slate-100 cursor-pointer"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className={`flex h-9 w-9 items-center justify-center rounded-xl border ${
-                        isDark ? 'bg-[#2c2c2e] border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600'
+                        added
+                          ? isDark ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" : "bg-emerald-100 border-emerald-300 text-emerald-700"
+                          : isDark ? "bg-[#2c2c2e] border-slate-700 text-slate-300" : "bg-slate-100 border-slate-200 text-slate-600"
                       }`}
                     >
-                      <TypeIcon className="h-4 w-4" />
+                      {added ? <Check className="h-4 w-4 text-emerald-500 stroke-[3]" /> : <TypeIcon className="h-4 w-4" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -182,42 +206,72 @@ export function AddAssetModal({ isOpen, onClose, onAdd }: AddAssetModalProps) {
                           {item.type}
                         </span>
                       </div>
-                      <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.name}</p>
+                      <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>{item.name}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-blue-500 opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
-                      Seleccionar <ArrowRight className="h-3 w-3" />
-                    </span>
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                      isDark ? 'bg-[#2c2c2e] text-blue-400' : 'bg-blue-50 text-blue-600'
-                    }`}>
-                      <Plus className="h-3.5 w-3.5" />
-                    </div>
+                    {added ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 text-xs font-bold text-emerald-500">
+                        <Check className="h-3.5 w-3.5 stroke-[3]" />
+                        Agregado
+                      </span>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectAsset(item);
+                        }}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                          isDark
+                            ? "bg-[#2c2c2e] text-blue-400 hover:bg-blue-600 hover:text-white"
+                            : "bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white shadow-xs"
+                        }`}
+                        title="Agregar a Watchlist"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
-                </button>
+                </div>
               );
             })
           ) : query.trim() ? (
             /* Custom entry if not in catalog */
             <div className="p-4 text-center">
-              <p className={`text-xs mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                No se encontró en la lista rápida, pero puedes agregarlo directamente:
+              <p className={`text-xs mb-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                No está en el catálogo predeterminado, pero puedes agregarlo directamente:
               </p>
               <button
                 onClick={handleAddCustom}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-blue-500 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 transition-all"
+                style={{ backgroundColor: accent.hex }}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-2.5 text-xs font-bold text-white shadow-md hover:opacity-90 transition-all"
               >
                 <Plus className="h-4 w-4" />
                 <span>Agregar "{query.trim().toUpperCase()}" a la Watchlist</span>
               </button>
             </div>
           ) : (
-            <div className={`py-8 text-center text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              Escribe el ticker o nombre de la empresa para buscar.
+            <div className={`py-8 text-center text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
+              Escribe el ticker o nombre para buscar.
             </div>
           )}
+        </div>
+
+        {/* Modal Footer Bar */}
+        <div className={`p-4 border-t flex items-center justify-between ${
+          isDark ? "border-slate-800 bg-[#2c2c2e]/40" : "border-slate-100 bg-slate-50"
+        }`}>
+          <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+            {justAdded.size > 0 ? `✨ ${justAdded.size} activo(s) agregado(s)` : "Selecciona los activos que deseas seguir"}
+          </span>
+          <button
+            onClick={onClose}
+            style={{ backgroundColor: accent.hex }}
+            className="rounded-2xl px-5 py-2 text-xs font-bold text-white shadow-xs hover:opacity-90 transition-all"
+          >
+            Listo / Cerrar
+          </button>
         </div>
       </div>
     </div>

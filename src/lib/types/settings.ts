@@ -19,6 +19,8 @@ export interface AppSettings {
   refreshInterval: number; // in seconds
   confettiCelebration: boolean;
   defaultRiskReward: number;
+  defaultView: 'grid' | 'table';
+  lastSavedAt?: string;
 }
 
 export const APPLE_ACCENT_PALETTE: {
@@ -131,4 +133,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   refreshInterval: 60,
   confettiCelebration: true,
   defaultRiskReward: 2.2,
+  defaultView: 'table',
 };

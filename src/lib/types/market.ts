@@ -72,8 +72,9 @@ export interface Asset {
 
 export interface BacktestConfig {
   initialCapital: number;
-  commissionRate: number; // e.g. 0.001 (0.1%)
-  slippageRate: number;   // e.g. 0.0005 (0.05%)
+  brokerPreset?: 'IBKR_TIERED' | 'IBKR_FIXED' | 'CRYPTO' | 'CUSTOM';
+  commissionRate: number; // e.g. 0.0005 (0.05% IBKR Tiered)
+  slippageRate: number;   // e.g. 0.0002 (0.02% IBKR SmartRouting)
   rsiPeriod: number;      // default 14
   rsiOversold: number;    // default 35
   rsiOverbought: number;  // default 68

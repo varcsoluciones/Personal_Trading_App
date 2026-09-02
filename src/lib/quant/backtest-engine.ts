@@ -3,8 +3,9 @@ import { calculateEMA, calculateRSI } from './indicators';
 
 export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
   initialCapital: 1000,
-  commissionRate: 0.001, // 0.1% per trade
-  slippageRate: 0.0005,  // 0.05% per execution
+  brokerPreset: 'IBKR_TIERED',
+  commissionRate: 0.0005, // 0.05% (Interactive Brokers Tiered: ~$0.0035/share or 0.05%)
+  slippageRate: 0.0002,  // 0.02% (Interactive Brokers SmartRouting low slippage)
   rsiPeriod: 14,
   rsiOversold: 38,
   rsiOverbought: 70,

@@ -55,7 +55,7 @@ export function useMarketData() {
           }
 
           if (candles.length === 0) {
-            candles = generateDeterministicCandles(cleanId, 220);
+            candles = generateDeterministicCandles(cleanId, 380);
           }
 
           const lastCandle = candles[candles.length - 1];
@@ -126,7 +126,7 @@ export function useMarketData() {
       }
 
       if (candles.length === 0) {
-        candles = generateDeterministicCandles(cleanId, 200);
+        candles = generateDeterministicCandles(cleanId, 380);
       }
 
       const last = candles[candles.length - 1];

@@ -60,25 +60,36 @@ export async function fetchStockKlines(
   }
 
   // High-fidelity quant generator if network error / rate limit
-  return generateDeterministicCandles(symbol, 200);
+  return generateDeterministicCandles(symbol, 380);
 }
 
 /**
  * Generates realistic deterministic historical price series based on authentic asset parameters
  */
-export function generateDeterministicCandles(symbol: string, days = 200): Candle[] {
+export function generateDeterministicCandles(symbol: string, days = 380): Candle[] {
   const basePrices: Record<string, { base: number; vol: number; drift: number }> = {
-    VOO: { base: 495, vol: 0.009, drift: 0.0004 },
-    QQQ: { base: 480, vol: 0.014, drift: 0.0006 },
-    SCHD: { base: 82, vol: 0.007, drift: 0.0003 },
-    VTI: { base: 275, vol: 0.010, drift: 0.0004 },
-    NVDA: { base: 125, vol: 0.032, drift: 0.0012 },
-    AAPL: { base: 228, vol: 0.012, drift: 0.0005 },
-    TSLA: { base: 215, vol: 0.038, drift: 0.0003 },
-    SPY: { base: 560, vol: 0.009, drift: 0.0004 },
-    BTCUSDT: { base: 64000, vol: 0.028, drift: 0.0008 },
-    ETHUSDT: { base: 2600, vol: 0.035, drift: 0.0007 },
-    SOLUSDT: { base: 145, vol: 0.045, drift: 0.0011 },
+    VOO: { base: 525, vol: 0.009, drift: 0.0004 },
+    QQQ: { base: 495, vol: 0.014, drift: 0.0006 },
+    SCHD: { base: 84, vol: 0.007, drift: 0.0003 },
+    VTI: { base: 280, vol: 0.010, drift: 0.0004 },
+    NVDA: { base: 128, vol: 0.032, drift: 0.0012 },
+    AAPL: { base: 232, vol: 0.012, drift: 0.0005 },
+    MSFT: { base: 430, vol: 0.013, drift: 0.0005 },
+    AMZN: { base: 188, vol: 0.018, drift: 0.0006 },
+    GOOGL: { base: 168, vol: 0.016, drift: 0.0005 },
+    META: { base: 575, vol: 0.022, drift: 0.0008 },
+    TSLA: { base: 218, vol: 0.038, drift: 0.0003 },
+    SPY: { base: 575, vol: 0.009, drift: 0.0004 },
+    BTCUSDT: { base: 64500, vol: 0.028, drift: 0.0008 },
+    ETHUSDT: { base: 2650, vol: 0.032, drift: 0.0007 },
+    SOLUSDT: { base: 138, vol: 0.038, drift: 0.0008 },
+    BNBUSDT: { base: 565, vol: 0.022, drift: 0.0006 },
+    XRPUSDT: { base: 0.58, vol: 0.035, drift: 0.0004 },
+    ADAUSDT: { base: 0.38, vol: 0.040, drift: 0.0004 },
+    DOGEUSDT: { base: 0.11, vol: 0.045, drift: 0.0005 },
+    AVAXUSDT: { base: 26.5, vol: 0.042, drift: 0.0007 },
+    LINKUSDT: { base: 11.8, vol: 0.038, drift: 0.0006 },
+    SUIUSDT: { base: 1.95, vol: 0.050, drift: 0.0010 },
   };
 
   const assetConfig = basePrices[symbol.toUpperCase()] || { base: 100, vol: 0.018, drift: 0.0005 };

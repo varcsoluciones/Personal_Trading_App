@@ -260,19 +260,50 @@ export function StrategyControls({ config, onChange }: StrategyControlsProps) {
           </div>
         </div>
 
-        {/* 9. Realism Friction Badge */}
+        {/* 9. Broker Cost Model (Interactive Brokers) */}
         <div
           className={`flex flex-col justify-center rounded-3xl border p-3.5 ${
-            isDark ? 'border-indigo-500/20 bg-indigo-950/20' : 'border-indigo-200 bg-indigo-50/60'
+            isDark ? 'border-indigo-500/20 bg-indigo-950/20' : 'border-indigo-200 bg-indigo-50/70'
           }`}
         >
-          <div className="flex items-center gap-2 text-indigo-500 mb-1">
-            <ShieldCheck className="h-4 w-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">Fricción Real Deducida</span>
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5 text-indigo-500">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="text-xs font-bold uppercase tracking-wider">Costos Interactive Brokers</span>
+            </div>
+            <span className="rounded-lg bg-indigo-500/15 border border-indigo-500/30 px-1.5 py-0.2 text-[9px] font-bold text-indigo-400">
+              IBKR SmartRouting
+            </span>
           </div>
+          
+          <div className="flex items-center gap-1.5 mb-2">
+            <button
+              type="button"
+              onClick={() => onChange({ brokerPreset: 'IBKR_TIERED', commissionRate: 0.0005, slippageRate: 0.0002 })}
+              className={`flex-1 rounded-xl py-1 text-[10px] font-bold transition-all ${
+                config.commissionRate === 0.0005
+                  ? 'bg-indigo-500 text-white shadow-xs'
+                  : isDark ? 'bg-[#2c2c2e] text-slate-400' : 'bg-slate-200/70 text-slate-700'
+              }`}
+            >
+              IBKR Tiered (~0.05%)
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ brokerPreset: 'IBKR_FIXED', commissionRate: 0.001, slippageRate: 0.0005 })}
+              className={`flex-1 rounded-xl py-1 text-[10px] font-bold transition-all ${
+                config.commissionRate === 0.001
+                  ? 'bg-indigo-500 text-white shadow-xs'
+                  : isDark ? 'bg-[#2c2c2e] text-slate-400' : 'bg-slate-200/70 text-slate-700'
+              }`}
+            >
+              Crypto / Fixed (0.10%)
+            </button>
+          </div>
+
           <div className={`text-[11px] space-y-0.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-            <div>• Comisiones: <span className="font-mono font-bold text-blue-500">0.10%</span> por trade</div>
-            <div>• Deslizamiento (Slippage): <span className="font-mono font-bold text-blue-500">0.05%</span> por orden</div>
+            <div>• Comisión IBKR: <span className="font-mono font-bold text-indigo-400">{(config.commissionRate * 100).toFixed(2)}%</span> ($0.0035/acción)</div>
+            <div>• Deslizamiento: <span className="font-mono font-bold text-indigo-400">{(config.slippageRate * 100).toFixed(2)}%</span> (SmartRouting)</div>
           </div>
         </div>
       </div>

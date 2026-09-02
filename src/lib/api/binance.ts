@@ -6,7 +6,7 @@ import { Candle } from '../types/market';
 export async function fetchBinanceKlines(
   symbol = 'BTCUSDT',
   interval = '1d',
-  limit = 200
+  limit = 500
 ): Promise<Candle[]> {
   try {
     const formattedSymbol = symbol.replace('/', '').toUpperCase();
