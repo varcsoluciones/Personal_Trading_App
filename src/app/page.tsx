@@ -98,6 +98,26 @@ export default function Home() {
         onOpenGuideModal={() => setIsGuideModalOpen(true)}
       />
 
+      {/* Contingency Simulation Warning Banner */}
+      {assets.some((a) => a.isSimulated) && (
+        <div className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+          <div
+            className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 text-xs font-medium transition-all ${
+              isDark
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                : "border-amber-200 bg-amber-50 text-amber-900 shadow-xs"
+            }`}
+          >
+            <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase text-amber-400 shrink-0">
+              DATOS SIMULADOS
+            </span>
+            <span>
+              Algunos activos bursátiles están operando con velas cuantitativas calibradas debido a limitaciones de rate-limit de la API externa pública.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         

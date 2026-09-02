@@ -68,6 +68,7 @@ export interface Asset {
   volume24h: number;
   candles: Candle[];
   analysis?: TrendAnalysis;
+  isSimulated?: boolean;
 }
 
 export interface BacktestConfig {

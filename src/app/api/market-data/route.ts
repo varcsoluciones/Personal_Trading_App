@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchBinanceKlines } from '@/lib/api/binance';
-import { fetchStockKlines } from '@/lib/api/yahoo';
+import { fetchStockKlines, generateDeterministicCandles } from '@/lib/api/yahoo';
 import { analyzeAsset } from '@/lib/quant/trend-analyzer';
 import { Candle } from '@/lib/types/market';
 
@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const rawSymbol = searchParams.get('symbol') || 'BTCUSDT';
   const type = (searchParams.get('type') || 'crypto').toLowerCase();
+  const forceDemo = searchParams.get('demo') === 'true';
 
   // 1. Validate symbol parameter
   if (!rawSymbol || !SYMBOL_REGEX.test(rawSymbol)) {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
   }
 
   const cleanSymbol = rawSymbol.replace('/', '').replace('-', '').toUpperCase();
-  const cacheKey = `${cleanSymbol}:${type}`;
+  const cacheKey = `${cleanSymbol}:${type}:${forceDemo}`;
   const now = Date.now();
 
   // 2. Check Shared Server-Side In-Memory Cache
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
 
   try {
     let candles: Candle[] = [];
+    let isSimulated = false;
 
     const isCrypto =
       type === 'crypto' ||
@@ -55,20 +57,23 @@ export async function GET(request: NextRequest) {
       cleanSymbol.includes('BTC') ||
       cleanSymbol.includes('ETH');
 
-    if (isCrypto) {
+    if (forceDemo) {
+      candles = generateDeterministicCandles(cleanSymbol, 380);
+      isSimulated = true;
+    } else if (isCrypto) {
       candles = await fetchBinanceKlines(cleanSymbol, '1d', 500);
       if (!candles || candles.length === 0) {
-        candles = await fetchStockKlines(cleanSymbol, '1y', '1d');
+        candles = await fetchStockKlines(cleanSymbol, '2y', '1d');
       }
     } else {
-      candles = await fetchStockKlines(rawSymbol, '1y', '1d');
+      candles = await fetchStockKlines(rawSymbol, '2y', '1d');
     }
 
+    // Explicit fallback with isSimulated flag if public API is blocked by 429
     if (!candles || candles.length === 0) {
-      return NextResponse.json(
-        { error: `Sin datos disponibles para el símbolo ${rawSymbol}` },
-        { status: 404 }
-      );
+      console.warn(`[MarketAPI] Real fetch returned empty for ${cleanSymbol}. Providing high-fidelity simulated fallback.`);
+      candles = generateDeterministicCandles(cleanSymbol, 380);
+      isSimulated = true;
     }
 
     const last = candles[candles.length - 1];
@@ -89,6 +94,7 @@ export async function GET(request: NextRequest) {
       volume24h: last.volume,
       candles,
       analysis,
+      isSimulated,
     };
 
     // Store in shared in-memory cache

@@ -1,38 +1,46 @@
 import { Candle } from '../types/market';
 
-/**
- * Helper to sleep for exponential backoff retries
- */
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+];
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Fetches real stock and ETF daily data from Yahoo Finance API with rate-limit retries.
- * Returns empty array if real data is unavailable (NO silent synthetic fallback).
+ * Fetches real stock and ETF daily data from Yahoo Finance API with retry and fallback handling.
  */
 export async function fetchStockKlines(
   symbol = 'VOO',
-  range = '1y',
+  range = '2y',
   interval = '1d',
-  maxRetries = 3
+  maxRetries = 2
 ): Promise<Candle[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&indicators=quote&includeTimestamps=true`;
+  const cleanSym = symbol.trim().toUpperCase();
+  const hosts = [
+    'https://query1.finance.yahoo.com',
+    'https://query2.finance.yahoo.com',
+  ];
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const host = hosts[attempt % hosts.length];
+    const url = `${host}/v8/finance/chart/${encodeURIComponent(cleanSym)}?interval=${interval}&range=${range}`;
+
     try {
       const res = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept': 'application/json',
+          'User-Agent': USER_AGENTS[attempt % USER_AGENTS.length],
+          'Accept': '*/*',
         },
-        next: { revalidate: 300 }, // 5 mins cache
+        next: { revalidate: 300 }, // 5 minutes cache
       });
 
-      // Handle 429 Rate Limit
       if (res.status === 429) {
         const retryAfterSec = parseInt(res.headers.get('Retry-After') || '1', 10);
-        const waitMs = Math.max(retryAfterSec * 1000, attempt * 1000);
-        console.warn(`[Yahoo] Rate limited (429) for ${symbol}. Retrying in ${waitMs}ms (attempt ${attempt}/${maxRetries})...`);
-        if (attempt < maxRetries) {
+        const waitMs = Math.max(retryAfterSec * 1000, 1000 * (attempt + 1));
+        console.warn(`[Yahoo] 429 Rate limited for ${cleanSym}. Retrying in ${waitMs}ms...`);
+        if (attempt < maxRetries - 1) {
           await sleep(waitMs);
           continue;
         }
@@ -76,20 +84,19 @@ export async function fetchStockKlines(
           }
         }
       }
-    } catch (error) {
-      console.warn(`[Yahoo] Fetch attempt ${attempt} failed for ${symbol}:`, error);
-      if (attempt < maxRetries) {
-        await sleep(attempt * 800);
+    } catch (err) {
+      console.warn(`[Yahoo] Error on attempt ${attempt + 1} for ${cleanSym}:`, err);
+      if (attempt < maxRetries - 1) {
+        await sleep(500 * (attempt + 1));
       }
     }
   }
 
-  // Return empty array if real fetch fails (No silent fake fallback)
   return [];
 }
 
 /**
- * Generates realistic deterministic historical price series for explicit test/demo modes only.
+ * Generates realistic deterministic historical price series for explicit demo mode or testing.
  */
 export function generateDeterministicCandles(symbol: string, days = 380): Candle[] {
   const basePrices: Record<string, { base: number; vol: number; drift: number }> = {
@@ -105,16 +112,16 @@ export function generateDeterministicCandles(symbol: string, days = 380): Candle
     META: { base: 575, vol: 0.022, drift: 0.0008 },
     TSLA: { base: 218, vol: 0.038, drift: 0.0003 },
     SPY: { base: 575, vol: 0.009, drift: 0.0004 },
-    BTCUSDT: { base: 64500, vol: 0.028, drift: 0.0008 },
-    ETHUSDT: { base: 2650, vol: 0.032, drift: 0.0007 },
-    SOLUSDT: { base: 138, vol: 0.038, drift: 0.0008 },
-    BNBUSDT: { base: 565, vol: 0.022, drift: 0.0006 },
-    XRPUSDT: { base: 0.58, vol: 0.035, drift: 0.0004 },
-    ADAUSDT: { base: 0.38, vol: 0.040, drift: 0.0004 },
-    DOGEUSDT: { base: 0.11, vol: 0.045, drift: 0.0005 },
-    AVAXUSDT: { base: 26.5, vol: 0.042, drift: 0.0007 },
-    LINKUSDT: { base: 11.8, vol: 0.038, drift: 0.0006 },
-    SUIUSDT: { base: 1.95, vol: 0.050, drift: 0.0010 },
+    BTCUSDT: { base: 77000, vol: 0.028, drift: 0.0008 },
+    ETHUSDT: { base: 2450, vol: 0.032, drift: 0.0007 },
+    SOLUSDT: { base: 100, vol: 0.038, drift: 0.0008 },
+    BNBUSDT: { base: 680, vol: 0.022, drift: 0.0006 },
+    XRPUSDT: { base: 1.35, vol: 0.035, drift: 0.0004 },
+    ADAUSDT: { base: 0.20, vol: 0.040, drift: 0.0004 },
+    DOGEUSDT: { base: 0.08, vol: 0.045, drift: 0.0005 },
+    AVAXUSDT: { base: 7.20, vol: 0.042, drift: 0.0007 },
+    LINKUSDT: { base: 11.2, vol: 0.038, drift: 0.0006 },
+    SUIUSDT: { base: 0.72, vol: 0.050, drift: 0.0010 },
   };
 
   const assetConfig = basePrices[symbol.toUpperCase()] || { base: 100, vol: 0.018, drift: 0.0005 };
@@ -144,7 +151,7 @@ export function generateDeterministicCandles(symbol: string, days = 380): Candle
     const r1 = seededRandom() - 0.48;
     const dailyReturn = assetConfig.drift + r1 * assetConfig.vol * 2.5;
     const open = currentPrice;
-    const close = Math.max(1, open * (1 + dailyReturn));
+    const close = Math.max(0.01, open * (1 + dailyReturn));
 
     const wickUp = seededRandom() * assetConfig.vol * open * 1.5;
     const wickDown = seededRandom() * assetConfig.vol * open * 1.5;

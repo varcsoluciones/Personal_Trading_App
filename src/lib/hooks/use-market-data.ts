@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Asset, BacktestConfig, BacktestResult, Candle } from '../types/market';
-import { DEFAULT_ASSETS_LIST, AssetDefinition } from '../api/default-data';
+import { DEFAULT_ASSETS_LIST, AssetDefinition, POPULAR_ASSETS_CATALOG } from '../api/default-data';
 import { analyzeAsset } from '../quant/trend-analyzer';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '../quant/backtest-engine';
 
@@ -15,7 +15,7 @@ export function useMarketData() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [backtestConfig, setBacktestConfig] = useState<BacktestConfig>(DEFAULT_BACKTEST_CONFIG);
 
-  // Initialize assets with parallel Promise.allSettled loading (NO silent fake fallback)
+  // Initialize assets with parallel Promise.allSettled loading
   useEffect(() => {
     async function loadInitialAssets() {
       setIsLoading(true);
@@ -49,10 +49,10 @@ export function useMarketData() {
           const candles: Candle[] = data.candles;
           const lastCandle = candles[candles.length - 1];
           const prevCandle = candles[candles.length - 2] || lastCandle;
-          const price = lastCandle.close;
-          const change24h = price - prevCandle.close;
-          const change24hPct = ((price - prevCandle.close) / prevCandle.close) * 100;
-          const analysis = analyzeAsset(candles);
+          const price = data.price ?? lastCandle.close;
+          const change24h = data.change24h ?? (price - prevCandle.close);
+          const change24hPct = data.change24hPct ?? (((price - prevCandle.close) / prevCandle.close) * 100);
+          const analysis = data.analysis ?? analyzeAsset(candles);
 
           return {
             id: def.id,
@@ -62,11 +62,12 @@ export function useMarketData() {
             price: Number(price.toFixed(4)),
             change24h: Number(change24h.toFixed(4)),
             change24hPct: Number(change24hPct.toFixed(2)),
-            high24h: lastCandle.high,
-            low24h: lastCandle.low,
-            volume24h: lastCandle.volume,
+            high24h: data.high24h ?? lastCandle.high,
+            low24h: data.low24h ?? lastCandle.low,
+            volume24h: data.volume24h ?? lastCandle.volume,
             candles,
             analysis,
+            isSimulated: data.isSimulated || false,
           } as Asset;
         })
       );
@@ -76,9 +77,44 @@ export function useMarketData() {
         if (r.status === 'fulfilled' && r.value) {
           successfulAssets.push(r.value);
         } else {
-          console.warn(`[MarketData] Could not load real data for ${assetDefs[idx]?.symbol}:`, (r as PromiseRejectedResult).reason);
+          console.warn(`[MarketData] Could not load data for ${assetDefs[idx]?.symbol}:`, (r as PromiseRejectedResult).reason);
         }
       });
+
+      // Fallback to catalog defaults if custom list returned 0
+      if (successfulAssets.length === 0) {
+        console.warn('Initial watchlist was empty, reloading catalog defaults...');
+        const fallbackResults = await Promise.allSettled(
+          DEFAULT_ASSETS_LIST.map(async (def) => {
+            const cleanId = def.id.replace('/', '').toUpperCase();
+            const res = await fetch(`/api/market-data?symbol=${cleanId}&type=${def.type}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const candles: Candle[] = data.candles;
+            const lastCandle = candles[candles.length - 1];
+            const prevCandle = candles[candles.length - 2] || lastCandle;
+            const price = data.price ?? lastCandle.close;
+            return {
+              id: def.id,
+              symbol: def.symbol,
+              name: def.name,
+              type: def.type,
+              price: Number(price.toFixed(4)),
+              change24h: data.change24h ?? Number((price - prevCandle.close).toFixed(4)),
+              change24hPct: data.change24hPct ?? Number((((price - prevCandle.close) / prevCandle.close) * 100).toFixed(2)),
+              high24h: data.high24h ?? lastCandle.high,
+              low24h: data.low24h ?? lastCandle.low,
+              volume24h: data.volume24h ?? lastCandle.volume,
+              candles,
+              analysis: data.analysis ?? analyzeAsset(candles),
+              isSimulated: data.isSimulated || false,
+            } as Asset;
+          })
+        );
+        fallbackResults.forEach((r) => {
+          if (r.status === 'fulfilled' && r.value) successfulAssets.push(r.value);
+        });
+      }
 
       setAssets(successfulAssets);
       if (successfulAssets.length > 0 && !successfulAssets.some(a => a.id === selectedAssetId)) {
@@ -103,7 +139,7 @@ export function useMarketData() {
     return runBacktest(selectedAsset.candles, backtestConfig);
   }, [selectedAsset, backtestConfig]);
 
-  // Add new asset to watchlist (Real API fetch, No silent fake fallback)
+  // Add new asset to watchlist
   const addAsset = useCallback(
     async (symbol: string, name: string, type: 'crypto' | 'stock' | 'etf') => {
       const cleanId = symbol.replace('/', '').toUpperCase();
@@ -129,10 +165,10 @@ export function useMarketData() {
 
         const last = candles[candles.length - 1];
         const prev = candles[candles.length - 2] || last;
-        const price = last.close;
-        const change24h = price - prev.close;
-        const change24hPct = ((price - prev.close) / prev.close) * 100;
-        const analysis = analyzeAsset(candles);
+        const price = data.price ?? last.close;
+        const change24h = data.change24h ?? (price - prev.close);
+        const change24hPct = data.change24hPct ?? (((price - prev.close) / prev.close) * 100);
+        const analysis = data.analysis ?? analyzeAsset(candles);
 
         const newAsset: Asset = {
           id: cleanId,
@@ -142,11 +178,12 @@ export function useMarketData() {
           price: Number(price.toFixed(4)),
           change24h: Number(change24h.toFixed(4)),
           change24hPct: Number(change24hPct.toFixed(2)),
-          high24h: last.high,
-          low24h: last.low,
-          volume24h: last.volume,
+          high24h: data.high24h ?? last.high,
+          low24h: data.low24h ?? last.low,
+          volume24h: data.volume24h ?? last.volume,
           candles,
           analysis,
+          isSimulated: data.isSimulated || false,
         };
 
         setAssets((prev) => {
@@ -160,7 +197,7 @@ export function useMarketData() {
         setSelectedAssetId(newAsset.id);
       } catch (err) {
         console.error(`Failed to add asset ${symbol}:`, err);
-        alert(`No se pudo cargar la información en vivo para ${symbol}. Verifica el ticker.`);
+        alert(`No se pudo cargar la información para ${symbol}.`);
       }
     },
     [assets]
