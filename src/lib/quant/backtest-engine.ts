@@ -1,11 +1,12 @@
 import { BacktestConfig, BacktestResult, Candle, EquityPoint, Trade } from '../types/market';
-import { calculateEMA, calculateRSI } from './indicators';
+import { calculateADX, calculateATR, calculateEMA, calculateRSI } from './indicators';
+import { evaluateEntryCondition, evaluateExitCondition, calculateDynamicOrderSetup } from './strategy-rules';
 
 export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
   initialCapital: 1000,
   brokerPreset: 'IBKR_TIERED',
   commissionRate: 0.0005, // 0.05% (Interactive Brokers Tiered: ~$0.0035/share or 0.05%)
-  slippageRate: 0.0002,  // 0.02% (Interactive Brokers SmartRouting low slippage)
+  slippageRate: 0.0002,  // 0.02% (Interactive Brokers SmartRouting)
   rsiPeriod: 14,
   rsiOversold: 38,
   rsiOverbought: 70,
@@ -13,20 +14,18 @@ export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
   emaSlowPeriod: 50,
   stopLossPct: 3.5,
   takeProfitRatio: 2.2,  // 1:2.2 Risk/Reward
-  useAtrStop: false,
+  useAtrStop: true,      // Uses ATR dynamic stop matching live signals
 };
 
 /**
- * Runs a deterministic historical quantitative backtest on the given asset's candles
- * with real market friction (commissions + slippage).
+ * Deterministic quantitative backtest simulation engine without look-ahead bias.
+ * Unifies ATR stop loss/take profit, ADX filter, realistic IBKR friction, next-bar Open execution,
+ * and conservative intra-bar ambiguity resolution.
  */
-export function runBacktest(
-  candles: Candle[],
-  config: Partial<BacktestConfig> = {}
-): BacktestResult {
+export function runBacktest(candles: Candle[], config?: Partial<BacktestConfig>): BacktestResult {
   const cfg: BacktestConfig = { ...DEFAULT_BACKTEST_CONFIG, ...config };
-  
-  if (!candles || candles.length < Math.max(cfg.emaSlowPeriod, cfg.rsiPeriod) + 10) {
+
+  if (!candles || candles.length < Math.max(cfg.emaSlowPeriod + 10, 50)) {
     return getEmptyResult(cfg.initialCapital);
   }
 
@@ -34,21 +33,28 @@ export function runBacktest(
   const emaFast = calculateEMA(closes, cfg.emaFastPeriod);
   const emaSlow = calculateEMA(closes, cfg.emaSlowPeriod);
   const rsi = calculateRSI(closes, cfg.rsiPeriod);
+  const { atr } = calculateATR(candles, 14);
+  const { adx } = calculateADX(candles, 14);
 
   let capital = cfg.initialCapital;
   let inPosition = false;
+  let shares = 0;
   let entryPrice = 0;
   let entryDate = '';
   let entryIndex = 0;
-  let shares = 0;
   let stopLossPrice = 0;
   let takeProfitPrice = 0;
+  let entryFeeForThisTrade = 0;
+  let ambiguousBarsCount = 0;
+
+  // Signal queued at close of candle i for execution at open of candle i+1
+  let pendingSignal = false;
 
   const trades: Trade[] = [];
   const equityCurve: EquityPoint[] = [];
 
-  const startIdx = Math.max(cfg.emaSlowPeriod, cfg.rsiPeriod);
-  const initialAssetPrice = closes[startIdx];
+  const startIdx = Math.max(cfg.emaSlowPeriod, cfg.rsiPeriod, 20);
+  const initialAssetPrice = candles[startIdx].open || closes[startIdx];
   const buyAndHoldShares = cfg.initialCapital / initialAssetPrice;
 
   let peakEquity = cfg.initialCapital;
@@ -60,10 +66,40 @@ export function runBacktest(
     const candle = candles[i];
     const prevCandle = candles[i - 1];
     const currentPrice = candle.close;
+    const currentOpen = candle.open;
     const currentEmaFast = emaFast[i];
     const currentEmaSlow = emaSlow[i];
     const currentRsi = rsi[i];
-    const prevRsi = rsi[i - 1];
+    const prevRsi = rsi[i - 1] || currentRsi;
+    const currentAtr = atr[i] || (currentPrice * 0.02);
+    const currentAdx = adx[i] || 20;
+
+    // 1. EXECUTE PENDING ENTRY SIGNAL AT CANDLE OPEN (Eliminates look-ahead bias)
+    if (pendingSignal && !inPosition) {
+      const effectiveEntryPrice = currentOpen * (1 + cfg.slippageRate);
+      const entryFee = capital * cfg.commissionRate;
+      totalFeesPaid += entryFee;
+      entryFeeForThisTrade = entryFee;
+
+      const investableCapital = capital - entryFee;
+      shares = investableCapital / effectiveEntryPrice;
+      entryPrice = effectiveEntryPrice;
+      entryDate = candle.time;
+      entryIndex = i;
+
+      // Calculate Stop Loss & Take Profit using shared ATR Strategy Logic
+      const orderSetup = calculateDynamicOrderSetup(entryPrice, currentAtr, {
+        useAtrStop: cfg.useAtrStop,
+        atrMultiplier: 1.5,
+        takeProfitRatio: cfg.takeProfitRatio,
+        stopLossPct: cfg.stopLossPct,
+      });
+
+      stopLossPrice = orderSetup.stopLossPrice;
+      takeProfitPrice = orderSetup.takeProfitPrice;
+      inPosition = true;
+      pendingSignal = false;
+    }
 
     // Track current position value
     let currentEquity = capital;
@@ -74,7 +110,7 @@ export function runBacktest(
     // Check Buy & Hold benchmark equity
     const buyAndHoldEquity = buyAndHoldShares * currentPrice;
 
-    // Check Drawdown
+    // Check Peak & Drawdown
     if (currentEquity > peakEquity) {
       peakEquity = currentEquity;
     }
@@ -85,34 +121,50 @@ export function runBacktest(
       maxDrawdownUSD = currentDrawdownUSD;
     }
 
-    // If currently in a trade, check exit conditions (Stop Loss, Take Profit, Signal Reversal)
+    // 2. IF IN POSITION, CHECK EXITS (Conservative ambiguity handling)
     if (inPosition) {
       let exitPrice = 0;
       let exitReason: 'TAKE_PROFIT' | 'STOP_LOSS' | 'SIGNAL_EXIT' | 'END_OF_DATA' = 'SIGNAL_EXIT';
 
-      // 1. Take Profit hit during bar high
-      if (candle.high >= takeProfitPrice) {
-        exitPrice = takeProfitPrice;
-        exitReason = 'TAKE_PROFIT';
-      }
-      // 2. Stop Loss hit during bar low
-      else if (candle.low <= stopLossPrice) {
+      const tpTriggered = candle.high >= takeProfitPrice;
+      const slTriggered = candle.low <= stopLossPrice;
+
+      // Conservative check: if BOTH TP and SL were breached in the same bar, assume Stop Loss triggered first
+      if (tpTriggered && slTriggered) {
         exitPrice = stopLossPrice;
         exitReason = 'STOP_LOSS';
-      }
-      // 3. Technical Exit: RSI overbought or EMA fast cross under EMA slow
-      else if (currentRsi >= cfg.rsiOverbought || (currentEmaFast < currentEmaSlow && currentPrice < currentEmaSlow)) {
-        exitPrice = currentPrice;
-        exitReason = 'SIGNAL_EXIT';
-      }
-      // 4. End of backtest data
-      else if (i === candles.length - 1) {
-        exitPrice = currentPrice;
-        exitReason = 'END_OF_DATA';
+        ambiguousBarsCount++;
+      } else if (tpTriggered) {
+        exitPrice = takeProfitPrice;
+        exitReason = 'TAKE_PROFIT';
+      } else if (slTriggered) {
+        exitPrice = stopLossPrice;
+        exitReason = 'STOP_LOSS';
+      } else {
+        // Technical Exit Evaluation
+        const exitCheck = evaluateExitCondition({
+          currentPrice,
+          currentEmaFast,
+          currentEmaSlow,
+          currentRsi,
+          config: {
+            rsiOverbought: cfg.rsiOverbought,
+            emaFastPeriod: cfg.emaFastPeriod,
+            emaSlowPeriod: cfg.emaSlowPeriod,
+          },
+        });
+
+        if (exitCheck.shouldExit) {
+          exitPrice = currentPrice;
+          exitReason = 'SIGNAL_EXIT';
+        } else if (i === candles.length - 1) {
+          exitPrice = currentPrice;
+          exitReason = 'END_OF_DATA';
+        }
       }
 
       if (exitPrice > 0) {
-        // Apply slippage on exit: selling gets slippage below exit price
+        // Apply slippage on exit
         const realizedExitPrice = exitPrice * (1 - cfg.slippageRate);
         const grossValue = shares * realizedExitPrice;
         const exitFee = grossValue * cfg.commissionRate;
@@ -128,6 +180,9 @@ export function runBacktest(
         capital = netCapital;
         currentEquity = capital;
 
+        // Correct total commissions per trade (Entry Fee + Exit Fee)
+        const totalTradeFees = Number((entryFeeForThisTrade + exitFee).toFixed(2));
+
         trades.push({
           id: `trade-${trades.length + 1}`,
           entryDate,
@@ -137,49 +192,40 @@ export function runBacktest(
           exitPrice: Number(exitPrice.toFixed(4)),
           shares: Number(shares.toFixed(4)),
           grossPnl: Number(grossPnl.toFixed(2)),
-          fees: Number((trades[trades.length - 1]?.fees || 0 + exitFee).toFixed(2)),
+          fees: totalTradeFees,
           slippageCost: Number(exitSlippage.toFixed(2)),
           netPnl: Number(netPnl.toFixed(2)),
           netPnlPct: Number(netPnlPct.toFixed(2)),
           exitReason,
           capitalAfter: Number(capital.toFixed(2)),
-          holdingDays: i - entryIndex,
+          holdingDays: Math.max(1, i - entryIndex),
         });
 
         inPosition = false;
         shares = 0;
+        entryFeeForThisTrade = 0;
       }
     }
 
-    // If not in position, check Entry Conditions
-    if (!inPosition && i < candles.length - 1) {
-      // Strategy Rule:
-      // Trend: Fast EMA > Slow EMA (Bullish Trend Filter)
-      // Momentum: RSI bounced up from oversold region or is in favorable pullback zone
-      const trendIsBullish = currentEmaFast > currentEmaSlow && currentPrice > currentEmaSlow;
-      const rsiBouncing = prevRsi <= cfg.rsiOversold + 5 && currentRsi > prevRsi && currentRsi < 62;
-      const pullbackEntry = trendIsBullish && (rsiBouncing || (currentRsi >= 35 && currentRsi <= 52 && currentPrice >= currentEmaSlow));
+    // 3. IF NOT IN POSITION, EVALUATE ENTRY SIGNAL AT CLOSE OF CANDLE i
+    if (!inPosition && !pendingSignal && i < candles.length - 1) {
+      const entryCheck = evaluateEntryCondition({
+        currentPrice,
+        currentEmaFast,
+        currentEmaSlow,
+        currentRsi,
+        prevRsi,
+        currentAdx,
+        config: {
+          rsiOversold: cfg.rsiOversold,
+          emaFastPeriod: cfg.emaFastPeriod,
+          emaSlowPeriod: cfg.emaSlowPeriod,
+          adxMin: 20, // Filter matching live signals
+        },
+      });
 
-      if (pullbackEntry) {
-        // Execute Entry
-        // Slippage on entry: buying gets slippage above candle close
-        const effectiveEntryPrice = currentPrice * (1 + cfg.slippageRate);
-        const entryFee = capital * cfg.commissionRate;
-        totalFeesPaid += entryFee;
-
-        const investableCapital = capital - entryFee;
-        shares = investableCapital / effectiveEntryPrice;
-        entryPrice = effectiveEntryPrice;
-        entryDate = candle.time;
-        entryIndex = i;
-
-        // Set Stop Loss & Take Profit
-        const slPct = cfg.stopLossPct / 100;
-        stopLossPrice = entryPrice * (1 - slPct);
-        const riskAmount = entryPrice - stopLossPrice;
-        takeProfitPrice = entryPrice + (riskAmount * cfg.takeProfitRatio);
-
-        inPosition = true;
+      if (entryCheck.shouldEnter) {
+        pendingSignal = true; // Signal confirmed; enter on next bar open
       }
     }
 
@@ -234,6 +280,8 @@ export function runBacktest(
     totalFeesPaid: Number(totalFeesPaid.toFixed(2)),
     equityCurve,
     trades: trades.reverse(), // most recent first
+    lowSampleWarning: totalTrades < 30,
+    ambiguousBarsCount,
   };
 }
 
@@ -259,5 +307,7 @@ function getEmptyResult(initialCapital: number): BacktestResult {
     totalFeesPaid: 0,
     equityCurve: [],
     trades: [],
+    lowSampleWarning: true,
+    ambiguousBarsCount: 0,
   };
 }

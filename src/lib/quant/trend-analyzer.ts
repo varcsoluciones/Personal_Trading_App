@@ -1,3 +1,4 @@
+import { evaluateEntryCondition, evaluateExitCondition, calculateDynamicOrderSetup } from './strategy-rules';
 import { AssetCategory, Candle, RiskLevel, SignalType, TrendAnalysis, TrendDirection } from '../types/market';
 import {
   calculateADX,
@@ -153,62 +154,54 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
   else if (currentAdx >= 18) strengthLabel = 'Moderada';
   else strengthLabel = 'Débil / Rango';
 
-  // 6. Signal Determination (Instant State)
+  // 6. Signal Determination (Instant State using Shared Strategy Rules)
   let signal: SignalType = 'ESPERAR / MANTENER';
   let signalReason = 'Sin confirmación de alta probabilidad en este momento.';
 
-  if (trend === 'BULLISH') {
-    if (currentRsi >= 38 && currentRsi <= 58 && currentPrice >= currentEma50 && currentAdx >= 20) {
-      signal = 'OPORTUNIDAD DE ENTRADA';
-      signalReason = 'Retroceso saludable (pullback) hacia soporte con RSI favorable y tendencia alcista intacta.';
-    } else if (currentRsi < 38 && rsiDiv === 'BULLISH') {
-      signal = 'OPORTUNIDAD DE ENTRADA';
-      signalReason = 'Divergencia alcista en sobreventa con alta probabilidad de rebote institucional.';
-    } else if (riskLevel === 'ALTO' || currentRsi > 78) {
-      signal = 'OPORTUNIDAD DE SALIDA';
-      signalReason = 'Riesgo alto de agotamiento/reversión bajista inminente. Tomar beneficios sugerido.';
-    } else {
-      signal = 'ESPERAR / MANTENER';
-      signalReason = 'Tendencia alcista activa en curso. Mantener posición con trailing stop.';
-    }
-  } else if (trend === 'BEARISH') {
-    if (rsiDiv === 'BULLISH' && currentRsi < 30) {
-      signal = 'OPORTUNIDAD DE ENTRADA';
-      signalReason = 'Rebote táctico por sobreventa extrema y divergencia alcista.';
-    } else if (riskLevel === 'ALTO') {
-      signal = 'ESPERAR / MANTENER';
-      signalReason = 'Fuerza vendedora desacelerando. Esperar confirmación de giro.';
-    } else {
-      signal = 'OPORTUNIDAD DE SALIDA';
-      signalReason = 'Estructura bajista dominante. Evitar compras o cerrar posiciones largas.';
-    }
+  const entryCheck = evaluateEntryCondition({
+    currentPrice,
+    currentEmaFast: currentEma20,
+    currentEmaSlow: currentEma50,
+    currentRsi,
+    prevRsi: rsiValues[lastIdx - 1] || currentRsi,
+    currentAdx,
+    rsiDiv,
+  });
+
+  const exitCheck = evaluateExitCondition({
+    currentPrice,
+    currentEmaFast: currentEma20,
+    currentEmaSlow: currentEma50,
+    currentRsi,
+  });
+
+  if (entryCheck.shouldEnter) {
+    signal = 'OPORTUNIDAD DE ENTRADA';
+    signalReason = entryCheck.reason;
+  } else if (exitCheck.shouldExit || (trend === 'BEARISH' && currentRsi > 45)) {
+    signal = 'OPORTUNIDAD DE SALIDA';
+    signalReason = exitCheck.reason;
   } else {
-    // Neutral / Lateral
-    if (currentRsi <= 33) {
-      signal = 'OPORTUNIDAD DE ENTRADA';
-      signalReason = 'Rebote en soporte de rango con RSI bajo.';
-    } else if (currentRsi >= 67) {
-      signal = 'OPORTUNIDAD DE SALIDA';
-      signalReason = 'Resistencia superior del rango alcanzada.';
-    } else {
-      signal = 'ESPERAR / MANTENER';
-      signalReason = 'Consolidación en el medio del rango. Sin ventaja estadística clara.';
-    }
+    signal = 'ESPERAR / MANTENER';
+    signalReason = trend === 'BULLISH'
+      ? 'Tendencia alcista activa en curso. Mantener posición.'
+      : 'Consolidación o sin ventaja estadística clara.';
   }
 
-  // 7. Dynamic Stop Loss & Take Profit (1:2 R:R Minimum)
-  const stopLossDistance = Math.max(currentAtr * 1.5, currentPrice * 0.025);
-  const suggestedStopLoss = Math.max(0.0001, currentPrice - stopLossDistance);
-  const suggestedStopLossPct = ((currentPrice - suggestedStopLoss) / currentPrice) * 100;
+  // 7. Dynamic Stop Loss & Take Profit (Shared ATR Strategy Logic)
+  const orderCalc = calculateDynamicOrderSetup(currentPrice, currentAtr, {
+    useAtrStop: true,
+    atrMultiplier: 1.5,
+    takeProfitRatio: 2.2,
+  });
 
-  const rewardDistance = stopLossDistance * 2.2; // 1:2.2 R:R
-  const suggestedTakeProfit = currentPrice + rewardDistance;
-  const suggestedTakeProfitPct = ((suggestedTakeProfit - currentPrice) / currentPrice) * 100;
-  const riskRewardRatio = Number((suggestedTakeProfitPct / suggestedStopLossPct).toFixed(2));
-
-  // Risk $ based on 1 unit / standard $1000 portfolio allocation
-  const potentialRiskUSD = Number(stopLossDistance.toFixed(2));
-  const potentialRewardUSD = Number(rewardDistance.toFixed(2));
+  const suggestedStopLoss = orderCalc.stopLossPrice;
+  const suggestedStopLossPct = orderCalc.stopLossPct;
+  const suggestedTakeProfit = orderCalc.takeProfitPrice;
+  const suggestedTakeProfitPct = orderCalc.takeProfitPct;
+  const riskRewardRatio = orderCalc.riskRewardRatio;
+  const potentialRiskUSD = orderCalc.potentialRiskUSD;
+  const potentialRewardUSD = orderCalc.potentialRewardUSD;
 
   // 8. Smart Opportunity Categorization & Composite Score (0 - 100)
   let opportunityCategory: AssetCategory = 'trend';

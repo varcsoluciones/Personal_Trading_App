@@ -1,70 +1,95 @@
 import { Candle } from '../types/market';
 
 /**
- * Fetches real stock and ETF daily data from Yahoo Finance API with fallback generator
+ * Helper to sleep for exponential backoff retries
+ */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Fetches real stock and ETF daily data from Yahoo Finance API with rate-limit retries.
+ * Returns empty array if real data is unavailable (NO silent synthetic fallback).
  */
 export async function fetchStockKlines(
   symbol = 'VOO',
   range = '1y',
-  interval = '1d'
+  interval = '1d',
+  maxRetries = 3
 ): Promise<Candle[]> {
-  try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&indicators=quote&includeTimestamps=true`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&indicators=quote&includeTimestamps=true`;
 
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-      next: { revalidate: 300 }, // 5 mins cache
-    });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+        },
+        next: { revalidate: 300 }, // 5 mins cache
+      });
 
-    if (res.ok) {
-      const json = await res.json();
-      const result = json?.chart?.result?.[0];
-      if (result && result.timestamp && result.indicators?.quote?.[0]) {
-        const timestamps: number[] = result.timestamp;
-        const quotes = result.indicators.quote[0];
-        const opens: (number | null)[] = quotes.open || [];
-        const highs: (number | null)[] = quotes.high || [];
-        const lows: (number | null)[] = quotes.low || [];
-        const closes: (number | null)[] = quotes.close || [];
-        const volumes: (number | null)[] = quotes.volume || [];
+      // Handle 429 Rate Limit
+      if (res.status === 429) {
+        const retryAfterSec = parseInt(res.headers.get('Retry-After') || '1', 10);
+        const waitMs = Math.max(retryAfterSec * 1000, attempt * 1000);
+        console.warn(`[Yahoo] Rate limited (429) for ${symbol}. Retrying in ${waitMs}ms (attempt ${attempt}/${maxRetries})...`);
+        if (attempt < maxRetries) {
+          await sleep(waitMs);
+          continue;
+        }
+        return [];
+      }
 
-        const candles: Candle[] = [];
-        for (let i = 0; i < timestamps.length; i++) {
-          const c = closes[i];
-          const o = opens[i];
-          const h = highs[i];
-          const l = lows[i];
+      if (res.ok) {
+        const json = await res.json();
+        const result = json?.chart?.result?.[0];
+        if (result && result.timestamp && result.indicators?.quote?.[0]) {
+          const timestamps: number[] = result.timestamp;
+          const quotes = result.indicators.quote[0];
+          const opens: (number | null)[] = quotes.open || [];
+          const highs: (number | null)[] = quotes.high || [];
+          const lows: (number | null)[] = quotes.low || [];
+          const closes: (number | null)[] = quotes.close || [];
+          const volumes: (number | null)[] = quotes.volume || [];
 
-          if (c !== null && o !== null && h !== null && l !== null && !isNaN(c)) {
-            const dateStr = new Date(timestamps[i] * 1000).toISOString().split('T')[0];
-            candles.push({
-              time: dateStr,
-              open: Number(o.toFixed(2)),
-              high: Number(h.toFixed(2)),
-              low: Number(l.toFixed(2)),
-              close: Number(c.toFixed(2)),
-              volume: Number(volumes[i] || 1000000),
-            });
+          const candles: Candle[] = [];
+          for (let i = 0; i < timestamps.length; i++) {
+            const c = closes[i];
+            const o = opens[i];
+            const h = highs[i];
+            const l = lows[i];
+
+            if (c !== null && o !== null && h !== null && l !== null && !isNaN(c)) {
+              const dateStr = new Date(timestamps[i] * 1000).toISOString().split('T')[0];
+              candles.push({
+                time: dateStr,
+                open: Number(o.toFixed(2)),
+                high: Number(h.toFixed(2)),
+                low: Number(l.toFixed(2)),
+                close: Number(c.toFixed(2)),
+                volume: Number(volumes[i] || 1000000),
+              });
+            }
+          }
+
+          if (candles.length > 20) {
+            return candles;
           }
         }
-
-        if (candles.length > 20) {
-          return candles;
-        }
+      }
+    } catch (error) {
+      console.warn(`[Yahoo] Fetch attempt ${attempt} failed for ${symbol}:`, error);
+      if (attempt < maxRetries) {
+        await sleep(attempt * 800);
       }
     }
-  } catch (error) {
-    console.warn(`Yahoo finance direct fetch failed for ${symbol}, switching to deterministic model:`, error);
   }
 
-  // High-fidelity quant generator if network error / rate limit
-  return generateDeterministicCandles(symbol, 380);
+  // Return empty array if real fetch fails (No silent fake fallback)
+  return [];
 }
 
 /**
- * Generates realistic deterministic historical price series based on authentic asset parameters
+ * Generates realistic deterministic historical price series for explicit test/demo modes only.
  */
 export function generateDeterministicCandles(symbol: string, days = 380): Candle[] {
   const basePrices: Record<string, { base: number; vol: number; drift: number }> = {
@@ -96,9 +121,8 @@ export function generateDeterministicCandles(symbol: string, days = 380): Candle
   const candles: Candle[] = [];
 
   const now = new Date();
-  let currentPrice = assetConfig.base * 0.82; // Start from 200 days ago
+  let currentPrice = assetConfig.base * 0.82;
 
-  // Seeded pseudo-random based on symbol string
   let seed = 0;
   for (let i = 0; i < symbol.length; i++) seed += symbol.charCodeAt(i);
 
@@ -109,7 +133,6 @@ export function generateDeterministicCandles(symbol: string, days = 380): Candle
 
   for (let i = days; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    // Skip weekends for stocks/etfs
     const dayOfWeek = d.getDay();
     const isCrypto = symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH');
     if (!isCrypto && (dayOfWeek === 0 || dayOfWeek === 6)) {
@@ -118,7 +141,7 @@ export function generateDeterministicCandles(symbol: string, days = 380): Candle
 
     const dateStr = d.toISOString().split('T')[0];
 
-    const r1 = seededRandom() - 0.48; // slight positive bias
+    const r1 = seededRandom() - 0.48;
     const dailyReturn = assetConfig.drift + r1 * assetConfig.vol * 2.5;
     const open = currentPrice;
     const close = Math.max(1, open * (1 + dailyReturn));

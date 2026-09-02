@@ -131,4 +131,6 @@ export interface BacktestResult {
   totalFeesPaid: number;
   equityCurve: EquityPoint[];
   trades: Trade[];
+  lowSampleWarning?: boolean;
+  ambiguousBarsCount?: number;
 }
