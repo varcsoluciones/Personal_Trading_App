@@ -309,3 +309,107 @@ export function detectRSIDivergence(
 
   return 'NONE';
 }
+
+/**
+ * Calculates standard On-Balance Volume (OBV)
+ */
+export function calculateOBV(candles: Candle[]): number[] {
+  const len = candles.length;
+  if (len === 0) return [];
+  const obv: number[] = new Array(len).fill(0);
+  obv[0] = candles[0].volume || 0;
+
+  for (let i = 1; i < len; i++) {
+    const currentClose = candles[i].close;
+    const prevClose = candles[i - 1].close;
+    const volume = candles[i].volume || 0;
+
+    if (currentClose > prevClose) {
+      obv[i] = obv[i - 1] + volume;
+    } else if (currentClose < prevClose) {
+      obv[i] = obv[i - 1] - volume;
+    } else {
+      obv[i] = obv[i - 1];
+    }
+  }
+  return obv;
+}
+
+/**
+ * Validates volume participation by comparing recent average volume against historical average.
+ */
+export function calculateVolumeConfirmation(
+  candles: Candle[],
+  lookback = 20,
+  recentBars = 4
+): { isConfirmed: boolean; volumeRatio: number } {
+  const len = candles.length;
+  if (len < lookback + recentBars) {
+    return { isConfirmed: true, volumeRatio: 1.0 };
+  }
+
+  const recentCandles = candles.slice(-recentBars);
+  const historicalCandles = candles.slice(-(lookback + recentBars), -recentBars);
+
+  const avgRecent = recentCandles.reduce((sum, c) => sum + (c.volume || 0), 0) / recentBars;
+  const avgHist = historicalCandles.reduce((sum, c) => sum + (c.volume || 0), 0) / historicalCandles.length;
+
+  if (avgHist === 0) {
+    return { isConfirmed: true, volumeRatio: 1.0 };
+  }
+
+  const volumeRatio = Number((avgRecent / avgHist).toFixed(2));
+  const isConfirmed = volumeRatio >= 0.85; // Institutional backing threshold
+
+  return { isConfirmed, volumeRatio };
+}
+
+/**
+ * Aggregates daily candlestick data into weekly OHLCV bars (Monday to Sunday).
+ */
+export function aggregateToWeekly(dailyCandles: Candle[]): Candle[] {
+  if (!dailyCandles || dailyCandles.length === 0) return [];
+
+  const weeklyMap = new Map<string, Candle[]>();
+
+  for (const candle of dailyCandles) {
+    const d = new Date(candle.time);
+    const day = d.getUTCDay();
+    const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
+    const weekKey = monday.toISOString().split('T')[0];
+
+    if (!weeklyMap.has(weekKey)) {
+      weeklyMap.set(weekKey, []);
+    }
+    weeklyMap.get(weekKey)!.push(candle);
+  }
+
+  const weeklyCandles: Candle[] = [];
+
+  weeklyMap.forEach((days, weekKey) => {
+    if (days.length === 0) return;
+    const open = days[0].open;
+    const close = days[days.length - 1].close;
+    let high = -Infinity;
+    let low = Infinity;
+    let volume = 0;
+
+    for (const day of days) {
+      if (day.high > high) high = day.high;
+      if (day.low < low) low = day.low;
+      volume += (day.volume || 0);
+    }
+
+    weeklyCandles.push({
+      time: weekKey,
+      open: Number(open.toFixed(2)),
+      high: Number(high.toFixed(2)),
+      low: Number(low.toFixed(2)),
+      close: Number(close.toFixed(2)),
+      volume,
+    });
+  });
+
+  return weeklyCandles;
+}

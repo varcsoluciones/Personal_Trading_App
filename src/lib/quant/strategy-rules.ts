@@ -8,6 +8,8 @@ export interface StrategyRulesConfig {
   takeProfitRatio?: number;
   useAtrStop?: boolean;
   stopLossPct?: number;
+  requireVolumeConfirmation?: boolean;
+  requireWeeklyAlignment?: boolean;
 }
 
 export const DEFAULT_STRATEGY_CONFIG: Required<StrategyRulesConfig> = {
@@ -20,6 +22,8 @@ export const DEFAULT_STRATEGY_CONFIG: Required<StrategyRulesConfig> = {
   takeProfitRatio: 2.2,
   useAtrStop: true,
   stopLossPct: 3.5,
+  requireVolumeConfirmation: true,
+  requireWeeklyAlignment: true,
 };
 
 /**
@@ -34,26 +38,55 @@ export function evaluateEntryCondition(params: {
   prevRsi: number;
   currentAdx: number;
   rsiDiv?: "BULLISH" | "BEARISH" | "NONE";
+  volumeConfirmed?: boolean;
+  volumeRatio?: number;
+  weeklyTrend?: "BULLISH" | "BEARISH" | "NEUTRAL";
   config?: StrategyRulesConfig;
 }): { shouldEnter: boolean; reason: string } {
   const cfg = { ...DEFAULT_STRATEGY_CONFIG, ...params.config };
-  const { currentPrice, currentEmaFast, currentEmaSlow, currentRsi, prevRsi, currentAdx, rsiDiv } = params;
+  const {
+    currentPrice,
+    currentEmaFast,
+    currentEmaSlow,
+    currentRsi,
+    prevRsi,
+    currentAdx,
+    rsiDiv,
+    volumeConfirmed,
+    weeklyTrend,
+  } = params;
+
+  // 1. Multi-Timeframe Filter: Weekly trend must not be BEARISH
+  if (cfg.requireWeeklyAlignment && weeklyTrend === "BEARISH") {
+    return {
+      shouldEnter: false,
+      reason: "Tendencia semanal en contra (bajista), esperando alineación temporal.",
+    };
+  }
+
+  // 2. Volume Confirmation Filter: Recent volume must support the price action
+  if (cfg.requireVolumeConfirmation && volumeConfirmed === false) {
+    return {
+      shouldEnter: false,
+      reason: "Volumen insuficiente para confirmar el rebote institucional.",
+    };
+  }
 
   const trendIsBullish = currentEmaFast > currentEmaSlow && currentPrice >= currentEmaSlow;
   const adxFilter = currentAdx >= cfg.adxMin;
 
-  // 1. Pullback to support in bullish trend with healthy RSI and ADX filter
+  // 3. Pullback to support in bullish trend with healthy RSI, ADX & Volume confirmation
   const rsiPullback = currentRsi >= cfg.rsiOversold && currentRsi <= 58;
   const rsiBouncing = prevRsi <= cfg.rsiOversold + 5 && currentRsi > prevRsi && currentRsi < 62;
 
   if (trendIsBullish && adxFilter && (rsiPullback || rsiBouncing)) {
     return {
       shouldEnter: true,
-      reason: "Retroceso saludable (pullback) hacia soporte con RSI favorable y filtro ADX >= " + cfg.adxMin,
+      reason: "Retroceso saludable (pullback) hacia soporte con RSI favorable, filtro ADX >= " + cfg.adxMin + " y confirmación de volumen.",
     };
   }
 
-  // 2. Bullish RSI divergence near support
+  // 4. Bullish RSI divergence near support with volume backing
   if (rsiDiv === "BULLISH" && currentRsi < cfg.rsiOversold + 5 && currentPrice >= currentEmaSlow * 0.98) {
     return {
       shouldEnter: true,

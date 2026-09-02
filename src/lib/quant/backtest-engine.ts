@@ -1,5 +1,5 @@
 import { BacktestConfig, BacktestResult, Candle, EquityPoint, Trade, WalkForwardMetrics } from '../types/market';
-import { calculateADX, calculateATR, calculateEMA, calculateRSI } from './indicators';
+import { calculateADX, calculateATR, calculateEMA, calculateRSI, calculateVolumeConfirmation, aggregateToWeekly } from './indicators';
 import {
   evaluateEntryCondition,
   evaluateExitCondition,
@@ -48,6 +48,29 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
   const rsi = calculateRSI(closes, cfg.rsiPeriod);
   const { atr } = calculateATR(candles, 14);
   const { adx } = calculateADX(candles, 14);
+
+  // Precompute Weekly Trend Map for Multi-Timeframe Alignment
+  const weeklyCandles = aggregateToWeekly(candles);
+  const weeklyTrendMap = new Map<string, 'BULLISH' | 'BEARISH' | 'NEUTRAL'> ();
+
+  if (weeklyCandles.length >= 8) {
+    const wCloses = weeklyCandles.map((c) => c.close);
+    const wEmaFast = calculateEMA(wCloses, Math.min(20, wCloses.length - 1));
+    const wEmaSlow = calculateEMA(wCloses, Math.min(50, wCloses.length - 1));
+    for (let w = 0; w < weeklyCandles.length; w++) {
+      const wClose = wCloses[w];
+      const f = wEmaFast[w];
+      const s = wEmaSlow[w];
+      let trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
+      if (!isNaN(f) && !isNaN(s)) {
+        if (f > s && wClose >= s) trend = 'BULLISH';
+        else if (f < s && wClose < s) trend = 'BEARISH';
+      } else if (!isNaN(f)) {
+        trend = wClose >= f ? 'BULLISH' : 'BEARISH';
+      }
+      weeklyTrendMap.set(weeklyCandles[w].time, trend);
+    }
+  }
 
   let capital = cfg.initialCapital;
   let inPosition = false;
@@ -235,6 +258,20 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
 
     // 3. IF NOT IN POSITION & NO PENDING ORDER, EVALUATE ENTRY AT CLOSE OF CANDLE i
     if (!inPosition && !pendingOrder && i < candles.length - 1) {
+      // Find weekly trend corresponding to candle date
+      const d = new Date(candle.time);
+      const day = d.getUTCDay();
+      const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
+      const weekKey = monday.toISOString().split('T')[0];
+      const weeklyTrend = weeklyTrendMap.get(weekKey) || 'NEUTRAL';
+
+      // Calculate volume confirmation up to bar i (no look-ahead bias)
+      const { isConfirmed: volumeConfirmed, volumeRatio } = calculateVolumeConfirmation(
+        candles.slice(Math.max(0, i - 25), i + 1),
+        20
+      );
+
       const entryCheck = evaluateEntryCondition({
         currentPrice,
         currentEmaFast,
@@ -242,11 +279,16 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
         currentRsi,
         prevRsi,
         currentAdx,
+        volumeConfirmed,
+        volumeRatio,
+        weeklyTrend,
         config: {
           rsiOversold: cfg.rsiOversold,
           emaFastPeriod: cfg.emaFastPeriod,
           emaSlowPeriod: cfg.emaSlowPeriod,
           adxMin: 20,
+          requireVolumeConfirmation: true,
+          requireWeeklyAlignment: true,
         },
       });
 

@@ -6,6 +6,8 @@ import {
   calculateEMA,
   calculateRSI,
   detectRSIDivergence,
+  calculateVolumeConfirmation,
+  aggregateToWeekly,
 } from './indicators';
 
 /**
@@ -154,7 +156,32 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
   else if (currentAdx >= 18) strengthLabel = 'Moderada';
   else strengthLabel = 'Débil / Rango';
 
-  // 6. Signal Determination (Instant State using Shared Strategy Rules)
+  // 5b. Multi-Timeframe (Weekly) & Volume Confirmations
+  const { isConfirmed: volumeConfirmed, volumeRatio } = calculateVolumeConfirmation(candles, 20);
+
+  const weeklyCandles = aggregateToWeekly(candles);
+  let weeklyTrend: TrendDirection = 'NEUTRAL';
+  if (weeklyCandles.length >= 8) {
+    const weeklyCloses = weeklyCandles.map((c) => c.close);
+    const wEmaFast = calculateEMA(weeklyCloses, Math.min(20, weeklyCloses.length - 1));
+    const wEmaSlow = calculateEMA(weeklyCloses, Math.min(50, weeklyCloses.length - 1));
+    const lastWIdx = weeklyCloses.length - 1;
+    const currentWEmaFast = wEmaFast[lastWIdx];
+    const currentWEmaSlow = wEmaSlow[lastWIdx];
+    const currentWClose = weeklyCloses[lastWIdx];
+
+    if (!isNaN(currentWEmaFast) && !isNaN(currentWEmaSlow)) {
+      if (currentWEmaFast > currentWEmaSlow && currentWClose >= currentWEmaSlow) {
+        weeklyTrend = 'BULLISH';
+      } else if (currentWEmaFast < currentWEmaSlow && currentWClose < currentWEmaSlow) {
+        weeklyTrend = 'BEARISH';
+      }
+    } else if (!isNaN(currentWEmaFast)) {
+      weeklyTrend = currentWClose >= currentWEmaFast ? 'BULLISH' : 'BEARISH';
+    }
+  }
+
+  // 6. Signal Determination (Instant State with Volume & Multi-Timeframe Filters)
   let signal: SignalType = 'ESPERAR / MANTENER';
   let signalReason = 'Sin confirmación de alta probabilidad en este momento.';
 
@@ -166,6 +193,9 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
     prevRsi: rsiValues[lastIdx - 1] || currentRsi,
     currentAdx,
     rsiDiv,
+    volumeConfirmed,
+    volumeRatio,
+    weeklyTrend,
   });
 
   const exitCheck = evaluateExitCondition({
@@ -247,6 +277,14 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
   // Reversal Risk discount (0 to -20 pts)
   if (riskLevel === 'BAJO') score += 10;
   else if (riskLevel === 'ALTO') score -= 20;
+
+  // Volume confirmation adjustment
+  if (!volumeConfirmed || volumeRatio < 0.8) score -= 10;
+  else if (volumeRatio >= 1.2) score += 6;
+
+  // Multi-timeframe weekly alignment adjustment
+  if (weeklyTrend === 'BULLISH') score += 8;
+  else if (weeklyTrend === 'BEARISH') score -= 15;
 
   // Signal component
   if (signal === 'OPORTUNIDAD DE ENTRADA') score += 15;
