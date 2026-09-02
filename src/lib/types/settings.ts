@@ -20,6 +20,7 @@ export interface AppSettings {
   confettiCelebration: boolean;
   defaultRiskReward: number;
   defaultView: 'grid' | 'table';
+  screenerViewMode?: 'grid' | 'table';
   lastSavedAt?: string;
 }
 
@@ -134,4 +135,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   confettiCelebration: true,
   defaultRiskReward: 2.2,
   defaultView: 'table',
+  screenerViewMode: 'grid',
 };
