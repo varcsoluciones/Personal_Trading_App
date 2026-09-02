@@ -340,8 +340,8 @@ export function OpportunityScreener({
           <div className="flex items-center gap-2">
             {[
               { label: 'Todos (≥ 50)', val: 50 },
-              { label: 'Buena Calidad (≥ 65)', val: 65 },
-              { label: 'Alta Calidad (≥ 80)', val: 80 },
+              { label: 'Buena Calidad (≥ 80)', val: 80 },
+              { label: 'Alta Calidad (≥ 95)', val: 95 },
             ].map((item) => (
               <button
                 key={item.val}
@@ -490,10 +490,14 @@ export function OpportunityScreener({
                       <td className="py-3.5 px-3 text-center font-mono">
                         <span
                           className={`inline-block rounded-xl border px-2.5 py-1 text-xs font-black ${
-                            analysis.opportunityScore >= 75
+                            analysis.opportunityScore >= 95
                               ? isDark
-                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                                : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-xs ring-1 ring-emerald-500/40'
+                                : 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-xs ring-1 ring-emerald-500/40'
+                              : analysis.opportunityScore >= 80
+                              ? isDark
+                                ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                                : 'bg-blue-50 border-blue-300 text-blue-800'
                               : analysis.opportunityScore >= 50
                               ? isDark
                                 ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
