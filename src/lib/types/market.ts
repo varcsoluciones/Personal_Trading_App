@@ -45,6 +45,10 @@ export interface TrendAnalysis {
   categoryLabel: string;
   orderSetup: {
     currentPrice: number;
+    suggestedEntryPrice: number;
+    entryType: 'INMEDIATA' | 'PULLBACK_ESPERADO' | 'REBOTE_SOPORTE';
+    entryLabel: string;
+    distanceToEntryPct: number;
     suggestedStopLoss: number;
     suggestedStopLossPct: number;
     suggestedTakeProfit: number;

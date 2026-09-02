@@ -15,6 +15,7 @@ import {
   Shield,
   ArrowRight,
   TrendingDown,
+  Compass,
 } from 'lucide-react';
 import { Asset, AssetCategory } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
@@ -253,29 +254,46 @@ export function OpportunityScreener({
                   }`}
                 >
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    <span>Plan de Entrada & Salida</span>
-                    <span className="text-blue-500 font-mono">R:B 1:{order.riskRewardRatio}</span>
+                    <span className="flex items-center gap-1.5">
+                      <Compass className="h-3.5 w-3.5 text-blue-500" />
+                      <span>Plan de Compra & Objetivos</span>
+                    </span>
+                    <span className="text-blue-500 font-mono font-bold">R:B 1:{order.riskRewardRatio}</span>
                   </div>
 
-                  {/* 1. Compra Recomendada */}
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5 text-blue-500 font-semibold">
-                      <span className="h-2 w-2 rounded-full bg-blue-500" />
-                      <span>Compra (Entrada):</span>
+                  {/* 1. Compra Sugerida / Precio Esperado */}
+                  <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-2.5 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-blue-500">
+                        <span className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span>{order.entryType === 'INMEDIATA' ? 'Precio de Compra (Ahora):' : 'Precio Esperado de Compra:'}</span>
+                      </div>
+                      <span className={`font-mono font-black text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        {formatCurrency(order.suggestedEntryPrice)}
+                      </span>
                     </div>
-                    <span className={`font-mono font-bold text-xs ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {formatCurrency(order.currentPrice)}
-                    </span>
+
+                    {/* Distance / Strategy Note */}
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
+                        {order.entryLabel}
+                      </span>
+                      {order.distanceToEntryPct !== 0 && (
+                        <span className="font-mono font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                          {order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}% vs mercado
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* 2. Take Profit (Venta para Salir) */}
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between text-xs pt-1">
                     <div className="flex items-center gap-1.5 text-emerald-500 font-semibold">
                       <Target className="h-3.5 w-3.5" />
-                      <span>Take Profit (Salida):</span>
+                      <span>Take Profit (Objetivo):</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-mono font-bold text-emerald-500">
+                      <span className="font-mono font-bold text-emerald-500 text-xs">
                         {formatCurrency(order.suggestedTakeProfit)}
                       </span>
                       <span className="text-[10px] text-emerald-600 font-bold ml-1">
@@ -291,7 +309,7 @@ export function OpportunityScreener({
                       <span>Stop Loss Sugerido:</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-mono font-bold text-rose-500">
+                      <span className="font-mono font-bold text-rose-500 text-xs">
                         {formatCurrency(order.suggestedStopLoss)}
                       </span>
                       <span className="text-[10px] text-rose-500 font-bold ml-1">
@@ -304,8 +322,8 @@ export function OpportunityScreener({
                   <div className={`pt-2 border-t flex items-center justify-between text-[11px] ${
                     isDark ? 'border-slate-700/60 text-slate-400' : 'border-slate-200 text-slate-500'
                   }`}>
-                    <span>Ganancia por unidad: <strong className="text-emerald-500">+{formatCurrency(order.potentialRewardUSD)}</strong></span>
-                    <span>Riesgo máx: <strong className="text-rose-500">-{formatCurrency(order.potentialRiskUSD)}</strong></span>
+                    <span>Ganancia proyectada: <strong className="text-emerald-500 font-mono">+{formatCurrency(order.potentialRewardUSD)}</strong></span>
+                    <span>Riesgo máx: <strong className="text-rose-500 font-mono">-{formatCurrency(order.potentialRiskUSD)}</strong></span>
                   </div>
                 </div>
 

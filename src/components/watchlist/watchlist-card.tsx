@@ -40,24 +40,46 @@ export function WatchlistCard({
   const isBearish = analysis.trend === 'BEARISH';
   const isPositiveChange = asset.change24hPct >= 0;
 
-  // Signal Badge (Clean Apple Pill)
-  const signalConfig = {
-    'OPORTUNIDAD DE ENTRADA': {
+  // Signal Badge (Context-Aware Apple Pill)
+  let signalConfig = {
+    bg: isDark ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
+    dot: 'bg-blue-500',
+    label: 'Mantener Posición',
+  };
+
+  if (analysis.signal === 'OPORTUNIDAD DE ENTRADA') {
+    signalConfig = {
       bg: isDark ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
       dot: 'bg-emerald-500',
-      label: 'Oportunidad de Entrada',
-    },
-    'ESPERAR / MANTENER': {
-      bg: isDark ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200',
-      dot: 'bg-amber-500',
-      label: 'Esperar / Mantener',
-    },
-    'OPORTUNIDAD DE SALIDA': {
+      label: 'Oportunidad de Compra',
+    };
+  } else if (analysis.signal === 'OPORTUNIDAD DE SALIDA') {
+    signalConfig = {
       bg: isDark ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200',
       dot: 'bg-rose-500',
       label: 'Oportunidad de Salida',
-    },
-  }[analysis.signal];
+    };
+  } else {
+    if (analysis.trend === 'BULLISH') {
+      signalConfig = {
+        bg: isDark ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-blue-50 text-blue-700 border-blue-200',
+        dot: 'bg-blue-500',
+        label: 'Mantener Posición',
+      };
+    } else if (analysis.trend === 'NEUTRAL') {
+      signalConfig = {
+        bg: isDark ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200',
+        dot: 'bg-amber-500',
+        label: 'Esperar Rango',
+      };
+    } else {
+      signalConfig = {
+        bg: isDark ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200',
+        dot: 'bg-rose-500',
+        label: 'Esperar Giro',
+      };
+    }
+  }
 
   const riskColor = {
     BAJO: isDark ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-emerald-700 bg-emerald-50 border-emerald-200',

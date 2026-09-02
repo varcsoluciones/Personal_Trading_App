@@ -188,8 +188,42 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
       : 'Consolidación o sin ventaja estadística clara.';
   }
 
-  // 7. Dynamic Stop Loss & Take Profit (Shared ATR Strategy Logic)
-  const orderCalc = calculateDynamicOrderSetup(currentPrice, currentAtr, {
+  // 7. Projected Ideal Entry Price & Order Setup
+  let suggestedEntryPrice = currentPrice;
+  let entryType: 'INMEDIATA' | 'PULLBACK_ESPERADO' | 'REBOTE_SOPORTE' = 'PULLBACK_ESPERADO';
+  let entryLabel = 'Esperar retroceso';
+
+  if (signal === 'OPORTUNIDAD DE ENTRADA') {
+    suggestedEntryPrice = currentPrice;
+    entryType = 'INMEDIATA';
+    entryLabel = 'Comprar en Mercado (Pullback Confirmado)';
+  } else if (trend === 'BULLISH') {
+    // In bullish trend, wait for healthy pullback to EMA 20 dynamic support
+    const pullbackTarget = currentEma20 > 0 && currentPrice > currentEma20
+      ? currentEma20
+      : currentPrice * 0.985;
+    suggestedEntryPrice = Math.min(currentPrice, pullbackTarget);
+    entryType = 'PULLBACK_ESPERADO';
+    entryLabel = 'Esperar retroceso a EMA 20';
+  } else if (trend === 'NEUTRAL') {
+    // In range/lateral trend, wait for lower boundary bounce
+    const rangeLowTarget = Math.max(0.0001, currentPrice - currentAtr * 1.2);
+    suggestedEntryPrice = Math.min(currentPrice, rangeLowTarget);
+    entryType = 'REBOTE_SOPORTE';
+    entryLabel = 'Esperar base del rango';
+  } else {
+    // In bearish trend, wait for bottom reversal
+    suggestedEntryPrice = Math.max(0.0001, currentPrice * 0.95);
+    entryType = 'REBOTE_SOPORTE';
+    entryLabel = 'Esperar suelo de sobreventa';
+  }
+
+  const distanceToEntryPct = Number(
+    (((suggestedEntryPrice - currentPrice) / currentPrice) * 100).toFixed(2)
+  );
+
+  // Stop Loss & Take Profit calculated strictly from the Projected Entry Price
+  const orderCalc = calculateDynamicOrderSetup(suggestedEntryPrice, currentAtr, {
     useAtrStop: true,
     atrMultiplier: 1.5,
     takeProfitRatio: 2.2,
@@ -278,6 +312,10 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
     categoryLabel,
     orderSetup: {
       currentPrice: Number(currentPrice.toFixed(4)),
+      suggestedEntryPrice: Number(suggestedEntryPrice.toFixed(4)),
+      entryType,
+      entryLabel,
+      distanceToEntryPct,
       suggestedStopLoss: Number(suggestedStopLoss.toFixed(4)),
       suggestedStopLossPct: Number(suggestedStopLossPct.toFixed(2)),
       suggestedTakeProfit: Number(suggestedTakeProfit.toFixed(4)),
@@ -320,6 +358,10 @@ function getDefaultAnalysis(price: number): TrendAnalysis {
     categoryLabel: 'Más Estable / Conservador',
     orderSetup: {
       currentPrice: price,
+      suggestedEntryPrice: price,
+      entryType: 'INMEDIATA',
+      entryLabel: 'Recopilando datos',
+      distanceToEntryPct: 0,
       suggestedStopLoss: price * 0.965,
       suggestedStopLossPct: 3.5,
       suggestedTakeProfit: price * 1.077,
