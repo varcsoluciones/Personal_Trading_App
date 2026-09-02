@@ -398,6 +398,7 @@ export function OpportunityScreener({
                   <th className="py-3.5 px-3 text-right">Precio / 24h</th>
                   <th className="py-3.5 px-3 text-right">🎯 Entrada Sugerida</th>
                   <th className="py-3.5 px-3 text-right">🎯 Take Profit / Stop</th>
+                  <th className="py-3.5 px-3 text-center">⏱️ Sugerencia & Plazo</th>
                   <th className="py-3.5 px-3 text-center">Veredicto de Confianza</th>
                   <th className="py-3.5 px-3 text-center">Score Técnico</th>
                   <th className="py-3.5 px-4 text-center">Acciones</th>
@@ -476,7 +477,41 @@ export function OpportunityScreener({
                         </div>
                       </td>
 
-                      {/* 5. Veredicto de Confianza Unificado */}
+                      {/* 5. Sugerencia de Horizonte & Duración Estimada */}
+                      <td className="py-3.5 px-3 text-center">
+                        {order.horizonSuggestion ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-xl border px-2 py-0.5 text-[11px] font-bold ${
+                                order.horizonSuggestion.horizon === 'CORTO_PLAZO'
+                                  ? isDark
+                                    ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
+                                    : 'bg-cyan-50 border-cyan-300 text-cyan-800'
+                                  : order.horizonSuggestion.horizon === 'MEDIANO_PLAZO'
+                                  ? isDark
+                                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                                    : 'bg-blue-50 border-blue-300 text-blue-800'
+                                  : isDark
+                                  ? 'bg-purple-500/15 border-purple-500/30 text-purple-400'
+                                  : 'bg-purple-50 border-purple-300 text-purple-800'
+                              }`}
+                            >
+                              <Clock className="h-3 w-3" />
+                              <span>{order.horizonSuggestion.horizonLabel}</span>
+                            </span>
+                            <div className={`text-[11px] font-mono font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                              ~{order.horizonSuggestion.durationLabel}
+                            </div>
+                            <div className="text-[9px] text-emerald-500 font-semibold">
+                              para +{order.suggestedTakeProfitPct}% profit
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+
+                      {/* 6. Veredicto de Confianza Unificado */}
                       <td className="py-3.5 px-3 text-center">
                         <ConfidenceBadge
                           opportunityScore={analysis.opportunityScore}

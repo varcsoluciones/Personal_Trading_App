@@ -1,5 +1,5 @@
 import { evaluateEntryCondition, evaluateExitCondition, calculateDynamicOrderSetup, calculateSuggestedEntry } from './strategy-rules';
-import { AssetCategory, Candle, RiskLevel, SignalType, TrendAnalysis, TrendDirection } from '../types/market';
+import { AssetCategory, Candle, RiskLevel, SignalType, TrendAnalysis, TrendDirection, HorizonSuggestion, TradingHorizon } from '../types/market';
 import {
   calculateADX,
   calculateATR,
@@ -292,6 +292,13 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
 
   const opportunityScore = Math.min(99, Math.max(12, Math.round(score)));
 
+  const horizonSuggestion = calculateHorizonSuggestion(
+    suggestedTakeProfitPct,
+    atrPct,
+    currentAdx,
+    opportunityCategory
+  );
+
   return {
     trend,
     trendLabel,
@@ -334,6 +341,7 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
       riskRewardRatio,
       potentialRiskUSD,
       potentialRewardUSD,
+      horizonSuggestion,
     },
   };
 }
@@ -380,6 +388,66 @@ function getDefaultAnalysis(price: number): TrendAnalysis {
       riskRewardRatio: 2.2,
       potentialRiskUSD: price * 0.035,
       potentialRewardUSD: price * 0.077,
+      horizonSuggestion: {
+        horizon: 'MEDIANO_PLAZO',
+        horizonLabel: 'Mediano Plazo',
+        horizonSubtitle: 'Seguimiento de Tendencia',
+        estimatedDaysMin: 8,
+        estimatedDaysMax: 16,
+        estimatedDaysAvg: 12,
+        durationLabel: '8 - 16 días',
+        rationale: 'Estimación estándar para activos en consolidación.',
+      },
     },
+  };
+}
+
+
+export function calculateHorizonSuggestion(
+  takeProfitPct: number,
+  atrPct: number,
+  adx: number,
+  opportunityCategory: AssetCategory
+): HorizonSuggestion {
+  const baseDailyMove = Math.max(0.35, atrPct * 0.42);
+  let speedMultiplier = 1.0;
+
+  if (adx >= 30) speedMultiplier = 1.35;
+  else if (adx < 20) speedMultiplier = 0.75;
+
+  if (opportunityCategory === 'volatile') speedMultiplier *= 1.2;
+  if (opportunityCategory === 'stable') speedMultiplier *= 0.85;
+
+  const rawDays = takeProfitPct / (baseDailyMove * speedMultiplier);
+  const estimatedDaysAvg = Math.max(3, Math.min(90, Math.round(rawDays)));
+  const estimatedDaysMin = Math.max(2, Math.round(estimatedDaysAvg * 0.7));
+  const estimatedDaysMax = Math.min(120, Math.round(estimatedDaysAvg * 1.4));
+
+  let horizon: TradingHorizon = 'MEDIANO_PLAZO';
+  let horizonLabel: 'Corto Plazo' | 'Mediano Plazo' | 'Largo Plazo' = 'Mediano Plazo';
+  let horizonSubtitle = 'Seguimiento de Tendencia';
+
+  if (estimatedDaysAvg <= 8) {
+    horizon = 'CORTO_PLAZO';
+    horizonLabel = 'Corto Plazo';
+    horizonSubtitle = 'Swing Trading Rápido';
+  } else if (estimatedDaysAvg > 25) {
+    horizon = 'LARGO_PLAZO';
+    horizonLabel = 'Largo Plazo';
+    horizonSubtitle = 'Posición Estructural';
+  }
+
+  const durationLabel = `${estimatedDaysMin} - ${estimatedDaysMax} días`;
+  const rationale = `Estimación basada en volatilidad diaria ATR (${atrPct.toFixed(1)}%) y fuerza ADX (${adx.toFixed(0)}) para alcanzar el objetivo de +${takeProfitPct.toFixed(1)}%.`;
+
+  return {
+    horizon,
+    horizonLabel,
+    horizonSubtitle,
+    estimatedDaysMin,
+    estimatedDaysMax,
+    estimatedDaysAvg,
+    durationLabel,
+    rationale,
   };
 }

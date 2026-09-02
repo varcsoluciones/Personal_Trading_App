@@ -14,6 +14,7 @@ import {
   Target,
   Shield,
   Activity,
+  Clock,
 } from 'lucide-react';
 
 export interface AssetOpportunityCardProps {
@@ -159,6 +160,21 @@ export function AssetOpportunityCard({
               <span className="text-[10px] text-rose-500 font-bold">(-{order.suggestedStopLossPct}%)</span>
             </div>
           </div>
+
+          {/* Horizon Suggestion & Estimated Duration */}
+          {order.horizonSuggestion && (
+            <div className={`flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800/30 ${
+              isDark ? 'text-slate-300' : 'text-slate-600'
+            }`}>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-blue-500" />
+                <span className="font-bold">{order.horizonSuggestion.horizonLabel}:</span>
+              </div>
+              <div className="font-mono font-bold text-blue-400">
+                ~{order.horizonSuggestion.durationLabel}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Collapsible Technical Details Trigger */}

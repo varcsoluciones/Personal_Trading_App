@@ -14,6 +14,19 @@ export type RiskLevel = 'BAJO' | 'MEDIO' | 'ALTO';
 export type SignalType = 'OPORTUNIDAD DE ENTRADA' | 'ESPERAR / MANTENER' | 'OPORTUNIDAD DE SALIDA';
 export type AssetCategory = 'stable' | 'range' | 'trend' | 'volatile';
 
+export type TradingHorizon = 'CORTO_PLAZO' | 'MEDIANO_PLAZO' | 'LARGO_PLAZO';
+
+export interface HorizonSuggestion {
+  horizon: TradingHorizon;
+  horizonLabel: 'Corto Plazo' | 'Mediano Plazo' | 'Largo Plazo';
+  horizonSubtitle: string;
+  estimatedDaysMin: number;
+  estimatedDaysMax: number;
+  estimatedDaysAvg: number;
+  durationLabel: string;
+  rationale: string;
+}
+
 export interface TrendAnalysis {
   trend: TrendDirection;
   trendLabel: 'Alcista' | 'Bajista' | 'Lateral';
@@ -56,6 +69,7 @@ export interface TrendAnalysis {
     riskRewardRatio: number;
     potentialRiskUSD: number;
     potentialRewardUSD: number;
+    horizonSuggestion: HorizonSuggestion;
   };
 }
 
