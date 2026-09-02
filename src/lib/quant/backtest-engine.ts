@@ -258,13 +258,14 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
 
     // 3. IF NOT IN POSITION & NO PENDING ORDER, EVALUATE ENTRY AT CLOSE OF CANDLE i
     if (!inPosition && !pendingOrder && i < candles.length - 1) {
-      // Find weekly trend corresponding to candle date
+      // Find weekly trend of the PREVIOUS completed week (Strict zero look-ahead bias)
       const d = new Date(candle.time);
       const day = d.getUTCDay();
       const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
-      const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
-      const weekKey = monday.toISOString().split('T')[0];
-      const weeklyTrend = weeklyTrendMap.get(weekKey) || 'NEUTRAL';
+      const currentWeekMonday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
+      const prevWeekMonday = new Date(currentWeekMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const prevWeekKey = prevWeekMonday.toISOString().split('T')[0];
+      const weeklyTrend = weeklyTrendMap.get(prevWeekKey) || 'NEUTRAL';
 
       // Calculate volume confirmation up to bar i (no look-ahead bias)
       const { isConfirmed: volumeConfirmed, volumeRatio } = calculateVolumeConfirmation(

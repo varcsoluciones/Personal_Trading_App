@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { POPULAR_ASSETS_CATALOG, AssetDefinition } from '@/lib/api/default-data';
 import { useSettings } from '@/lib/context/settings-context';
+import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 
 interface AddAssetModalProps {
   isOpen: boolean;
@@ -167,11 +168,7 @@ export function AddAssetModal({ isOpen, onClose, onAdd, existingSymbols = [] }: 
           {matches.length > 0 ? (
             matches.map((item) => {
               const added = isSymbolAdded(item.symbol);
-              const typeBadge = {
-                crypto: isDark ? "bg-purple-500/15 text-purple-300 border-purple-500/30" : "bg-purple-50 text-purple-700 border-purple-200",
-                stock: isDark ? "bg-blue-500/15 text-blue-300 border-blue-500/30" : "bg-blue-50 text-blue-700 border-blue-200",
-                etf: isDark ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30" : "bg-cyan-50 text-cyan-700 border-cyan-200",
-              }[item.type];
+              const typeBadge = getAssetTypeBadgeStyle(item.type, isDark);
 
               const TypeIcon = item.type === 'crypto' ? Coins : item.type === 'etf' ? Layers : TrendingUp;
 

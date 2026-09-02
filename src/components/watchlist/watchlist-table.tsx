@@ -4,6 +4,7 @@ import React from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
+import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import {
   TrendingUp,
   BarChart2,
@@ -90,9 +91,7 @@ export function WatchlistTable({
                         {asset.symbol}
                       </span>
                       <span
-                        className={`rounded-lg px-1.5 py-0.2 text-[9px] uppercase font-bold ${
-                          isDark ? 'bg-[#2c2c2e] text-slate-300' : 'bg-slate-100 text-slate-600'
-                        }`}
+                        className={`rounded-lg border px-1.5 py-0.2 text-[9px] uppercase font-bold ${getAssetTypeBadgeStyle(asset.type, isDark)}`}
                       >
                         {asset.type}
                       </span>
@@ -146,6 +145,7 @@ export function WatchlistTable({
                     <ConfidenceBadge
                       opportunityScore={analysis.opportunityScore}
                       isSimulated={asset.isSimulated}
+                      isDark={isDark}
                       size="sm"
                     />
                   </td>

@@ -12,6 +12,7 @@ import {
 } from 'lightweight-charts';
 import { Asset } from '@/lib/types/market';
 import { calculateADX, calculateEMA, calculateRSI } from '@/lib/quant/indicators';
+import { getAssetTypeBadgeStyle, getTrendBadgeStyle } from '@/lib/ui/badge-styles';
 import { useSettings } from '@/lib/context/settings-context';
 import {
   TrendingUp,
@@ -455,23 +456,17 @@ export function TradingChart({ asset }: TradingChartProps) {
             <div className="flex items-center gap-2">
               <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{asset.symbol}</h2>
               <span
-                className={`rounded-xl px-2 py-0.5 text-xs font-bold uppercase ${
-                  isDark ? 'bg-[#2c2c2e] text-slate-300' : 'bg-slate-100 text-slate-700'
-                }`}
+                className={`rounded-xl border px-2 py-0.5 text-xs font-bold uppercase ${getAssetTypeBadgeStyle(asset.type, isDark)}`}
               >
                 {asset.type}
               </span>
-              <span
-                className={`rounded-xl px-2.5 py-0.5 text-xs font-semibold border ${
-                  analysis?.trend === 'BULLISH'
-                    ? isDark ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : analysis?.trend === 'BEARISH'
-                    ? isDark ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-700 border-rose-200'
-                    : isDark ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200'
-                }`}
-              >
-                {analysis?.trendLabel}
-              </span>
+              {analysis && (
+                <span
+                  className={`rounded-xl px-2.5 py-0.5 text-xs font-semibold border ${getTrendBadgeStyle(analysis.trend, isDark).badgeClass}`}
+                >
+                  {analysis.trendLabel}
+                </span>
+              )}
             </div>
             <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{asset.name}</p>
           </div>

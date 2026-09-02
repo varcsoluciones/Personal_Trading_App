@@ -1,7 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BacktestResult } from '@/lib/types/market';
+import { useSettings } from '@/lib/context/settings-context';
+import { ConfidenceBadge } from '@/components/ui/confidence-badge';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import {
   AreaChart,
   Area,
@@ -11,127 +14,186 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
-import { HelpCircle, AlertTriangle, ShieldCheck, CheckCircle2, RefreshCw } from 'lucide-react';
-import { ConfidenceBadge } from '@/components/ui/confidence-badge';
-import { useSettings } from '@/lib/context/settings-context';
+import {
+  AlertTriangle,
+  ShieldCheck,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 interface BacktestDashboardProps {
   result: BacktestResult | null;
   symbol?: string;
-  onOpenGuide?: () => void;
 }
 
-function InfoTooltip({ text, title }: { text: string; title: string }) {
-  const [open, setOpen] = React.useState(false);
-  return (
-    <div className="relative inline-block">
-      <button
-        onClick={() => setOpen(!open)}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        className="text-slate-400 hover:text-blue-500 transition-colors"
-        aria-label="Info"
-      >
-        <HelpCircle className="h-3.5 w-3.5" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-6 z-50 w-60 rounded-2xl border border-slate-700/80 bg-[#1c1c1e] p-3 text-xs text-slate-200 shadow-xl backdrop-blur-xl">
-          <p className="font-bold text-white mb-1">{title}</p>
-          <p className="text-slate-300 leading-relaxed">{text}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function BacktestDashboard({ result }: BacktestDashboardProps) {
+export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
   const { settings, accent, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
+  const [showWalkForwardDetails, setShowWalkForwardDetails] = useState(false);
 
   if (!result) {
     return (
       <div
-        className={`flex h-48 items-center justify-center rounded-3xl border ${
-          isDark ? 'border-slate-800 bg-[#1c1c1e]' : 'border-slate-200 bg-white'
+        className={`p-10 text-center rounded-3xl border ${
+          isDark ? 'border-slate-800 bg-[#1c1c1e] text-slate-400' : 'border-slate-200 bg-white text-slate-600'
         }`}
       >
-        <p className="text-xs text-slate-500">Cargando datos para el backtest...</p>
+        <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-500" />
+        <p className="text-xs font-semibold">Calculando simulación cuantitativa para {symbol || "el activo"}...</p>
       </div>
     );
   }
-
+  const isNetProfitPositive = result.totalNetProfit >= 0;
   const isStrategyWinner = result.totalNetProfitPct > result.buyAndHoldProfitPct;
-  const isPositiveReturn = result.totalNetProfitPct >= 0;
+
+
+  const wf = result.walkForwardMetrics;
 
   return (
     <div className="space-y-6">
-      {/* 4 Main KPI Cards (Apple iOS Style) */}
+      {/* Top Section: Prominent Unified Confidence Hero Banner */}
+      <div
+        className={`rounded-3xl border p-5 shadow-xs transition-colors ${
+          isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
+        }`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Evaluación de Confiabilidad Cuantitativa
+            </h3>
+            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Simulación con $1,000 USD iniciales, comisiones reales IBKR y prueba ciega fuera de muestra
+            </p>
+          </div>
+
+          <ConfidenceBadge
+            opportunityScore={result.winRate >= 50 ? 75 : 45}
+            reliabilityScore={result.reliabilityScore}
+            lowSampleWarning={result.lowSampleWarning}
+            size="lg"
+            isDark={isDark}
+          />
+        </div>
+
+        {/* Clear explanations without technical jargon */}
+        {(result.lowSampleWarning || (result.ambiguousBarsCount && result.ambiguousBarsCount > 0)) && (
+          <div className="mt-3.5 space-y-1.5 pt-3 border-t border-slate-800/40 text-xs">
+            {result.lowSampleWarning && (
+              <div className="flex items-center gap-2 text-amber-500 font-medium">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Aún no hay suficientes operaciones históricas para confiar del todo en este resultado (n = {result.totalTrades} operaciones).
+                </span>
+              </div>
+            )}
+            {result.ambiguousBarsCount !== undefined && result.ambiguousBarsCount > 0 && (
+              <div className="flex items-center gap-2 text-blue-400 font-medium">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+                <span>
+                  {result.ambiguousBarsCount} señales tuvieron un desenlace ambiguo, resueltas de forma conservadora priorizando la salida por Stop Loss.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Optional Collapsible Out-of-Sample Walk-Forward Comparison */}
+        {wf && (
+          <div className="mt-4 pt-3 border-t border-slate-800/40">
+            <button
+              type="button"
+              onClick={() => setShowWalkForwardDetails(!showWalkForwardDetails)}
+              className={`flex items-center gap-2 text-xs font-semibold rounded-xl px-2.5 py-1.5 transition-all ${
+                isDark ? 'text-slate-300 hover:bg-[#2c2c2e]' : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-blue-500" />
+              <span>Ver validación fuera de muestra (Walk-Forward)</span>
+              {showWalkForwardDetails ? (
+                <ChevronUp className="h-3.5 w-3.5 opacity-70" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+              )}
+            </button>
+
+            {showWalkForwardDetails && (
+              <div
+                className={`mt-3 rounded-2xl border p-4 text-xs transition-colors ${
+                  isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+                }`}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* In-Sample Column */}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      1. Calibración (70% Histórico)
+                    </div>
+                    <div className="space-y-1 font-mono text-xs">
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Factor Beneficio:</span>
+                        <strong>{wf.inSampleProfitFactor.toFixed(2)}x</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Tasa de Acierto:</span>
+                        <strong>{wf.inSampleWinRate.toFixed(1)}%</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Operaciones:</span>
+                        <strong>{wf.inSampleTrades} trades</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Out-of-Sample Column */}
+                  <div className="space-y-1.5 md:border-l md:pl-4 border-slate-800/40">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-blue-500">
+                      2. Prueba Ciega (30% Fuera de Muestra)
+                    </div>
+                    <div className="space-y-1 font-mono text-xs">
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Factor Beneficio:</span>
+                        <strong className={wf.outOfSampleProfitFactor >= 1.0 ? 'text-emerald-500' : 'text-rose-500'}>
+                          {wf.outOfSampleProfitFactor.toFixed(2)}x
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Tasa de Acierto:</span>
+                        <strong>{wf.outOfSampleWinRate.toFixed(1)}%</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Operaciones:</span>
+                        <strong>{wf.outOfSampleTrades} trades</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={`mt-3 pt-2 border-t border-slate-800/40 text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  El score premia estrategias cuyos resultados en la prueba ciega se mantienen estables respecto al periodo de calibración.
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 4 KPI Cards Grid: REORDERED (Risk First -> Profit Last) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        
-        {/* KPI 1: Win Rate */}
+        {/* KPI 1: Máxima Caída (Riesgo Primero) */}
         <div
           className={`relative overflow-hidden rounded-3xl border p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Tasa de Acierto</span>
-            <InfoTooltip text="Porcentaje de operaciones cerradas con ganancia sobre el total de trades ejecutados." title="Win Rate %" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-mono text-3xl font-black text-emerald-500">
-              {result.winRate.toFixed(1)}%
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              1. Máxima Caída
             </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Ganadas: <strong className="text-emerald-500">{result.winningTrades}</strong></span>
-            <span>Perdidas: <strong className="text-rose-500">{result.losingTrades}</strong></span>
-            <span>Total: <strong>{result.totalTrades}</strong></span>
-          </div>
-        </div>
-
-        {/* KPI 2: Strategy Return vs Buy & Hold */}
-        <div
-          className={`relative overflow-hidden rounded-3xl border p-5 transition-all ${
-            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Retorno Estrategia</span>
-            <InfoTooltip text="Rendimiento neto de la estrategia quant tras deducir comisiones y deslizamiento." title="Retorno Total %" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span
-              className={`font-mono text-3xl font-black ${
-                isPositiveReturn ? 'text-emerald-500' : 'text-rose-500'
-              }`}
-            >
-              {isPositiveReturn ? '+' : ''}{result.totalNetProfitPct.toFixed(2)}%
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Buy & Hold: <strong className="font-mono">{result.buyAndHoldProfitPct.toFixed(2)}%</strong></span>
-            <span
-              className={`rounded-lg px-1.5 py-0.5 text-[10px] font-bold ${
-                isStrategyWinner
-                  ? 'bg-emerald-500/15 text-emerald-500'
-                  : isDark ? 'bg-[#2c2c2e] text-slate-400' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {isStrategyWinner ? '¡Supera Benchmark!' : 'Estrategia Defensiva'}
-            </span>
-          </div>
-        </div>
-
-        {/* KPI 3: Max Drawdown */}
-        <div
-          className={`relative overflow-hidden rounded-3xl border p-5 transition-all ${
-            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Máxima Caída</span>
-            <InfoTooltip text="La mayor pérdida acumulada de la cuenta desde un pico máximo hasta un fondo." title="Max Drawdown %" />
+            <InfoTooltip
+              text="La mayor pérdida acumulada de la cuenta desde un pico máximo hasta un fondo."
+              title="Max Drawdown %"
+            />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="font-mono text-3xl font-black text-rose-500">
@@ -144,15 +206,89 @@ export function BacktestDashboard({ result }: BacktestDashboardProps) {
           </div>
         </div>
 
-        {/* KPI 4: Profit Factor */}
+        {/* KPI 2: Tasa de Acierto */}
         <div
           className={`relative overflow-hidden rounded-3xl border p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Factor de Beneficio</span>
-            <InfoTooltip text="Ganancias brutas divididas entre pérdidas brutas (> 1.5 es un excelente sistema cuantitativo)." title="Profit Factor" />
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              2. Tasa de Acierto
+            </span>
+            <InfoTooltip
+              text="Porcentaje de operaciones cerradas con ganancia sobre el total ejecutado."
+              title="Win Rate %"
+            />
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="font-mono text-3xl font-black text-emerald-500">
+              {result.winRate.toFixed(1)}%
+            </span>
+          </div>
+          <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Ganadoras: <strong className="font-mono text-emerald-500">{result.winningTrades}</strong></span>
+            <span>Perdedoras: <strong className="font-mono text-rose-500">{result.losingTrades}</strong></span>
+          </div>
+        </div>
+
+        {/* KPI 3: Retorno Estrategia */}
+        <div
+          className={`relative overflow-hidden rounded-3xl border p-5 transition-all ${
+            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              3. Retorno Estrategia
+            </span>
+            <InfoTooltip
+              text="Rendimiento porcentual neto obtenido tras descontar todas las comisiones de compra/venta."
+              title="Net Profit %"
+            />
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span
+              className={`font-mono text-3xl font-black ${
+                isNetProfitPositive ? 'text-emerald-500' : 'text-rose-500'
+              }`}
+            >
+              {isNetProfitPositive ? '+' : ''}{result.totalNetProfitPct.toFixed(2)}%
+            </span>
+            <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              ({isNetProfitPositive ? '+' : ''}{formatCurrency(result.totalNetProfit)})
+            </span>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs">
+            <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
+              B&H: {result.buyAndHoldProfitPct.toFixed(1)}%
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                isStrategyWinner
+                  ? 'bg-emerald-500/15 text-emerald-500'
+                  : isDark ? 'bg-[#2c2c2e] text-slate-400' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {isStrategyWinner ? '¡Supera Benchmark!' : 'Estrategia Defensiva'}
+            </span>
+          </div>
+        </div>
+
+        {/* KPI 4: Factor de Beneficio (Ganancia al Final) */}
+        <div
+          className={`relative overflow-hidden rounded-3xl border p-5 transition-all ${
+            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              4. Factor de Beneficio
+            </span>
+            <InfoTooltip
+              text="Ganancias brutas divididas entre pérdidas brutas (> 1.5 es un excelente sistema cuantitativo)."
+              title="Profit Factor"
+            />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`font-mono text-3xl font-black ${accent.textClass}`}>
@@ -164,7 +300,6 @@ export function BacktestDashboard({ result }: BacktestDashboardProps) {
             <span className="text-emerald-500 font-bold">R:B 1:{result.riskRewardRatio.toFixed(1)}</span>
           </div>
         </div>
-
       </div>
 
       {/* Equity Curve Chart */}
@@ -179,11 +314,10 @@ export function BacktestDashboard({ result }: BacktestDashboardProps) {
               Curva de Capital (Equity Curve) vs. Comprar & Mantener (Buy & Hold)
             </h4>
             <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Evolución del balance con $1,000 USD iniciales y deducción de fricción real
+              Evolución del balance con $1,000 USD iniciales y deducción de comisiones de Interactive Brokers
             </p>
           </div>
 
-          {/* Legend */}
           <div className="flex items-center gap-4 text-xs font-semibold">
             <div className="flex items-center gap-1.5">
               <span className={`h-2.5 w-2.5 rounded-full ${accent.bgClass}`} />
