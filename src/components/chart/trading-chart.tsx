@@ -27,17 +27,49 @@ interface TradingChartProps {
 }
 
 export function TradingChart({ asset }: TradingChartProps) {
-  const { settings, accent, formatCurrency } = useSettings();
+  const { settings, accent, formatCurrency, updateSettings } = useSettings();
   const isDark = settings.theme === 'dark';
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const rsiContainerRef = useRef<HTMLDivElement>(null);
   const adxContainerRef = useRef<HTMLDivElement>(null);
 
-  const [showEma20, setShowEma20] = useState(true);
-  const [showEma50, setShowEma50] = useState(true);
-  const [showEma200, setShowEma200] = useState(true);
-  const [showMarkers, setShowMarkers] = useState(true);
+  const chartIndicators = settings.chartIndicators || {
+    showEma20: true,
+    showEma50: true,
+    showEma200: true,
+    showMarkers: true,
+  };
+
+  const [showEma20, setShowEma20] = useState(chartIndicators.showEma20);
+  const [showEma50, setShowEma50] = useState(chartIndicators.showEma50);
+  const [showEma200, setShowEma200] = useState(chartIndicators.showEma200);
+  const [showMarkers, setShowMarkers] = useState(chartIndicators.showMarkers);
+
+  // Sync indicator changes with persistent AppSettings
+  const toggleEma20 = () => {
+    const next = !showEma20;
+    setShowEma20(next);
+    updateSettings({ chartIndicators: { ...chartIndicators, showEma20: next } });
+  };
+
+  const toggleEma50 = () => {
+    const next = !showEma50;
+    setShowEma50(next);
+    updateSettings({ chartIndicators: { ...chartIndicators, showEma50: next } });
+  };
+
+  const toggleEma200 = () => {
+    const next = !showEma200;
+    setShowEma200(next);
+    updateSettings({ chartIndicators: { ...chartIndicators, showEma200: next } });
+  };
+
+  const toggleMarkers = () => {
+    const next = !showMarkers;
+    setShowMarkers(next);
+    updateSettings({ chartIndicators: { ...chartIndicators, showMarkers: next } });
+  };
   const [hoverData, setHoverData] = useState<{
     time?: string;
     open?: number;
@@ -499,7 +531,7 @@ export function TradingChart({ asset }: TradingChartProps) {
         {/* Indicator Toggles */}
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setShowEma20(!showEma20)}
+            onClick={toggleEma20}
             className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
               showEma20
                 ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
@@ -513,7 +545,7 @@ export function TradingChart({ asset }: TradingChartProps) {
           </button>
 
           <button
-            onClick={() => setShowEma200(!showEma200)}
+            onClick={toggleEma200}
             className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
               showEma200
                 ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-400"
@@ -527,7 +559,7 @@ export function TradingChart({ asset }: TradingChartProps) {
           </button>
 
           <button
-            onClick={() => setShowEma50(!showEma50)}
+            onClick={toggleEma50}
             className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
               showEma50
                 ? 'border-orange-500/50 bg-orange-500/15 text-orange-500'
@@ -541,7 +573,7 @@ export function TradingChart({ asset }: TradingChartProps) {
           </button>
 
           <button
-            onClick={() => setShowMarkers(!showMarkers)}
+            onClick={toggleMarkers}
             className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
               showMarkers
                 ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-500'

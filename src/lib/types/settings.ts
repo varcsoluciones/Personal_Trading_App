@@ -11,6 +11,13 @@ export type AppleAccentColor =
   | 'teal'
   | 'graphite';
 
+export interface ChartIndicatorSettings {
+  showEma20: boolean;
+  showEma50: boolean;
+  showEma200: boolean;
+  showMarkers: boolean;
+}
+
 export interface AppSettings {
   theme: ThemeMode;
   accentColor: AppleAccentColor;
@@ -20,8 +27,27 @@ export interface AppSettings {
   confettiCelebration: boolean;
   defaultRiskReward: number;
   defaultView: 'grid' | 'table';
+
+  // Persisted Tab Navigation & Filters
+  activeTab?: 'watchlist' | 'opportunities' | 'charts' | 'backtest';
+  selectedAssetId?: string;
+
+  // Persisted Watchlist Filters
+  watchlistViewMode?: 'grid' | 'table';
+  watchlistAssetFilter?: 'all' | 'crypto' | 'stock' | 'etf';
+
+  // Persisted Screener (Oportunidades) Filters
+  screenerCategory?: 'all' | 'trend' | 'volatile' | 'range' | 'stable';
+  screenerMinScore?: number;
+  screenerRankingMode?: 'opportunity' | 'historical';
   screenerViewMode?: 'grid' | 'table';
+
+  // Persisted Chart Preferences
+  chartIndicators?: ChartIndicatorSettings;
+
+  // Persisted Backtest Preferences
   backtestAdvancedMode?: boolean;
+
   lastSavedAt?: string;
 }
 

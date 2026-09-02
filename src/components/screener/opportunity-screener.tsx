@@ -49,23 +49,58 @@ export function OpportunityScreener({
   const { settings, accent, formatCurrency, updateSettings } = useSettings();
   const isDark = settings.theme === 'dark';
 
-  const [rankingMode, setRankingMode] = useState<'opportunity' | 'historical'>('opportunity');
-  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | 'all'>('all');
-  const [minScore, setMinScore] = useState<number>(50);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [rankingMode, setRankingMode] = useState<'opportunity' | 'historical'>(
+    settings.screenerRankingMode || 'opportunity'
+  );
+  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | 'all'>(
+    settings.screenerCategory || 'all'
+  );
+  const [minScore, setMinScore] = useState<number>(settings.screenerMinScore ?? 50);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(
+    settings.screenerViewMode || 'grid'
+  );
   const [historicalRankings, setHistoricalRankings] = useState<Map<string, HistoricalRankingItem>>(new Map());
   const [isLoadingRankings, setIsLoadingRankings] = useState(false);
 
-  // Sync and persist viewMode with user settings
+  // Sync and persist all screener filters with user settings across navigation & refreshes
   useEffect(() => {
-    if (settings.screenerViewMode) {
+    if (settings.screenerViewMode && settings.screenerViewMode !== viewMode) {
       setViewMode(settings.screenerViewMode);
     }
-  }, [settings.screenerViewMode]);
+    if (settings.screenerRankingMode && settings.screenerRankingMode !== rankingMode) {
+      setRankingMode(settings.screenerRankingMode);
+    }
+    if (settings.screenerCategory && settings.screenerCategory !== selectedCategory) {
+      setSelectedCategory(settings.screenerCategory);
+    }
+    if (settings.screenerMinScore !== undefined && settings.screenerMinScore !== minScore) {
+      setMinScore(settings.screenerMinScore);
+    }
+  }, [
+    settings.screenerViewMode,
+    settings.screenerRankingMode,
+    settings.screenerCategory,
+    settings.screenerMinScore,
+  ]);
 
   const handleToggleViewMode = (mode: 'grid' | 'table') => {
     setViewMode(mode);
     updateSettings({ screenerViewMode: mode });
+  };
+
+  const handleSetRankingMode = (mode: 'opportunity' | 'historical') => {
+    setRankingMode(mode);
+    updateSettings({ screenerRankingMode: mode });
+  };
+
+  const handleSetCategory = (cat: AssetCategory | 'all') => {
+    setSelectedCategory(cat);
+    updateSettings({ screenerCategory: cat });
+  };
+
+  const handleSetMinScore = (score: number) => {
+    setMinScore(score);
+    updateSettings({ screenerMinScore: score });
   };
 
   // Fetch cached walk-forward historical rankings on mount
@@ -201,7 +236,7 @@ export function OpportunityScreener({
             >
               <button
                 type="button"
-                onClick={() => setRankingMode('opportunity')}
+                onClick={() => handleSetRankingMode('opportunity')}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
                   rankingMode === 'opportunity'
                     ? isDark
@@ -218,7 +253,7 @@ export function OpportunityScreener({
 
               <button
                 type="button"
-                onClick={() => setRankingMode('historical')}
+                onClick={() => handleSetRankingMode('historical')}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
                   rankingMode === 'historical'
                     ? isDark
@@ -303,7 +338,7 @@ export function OpportunityScreener({
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => handleSetCategory(cat.id)}
                 className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all ${
                   isSelected
                     ? isDark
@@ -346,7 +381,7 @@ export function OpportunityScreener({
               <button
                 key={item.val}
                 type="button"
-                onClick={() => setMinScore(item.val)}
+                onClick={() => handleSetMinScore(item.val)}
                 className={`rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
                   minScore === item.val
                     ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold`

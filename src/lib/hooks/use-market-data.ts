@@ -7,13 +7,50 @@ import { analyzeAsset } from '../quant/trend-analyzer';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '../quant/backtest-engine';
 
 const WATCHLIST_STORAGE_KEY = 'personal_trading_custom_watchlist_v1';
+const ACTIVE_TAB_STORAGE_KEY = 'quantpulse_active_tab_v2';
+const SELECTED_ASSET_STORAGE_KEY = 'quantpulse_selected_asset_v2';
+const BACKTEST_CONFIG_STORAGE_KEY = 'quantpulse_backtest_config_v2';
+
 
 export function useMarketData() {
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [selectedAssetId, setSelectedAssetId] = useState<string>('BTCUSDT');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'screener' | 'chart' | 'backtest'>('dashboard');
+  const [selectedAssetId, setSelectedAssetIdState] = useState<string>('BTCUSDT');
+  const [activeTab, setActiveTabState] = useState<'dashboard' | 'screener' | 'chart' | 'backtest'>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [backtestConfig, setBacktestConfig] = useState<BacktestConfig>(DEFAULT_BACKTEST_CONFIG);
+
+  // Hydrate persistent state from localStorage
+  useEffect(() => {
+    try {
+      const savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) as 'dashboard' | 'screener' | 'chart' | 'backtest';
+      if (savedTab && ['dashboard', 'screener', 'chart', 'backtest'].includes(savedTab)) {
+        setActiveTabState(savedTab);
+      }
+      const savedAsset = localStorage.getItem(SELECTED_ASSET_STORAGE_KEY);
+      if (savedAsset) {
+        setSelectedAssetIdState(savedAsset);
+      }
+      const savedConfig = localStorage.getItem(BACKTEST_CONFIG_STORAGE_KEY);
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        setBacktestConfig((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (e) {}
+  }, []);
+
+  const setActiveTab = useCallback((tab: 'dashboard' | 'screener' | 'chart' | 'backtest') => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
+    } catch (e) {}
+  }, []);
+
+  const setSelectedAssetId = useCallback((id: string) => {
+    setSelectedAssetIdState(id);
+    try {
+      localStorage.setItem(SELECTED_ASSET_STORAGE_KEY, id);
+    } catch (e) {}
+  }, []);
 
   // Initialize assets with parallel Promise.allSettled loading
   useEffect(() => {
@@ -215,9 +252,15 @@ export function useMarketData() {
     });
   }, []);
 
-  // Update backtest parameters
+  // Update backtest parameters and persist to localStorage
   const updateBacktestConfig = useCallback((updates: Partial<BacktestConfig>) => {
-    setBacktestConfig((prev) => ({ ...prev, ...updates }));
+    setBacktestConfig((prev) => {
+      const next = { ...prev, ...updates };
+      try {
+        localStorage.setItem(BACKTEST_CONFIG_STORAGE_KEY, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
   }, []);
 
   return {
