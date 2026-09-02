@@ -7,6 +7,8 @@ import { analyzeAsset } from '../quant/trend-analyzer';
 import { generateDeterministicCandles } from '../api/yahoo';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '../quant/backtest-engine';
 
+const WATCHLIST_STORAGE_KEY = 'personal_trading_custom_watchlist_v1';
+
 export function useMarketData() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string>('BTCUSDT');
@@ -20,7 +22,18 @@ export function useMarketData() {
       setIsLoading(true);
       const initialAssets: Asset[] = [];
 
-      for (const def of DEFAULT_ASSETS_LIST) {
+      let assetDefs = DEFAULT_ASSETS_LIST;
+      try {
+        const savedWatchlist = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+        if (savedWatchlist) {
+          const parsed = JSON.parse(savedWatchlist);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            assetDefs = parsed;
+          }
+        }
+      } catch (e) {}
+
+      for (const def of assetDefs) {
         try {
           // Generate or fetch candles
           const cleanId = def.id.replace('/', '').toUpperCase();
@@ -138,7 +151,14 @@ export function useMarketData() {
         analysis,
       };
 
-      setAssets((prev) => [newAsset, ...prev]);
+      setAssets((prev) => {
+        const next = [newAsset, ...prev];
+        try {
+          const defsToSave = next.map(a => ({ id: a.id, symbol: a.symbol, name: a.name, type: a.type }));
+          localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(defsToSave));
+        } catch (e) {}
+        return next;
+      });
       setSelectedAssetId(newAsset.id);
     },
     [assets]
@@ -148,6 +168,10 @@ export function useMarketData() {
   const removeAsset = useCallback((assetId: string) => {
     setAssets((prev) => {
       const filtered = prev.filter((a) => a.id !== assetId);
+      try {
+        const defsToSave = filtered.map(a => ({ id: a.id, symbol: a.symbol, name: a.name, type: a.type }));
+        localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(defsToSave));
+      } catch (e) {}
       return filtered;
     });
   }, []);
