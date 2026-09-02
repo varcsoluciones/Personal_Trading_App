@@ -12,6 +12,7 @@ import {
   BarChart2,
   Trash2,
   AlertTriangle,
+  Coins,
 } from 'lucide-react';
 
 interface WatchlistTableProps {
@@ -21,6 +22,21 @@ interface WatchlistTableProps {
   onRemoveAsset: (id: string) => void;
   onOpenChart: (id: string) => void;
   onOpenBacktest: (id: string) => void;
+}
+
+function formatCapitalVolume(volume: number, price: number, currencyPrefix = '$'): string {
+  if (!volume || volume <= 0) return `${currencyPrefix}0`;
+  const totalUSD = volume < 1_000_000 && price > 50 ? volume * price : volume;
+  if (totalUSD >= 1_000_000_000) {
+    return `${currencyPrefix}${(totalUSD / 1_000_000_000).toFixed(2)}B`;
+  }
+  if (totalUSD >= 1_000_000) {
+    return `${currencyPrefix}${(totalUSD / 1_000_000).toFixed(2)}M`;
+  }
+  if (totalUSD >= 1_000) {
+    return `${currencyPrefix}${(totalUSD / 1_000).toFixed(2)}K`;
+  }
+  return `${currencyPrefix}${totalUSD.toFixed(0)}`;
 }
 
 export function WatchlistTable({
@@ -56,6 +72,8 @@ export function WatchlistTable({
             >
               <th className="py-3.5 px-4">Activo</th>
               <th className="py-3.5 px-3 text-right">Precio / 24h</th>
+              <th className="py-3.5 px-3 text-right">Rango 24h (Mín - Máx)</th>
+              <th className="py-3.5 px-3 text-right">Volumen Capital</th>
               <th className="py-3.5 px-3 text-left">Tendencia Detectada</th>
               <th className="py-3.5 px-3 text-center">Días en Tendencia</th>
               <th className="py-3.5 px-3 text-center">Riesgo de Giro</th>
@@ -72,6 +90,11 @@ export function WatchlistTable({
               const isBullish = analysis.trend === 'BULLISH';
               const isBearish = analysis.trend === 'BEARISH';
               const trendStyle = getTrendBadgeStyle(analysis.trend, isDark);
+
+              const lastCandle = asset.candles?.length ? asset.candles[asset.candles.length - 1] : null;
+              const high24h = asset.high24h || (lastCandle ? lastCandle.high : asset.price);
+              const low24h = asset.low24h || (lastCandle ? lastCandle.low : asset.price);
+              const volume24h = asset.volume24h || (lastCandle ? lastCandle.volume : 0);
 
               const riskBadgeClass = {
                 BAJO: isDark ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30' : 'text-emerald-700 bg-emerald-50 border-emerald-200',
@@ -123,7 +146,30 @@ export function WatchlistTable({
                     </div>
                   </td>
 
-                  {/* 3. Tendencia Detectada */}
+                  {/* 3. Rango 24h (Mín - Máx) */}
+                  <td className="px-3 py-3.5 text-right font-mono text-[11px]">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Mín:</span>
+                      <span className="font-semibold text-rose-400">{formatCurrency(low24h)}</span>
+                    </div>
+                    <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                      <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Máx:</span>
+                      <span className="font-semibold text-emerald-400">{formatCurrency(high24h)}</span>
+                    </div>
+                  </td>
+
+                  {/* 4. Volumen Total de Capital */}
+                  <td className="px-3 py-3.5 text-right font-mono font-bold">
+                    <div className={`flex items-center justify-end gap-1 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      <Coins className="h-3 w-3 text-blue-500" />
+                      <span>{formatCapitalVolume(volume24h, asset.price)}</span>
+                    </div>
+                    <div className={`text-[10px] font-normal ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      24h negociado
+                    </div>
+                  </td>
+
+                  {/* 5. Tendencia Detectada */}
                   <td className="px-3 py-3.5 text-left">
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-semibold ${trendStyle.badgeClass}`}
@@ -139,7 +185,7 @@ export function WatchlistTable({
                     </span>
                   </td>
 
-                  {/* 4. Días en Tendencia */}
+                  {/* 6. Días en Tendencia */}
                   <td className="px-3 py-3.5 text-center font-mono">
                     <div className={`inline-flex items-center gap-1 font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                       <Clock className="h-3.5 w-3.5 text-blue-500" />
@@ -147,7 +193,7 @@ export function WatchlistTable({
                     </div>
                   </td>
 
-                  {/* 5. Riesgo de Giro */}
+                  {/* 7. Riesgo de Giro */}
                   <td className="px-3 py-3.5 text-center">
                     <span
                       className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-0.5 text-xs font-bold ${riskBadgeClass}`}
@@ -158,7 +204,7 @@ export function WatchlistTable({
                     </span>
                   </td>
 
-                  {/* 6. Actions */}
+                  {/* 8. Actions */}
                   <td className="px-4 py-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <button
