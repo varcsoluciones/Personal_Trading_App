@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { POPULAR_ASSETS_CATALOG } from '@/lib/api/default-data';
 import { fetchBinanceKlines } from '@/lib/api/binance';
 import { fetchStockKlines, generateDeterministicCandles } from '@/lib/api/yahoo';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '@/lib/quant/backtest-engine';
-import { Candle } from '@/lib/types/market';
+import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
+import { Candle, BacktestConfig } from '@/lib/types/market';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,17 +29,28 @@ interface CacheState {
   cachedAt: string;
 }
 
-let rankingsCache: CacheState | null = null;
+const rankingsCacheMap = new Map<string, CacheState>();
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-export async function GET() {
-  const now = Date.now();
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const presetId = (searchParams.get('preset') || 'balanced').toLowerCase();
 
-  if (rankingsCache && rankingsCache.expiresAt > now) {
+  const preset = STRATEGY_PRESETS.find((p) => p.id === presetId) || STRATEGY_PRESETS[1];
+  const targetConfig: BacktestConfig = {
+    ...DEFAULT_BACKTEST_CONFIG,
+    ...preset.config,
+  };
+
+  const now = Date.now();
+  const cached = rankingsCacheMap.get(presetId);
+
+  if (cached && cached.expiresAt > now) {
     return NextResponse.json(
       {
-        rankings: rankingsCache.data,
-        cachedAt: rankingsCache.cachedAt,
+        rankings: cached.data,
+        cachedAt: cached.cachedAt,
+        preset: presetId,
         isCached: true,
       },
       { headers: { 'X-Server-Cache': 'HIT' } }
@@ -65,7 +77,7 @@ export async function GET() {
       candles = generateDeterministicCandles(cleanSymbol, 380);
     }
 
-    const backtest = runBacktest(candles, DEFAULT_BACKTEST_CONFIG);
+    const backtest = runBacktest(candles, targetConfig);
 
     results.push({
       id: asset.id,
@@ -83,15 +95,18 @@ export async function GET() {
     });
   }
 
-  rankingsCache = {
+  const cacheEntry: CacheState = {
     data: results,
     expiresAt: now + CACHE_TTL_MS,
     cachedAt: new Date().toISOString(),
   };
 
+  rankingsCacheMap.set(presetId, cacheEntry);
+
   return NextResponse.json({
     rankings: results,
-    cachedAt: rankingsCache.cachedAt,
+    cachedAt: cacheEntry.cachedAt,
+    preset: presetId,
     isCached: false,
   });
 }

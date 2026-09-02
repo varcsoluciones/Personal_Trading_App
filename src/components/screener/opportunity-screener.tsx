@@ -14,12 +14,16 @@ import {
   Table as TableIcon,
   Award,
   Clock,
+  Scale,
+  Zap,
 } from 'lucide-react';
 import { Asset, AssetCategory } from '@/lib/types/market';
 import { AssetOpportunityCard } from '@/components/shared/asset-opportunity-card';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { useSettings } from '@/lib/context/settings-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
+import { analyzeAsset } from '@/lib/quant/trend-analyzer';
 
 interface OpportunityScreenerProps {
   assets: Asset[];
@@ -49,6 +53,9 @@ export function OpportunityScreener({
   const { settings, accent, formatCurrency, updateSettings } = useSettings();
   const isDark = settings.theme === 'dark';
 
+  const [selectedProfileId, setSelectedProfileId] = useState<'conservative' | 'balanced' | 'aggressive'>(
+    settings.screenerPresetProfile || 'balanced'
+  );
   const [rankingMode, setRankingMode] = useState<'opportunity' | 'historical'>(
     settings.screenerRankingMode || 'opportunity'
   );
@@ -64,6 +71,9 @@ export function OpportunityScreener({
 
   // Sync and persist all screener filters with user settings across navigation & refreshes
   useEffect(() => {
+    if (settings.screenerPresetProfile && settings.screenerPresetProfile !== selectedProfileId) {
+      setSelectedProfileId(settings.screenerPresetProfile);
+    }
     if (settings.screenerViewMode && settings.screenerViewMode !== viewMode) {
       setViewMode(settings.screenerViewMode);
     }
@@ -77,11 +87,17 @@ export function OpportunityScreener({
       setMinScore(settings.screenerMinScore);
     }
   }, [
+    settings.screenerPresetProfile,
     settings.screenerViewMode,
     settings.screenerRankingMode,
     settings.screenerCategory,
     settings.screenerMinScore,
   ]);
+
+  const handleSetProfile = (profileId: 'conservative' | 'balanced' | 'aggressive') => {
+    setSelectedProfileId(profileId);
+    updateSettings({ screenerPresetProfile: profileId });
+  };
 
   const handleToggleViewMode = (mode: 'grid' | 'table') => {
     setViewMode(mode);
@@ -103,10 +119,10 @@ export function OpportunityScreener({
     updateSettings({ screenerMinScore: score });
   };
 
-  // Fetch cached walk-forward historical rankings on mount
+  // Fetch cached walk-forward historical rankings for the current profile
   useEffect(() => {
     setIsLoadingRankings(true);
-    fetch('/api/screener-rankings')
+    fetch(`/api/screener-rankings?preset=${selectedProfileId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data?.rankings && Array.isArray(data.rankings)) {
@@ -120,7 +136,20 @@ export function OpportunityScreener({
       })
       .catch((err) => console.warn('Error loading historical screener rankings:', err))
       .finally(() => setIsLoadingRankings(false));
-  }, []);
+  }, [selectedProfileId]);
+
+  // Dynamically re-analyze ALL assets in real time based on the active profile configuration
+  const dynamicAssets = useMemo(() => {
+    const activePreset = STRATEGY_PRESETS.find((p) => p.id === selectedProfileId) || STRATEGY_PRESETS[1];
+    return assets.map((asset) => {
+      if (!asset.candles || asset.candles.length === 0) return asset;
+      const freshAnalysis = analyzeAsset(asset.candles, activePreset.config);
+      return {
+        ...asset,
+        analysis: freshAnalysis,
+      };
+    });
+  }, [assets, selectedProfileId]);
 
   // Categories Definition
   const categories: { id: AssetCategory | 'all'; label: string; icon: any; count: number }[] = [
@@ -128,37 +157,37 @@ export function OpportunityScreener({
       id: 'all',
       label: 'Todas las Oportunidades',
       icon: Sparkles,
-      count: assets.length,
+      count: dynamicAssets.length,
     },
     {
       id: 'trend',
       label: 'Tendencia Fuerte',
       icon: TrendingUp,
-      count: assets.filter((a) => a.analysis?.opportunityCategory === 'trend').length,
+      count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'trend').length,
     },
     {
       id: 'volatile',
       label: 'Alta Volatilidad / Oportunidades',
       icon: Flame,
-      count: assets.filter((a) => a.analysis?.opportunityCategory === 'volatile').length,
+      count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'volatile').length,
     },
     {
       id: 'range',
       label: 'Operaciones en Rango',
       icon: Activity,
-      count: assets.filter((a) => a.analysis?.opportunityCategory === 'range').length,
+      count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'range').length,
     },
     {
       id: 'stable',
       label: 'Más Estable / Conservador',
       icon: ShieldCheck,
-      count: assets.filter((a) => a.analysis?.opportunityCategory === 'stable').length,
+      count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'stable').length,
     },
   ];
 
   // Filter and Sort Assets based on rankingMode
   const filteredAssets = useMemo(() => {
-    return assets
+    return dynamicAssets
       .filter((asset) => {
         if (!asset.analysis) return false;
 
@@ -197,11 +226,101 @@ export function OpportunityScreener({
         // Default: Sort by Opportunity Score Now
         return (b.analysis?.opportunityScore || 0) - (a.analysis?.opportunityScore || 0);
       });
-  }, [assets, selectedCategory, minScore, rankingMode, historicalRankings]);
+  }, [dynamicAssets, selectedCategory, minScore, rankingMode, historicalRankings]);
 
   return (
     <div className="space-y-6">
-      {/* Category Pills & Controls Header */}
+      {/* 1. STRATEGY PRESET PROFILE SELECTOR (Conservador / Equilibrado / Agresivo) */}
+      <div
+        className={`rounded-3xl border p-5 shadow-xs transition-colors ${
+          isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
+        }`}
+      >
+        <div className="mb-3">
+          <div className="flex items-center gap-2">
+            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Perfil de Estrategia Cuantitativa
+            </h3>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${accent.tintBgClass} ${accent.textClass}`}>
+              Simulación en Vivo
+            </span>
+          </div>
+          <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            Selecciona el nivel de riesgo deseado. Todas las oportunidades, entradas, stops y objetivos se recalcularán al instante.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+          {STRATEGY_PRESETS.map((preset) => {
+            const isSelected = selectedProfileId === preset.id;
+            const Icon = preset.id === 'conservative' ? Shield : preset.id === 'aggressive' ? Zap : Scale;
+
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handleSetProfile(preset.id)}
+                className={`flex flex-col justify-between rounded-2xl border p-4 text-left transition-all ${
+                  isSelected
+                    ? isDark
+                      ? 'border-blue-500 bg-[#2c2c2e] shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
+                      : 'border-blue-500 bg-blue-50/70 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
+                    : isDark
+                    ? 'border-slate-800 bg-[#2c2c2e]/40 hover:border-slate-700 hover:bg-[#2c2c2e]/70'
+                    : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-slate-100/70'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                          isSelected
+                            ? 'bg-blue-500 text-white shadow-xs'
+                            : isDark
+                            ? 'bg-[#1c1c1e] text-slate-400'
+                            : 'bg-white text-slate-600 border border-slate-200'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          {preset.name}
+                        </h4>
+                        <p className={`text-[10px] font-semibold ${isSelected ? 'text-blue-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {preset.tagline}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-500">
+                        Activo
+                      </span>
+                    )}
+                  </div>
+
+                  <p className={`text-xs leading-relaxed mt-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {preset.description}
+                  </p>
+                </div>
+
+                {/* Quick Strategy Blueprint Pill */}
+                <div className={`mt-3 pt-2 border-t flex items-center justify-between text-[10px] font-mono font-semibold ${
+                  isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+                }`}>
+                  <span>SL: -{preset.config.stopLossPct}%</span>
+                  <span>TP: 1:{preset.config.takeProfitRatio}x</span>
+                  <span>RSI: {preset.config.rsiOversold}-{preset.config.rsiOverbought}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. CATEGORY PILLS & CONTROLS HEADER */}
       <div
         className={`rounded-3xl border p-5 shadow-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
@@ -222,7 +341,7 @@ export function OpportunityScreener({
             <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               {rankingMode === 'historical'
                 ? 'Basado en desempeño histórico simulado fuera de muestra (Walk-Forward). No garantiza resultados futuros.'
-                : 'Selecciona una estrategia según tu perfil de riesgo y estilo de trading'}
+                : 'Filtra por estilo de mercado y umbral de calidad cuantitativa'}
             </p>
           </div>
 
@@ -324,7 +443,7 @@ export function OpportunityScreener({
           >
             <ShieldCheck className="h-4 w-4 text-amber-500 shrink-0" />
             <div>
-              <strong>Filtro de Consistencia Activo:</strong> Se filtraron activos con baja consistencia (BAJA) para mostrar solo los de persistencia Media o Alta en prueba ciega fuera de muestra.
+              <strong>Filtro de Consistencia Activo:</strong> Se recalcularon las simulaciones para el perfil <strong>{STRATEGY_PRESETS.find(p => p.id === selectedProfileId)?.name}</strong> y se filtraron los activos con persistencia baja (BAJA).
             </div>
           </div>
         )}
@@ -556,7 +675,7 @@ export function OpportunityScreener({
                         />
                       </td>
 
-                      {/* 6. Score Técnico (Al lado derecho de Confianza) */}
+                      {/* 7. Score Técnico (Al lado derecho de Confianza) */}
                       <td className="py-3.5 px-3 text-center font-mono">
                         <span
                           className={`inline-block rounded-xl border px-2.5 py-1 text-xs font-black ${
@@ -581,7 +700,7 @@ export function OpportunityScreener({
                         </span>
                       </td>
 
-                      {/* 7. Acciones */}
+                      {/* 8. Acciones */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button

@@ -1,4 +1,4 @@
-import { evaluateEntryCondition, evaluateExitCondition, calculateDynamicOrderSetup, calculateSuggestedEntry } from './strategy-rules';
+import { evaluateEntryCondition, evaluateExitCondition, calculateDynamicOrderSetup, calculateSuggestedEntry, StrategyRulesConfig } from './strategy-rules';
 import { AssetCategory, Candle, RiskLevel, SignalType, TrendAnalysis, TrendDirection, HorizonSuggestion, TradingHorizon } from '../types/market';
 import {
   calculateADX,
@@ -13,7 +13,7 @@ import {
 /**
  * Full quantitative diagnostic analyzer for a single asset's historical series
  */
-export function analyzeAsset(candles: Candle[]): TrendAnalysis {
+export function analyzeAsset(candles: Candle[], config?: StrategyRulesConfig): TrendAnalysis {
   if (!candles || candles.length < 30) {
     return getDefaultAnalysis(candles?.[candles.length - 1]?.close || 100);
   }
@@ -21,11 +21,15 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
   const closes = candles.map((c) => c.close);
   const currentPrice = closes[closes.length - 1];
 
+  const fastPeriod = config?.emaFastPeriod ?? 20;
+  const slowPeriod = config?.emaSlowPeriod ?? 50;
+  const rsiPeriod = config?.rsiPeriod ?? 14;
+
   // 1. Calculate Core Indicators
-  const ema20 = calculateEMA(closes, 20);
-  const ema50 = calculateEMA(closes, 50);
+  const ema20 = calculateEMA(closes, fastPeriod);
+  const ema50 = calculateEMA(closes, slowPeriod);
   const ema200 = calculateEMA(closes, Math.min(200, closes.length - 1));
-  const rsiValues = calculateRSI(closes, 14);
+  const rsiValues = calculateRSI(closes, rsiPeriod);
   const { atr } = calculateATR(candles, 14);
   const { adx, plusDI, minusDI } = calculateADX(candles, 14);
 
@@ -196,6 +200,7 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
     volumeConfirmed,
     volumeRatio,
     weeklyTrend,
+    config,
   });
 
   const exitCheck = evaluateExitCondition({
@@ -203,6 +208,7 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
     currentEmaFast: currentEma20,
     currentEmaSlow: currentEma50,
     currentRsi,
+    config,
   });
 
   if (entryCheck.shouldEnter) {
@@ -225,8 +231,8 @@ export function analyzeAsset(candles: Candle[]): TrendAnalysis {
   const entryLabel = entryCalc.entryLabel;
   const distanceToEntryPct = entryCalc.distanceToEntryPct;
 
-  // Stop Loss & Take Profit calculated strictly from the Projected Entry Price
-  const orderCalc = calculateDynamicOrderSetup(suggestedEntryPrice, currentAtr, {
+  // Stop Loss & Take Profit calculated strictly from the Projected Entry Price with dynamic profile config
+  const orderCalc = calculateDynamicOrderSetup(suggestedEntryPrice, currentAtr, config || {
     useAtrStop: true,
     atrMultiplier: 1.5,
     takeProfitRatio: 2.2,

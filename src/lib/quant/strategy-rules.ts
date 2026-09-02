@@ -1,4 +1,5 @@
 export interface StrategyRulesConfig {
+  rsiPeriod?: number;
   rsiOversold?: number;
   rsiOverbought?: number;
   emaFastPeriod?: number;
@@ -13,6 +14,7 @@ export interface StrategyRulesConfig {
 }
 
 export const DEFAULT_STRATEGY_CONFIG: Required<StrategyRulesConfig> = {
+  rsiPeriod: 14,
   rsiOversold: 38,
   rsiOverbought: 70,
   emaFastPeriod: 20,
@@ -231,3 +233,75 @@ export function calculateSuggestedEntry(
     distanceToEntryPct,
   };
 }
+
+
+export interface StrategyPresetProfile {
+  id: 'conservative' | 'balanced' | 'aggressive';
+  name: string;
+  tagline: string;
+  description: string;
+  config: StrategyRulesConfig;
+}
+
+export const STRATEGY_PRESETS: StrategyPresetProfile[] = [
+  {
+    id: 'conservative',
+    name: 'Conservador',
+    tagline: 'Protección & Selectividad',
+    description: 'Entra con más cautela y protege el capital con un stop más ceñido. Menos operaciones, pero más selectivas.',
+    config: {
+      rsiPeriod: 14,
+      rsiOversold: 40,
+      rsiOverbought: 65,
+      emaFastPeriod: 20,
+      emaSlowPeriod: 50,
+      stopLossPct: 2.5,
+      takeProfitRatio: 1.8,
+      useAtrStop: true,
+      atrMultiplier: 1.2,
+      adxMin: 22,
+      requireVolumeConfirmation: true,
+      requireWeeklyAlignment: true,
+    },
+  },
+  {
+    id: 'balanced',
+    name: 'Equilibrado',
+    tagline: 'Recomendado por Defecto',
+    description: 'El balance recomendado entre frecuencia de operaciones y control de riesgo.',
+    config: {
+      rsiPeriod: 14,
+      rsiOversold: 38,
+      rsiOverbought: 70,
+      emaFastPeriod: 20,
+      emaSlowPeriod: 50,
+      stopLossPct: 3.5,
+      takeProfitRatio: 2.2,
+      useAtrStop: true,
+      atrMultiplier: 1.5,
+      adxMin: 20,
+      requireVolumeConfirmation: true,
+      requireWeeklyAlignment: true,
+    },
+  },
+  {
+    id: 'aggressive',
+    name: 'Agresivo',
+    tagline: 'Mayor Frecuencia & Retorno',
+    description: 'Busca más oportunidades y tolera mayor volatilidad. Mayor riesgo, mayor potencial de retorno.',
+    config: {
+      rsiPeriod: 10,
+      rsiOversold: 32,
+      rsiOverbought: 75,
+      emaFastPeriod: 12,
+      emaSlowPeriod: 40,
+      stopLossPct: 5.0,
+      takeProfitRatio: 3.0,
+      useAtrStop: true,
+      atrMultiplier: 2.0,
+      adxMin: 16,
+      requireVolumeConfirmation: true,
+      requireWeeklyAlignment: true,
+    },
+  },
+];

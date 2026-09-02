@@ -39,6 +39,7 @@ export interface AppSettings {
   // Persisted Screener (Oportunidades) Filters
   screenerCategory?: 'all' | 'trend' | 'volatile' | 'range' | 'stable';
   screenerMinScore?: number;
+  screenerPresetProfile?: 'conservative' | 'balanced' | 'aggressive';
   screenerRankingMode?: 'opportunity' | 'historical';
   screenerViewMode?: 'grid' | 'table';
 
