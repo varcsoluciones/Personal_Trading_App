@@ -18,24 +18,90 @@
   }
 }
 
-/* Custom Scrollbar for quant terminal tables */
+
+/* Custom Scrollbar Theme Adaptive (Dark & Light) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
-  background: #090e17;
+html.dark ::-webkit-scrollbar-track,
+body.dark ::-webkit-scrollbar-track {
+  background: #121214;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #1e293b;
+html.dark ::-webkit-scrollbar-thumb,
+body.dark ::-webkit-scrollbar-thumb {
+  background: #2c2c2e;
+  border-radius: 6px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover,
+body.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3c;
+}
+
+html.light ::-webkit-scrollbar-track,
+body.light ::-webkit-scrollbar-track {
+  background: #e5e5ea;
+}
+
+html.light ::-webkit-scrollbar-thumb,
+body.light ::-webkit-scrollbar-thumb {
+  background: #c7c7cc;
+  border-radius: 6px;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover,
+body.light ::-webkit-scrollbar-thumb:hover {
+  background: #8e8e93;
+}
+
+/* Horizontal scrollbar styling for asset pill bars */
+.custom-horizontal-scrollbar {
+  scrollbar-width: thin;
+}
+
+html.dark .custom-horizontal-scrollbar {
+  scrollbar-color: #3a3a3c #1c1c1e;
+}
+
+html.light .custom-horizontal-scrollbar {
+  scrollbar-color: #c7c7cc #e5e5ea;
+}
+
+.custom-horizontal-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+html.dark .custom-horizontal-scrollbar::-webkit-scrollbar-track {
+  background: #1c1c1e;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+html.dark .custom-horizontal-scrollbar::-webkit-scrollbar-thumb {
+  background: #3a3a3c;
+  border-radius: 4px;
 }
+
+html.dark .custom-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #48484a;
+}
+
+html.light .custom-horizontal-scrollbar::-webkit-scrollbar-track {
+  background: #e5e5ea;
+  border-radius: 4px;
+}
+
+html.light .custom-horizontal-scrollbar::-webkit-scrollbar-thumb {
+  background: #c7c7cc;
+  border-radius: 4px;
+}
+
+html.light .custom-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #8e8e93;
+}
+
 
 /* Glassmorphism helpers */
 .glass-panel {

@@ -14,6 +14,7 @@ import { TradingChart } from '@/components/chart/trading-chart';
 import { StrategyControls } from '@/components/backtesting/strategy-controls';
 import { BacktestDashboard } from '@/components/backtesting/backtest-dashboard';
 import { TradeHistoryTable } from '@/components/backtesting/trade-history-table';
+import { HorizontalAssetBar } from '@/components/shared/horizontal-asset-bar';
 import {
   LayoutGrid,
   Table as TableIcon,
@@ -344,27 +345,12 @@ export default function Home() {
         {/* TAB 3: CHART VIEW WITH EMAs 20/50/200 */}
         {activeTab === 'chart' && selectedAsset && (
           <div className="space-y-4">
-            {/* Quick asset pill bar */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {assets.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => setSelectedAssetId(a.id)}
-                  className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
-                    a.id === selectedAssetId
-                      ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold shadow-xs`
-                      : isDark
-                      ? 'border-slate-800 bg-[#1c1c1e] text-slate-400 hover:border-slate-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 shadow-xs'
-                  }`}
-                >
-                  <span>{a.symbol}</span>
-                  <span className={`font-mono text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    ({formatCurrency(a.price, 0)})
-                  </span>
-                </button>
-              ))}
-            </div>
+            {/* High-Contrast Horizontal Asset Navigation Bar */}
+            <HorizontalAssetBar
+              assets={assets}
+              selectedAssetId={selectedAssetId}
+              onSelectAsset={(id) => setSelectedAssetId(id)}
+            />
 
             <TradingChart asset={selectedAsset} />
           </div>
@@ -373,27 +359,12 @@ export default function Home() {
         {/* TAB 4: BACKTESTING LAB (INTERACTIVE BROKERS REALISTIC PRICING) */}
         {activeTab === 'backtest' && selectedAsset && (
           <div className="space-y-6">
-            {/* Asset Selector Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {assets.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => setSelectedAssetId(a.id)}
-                  className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
-                    a.id === selectedAssetId
-                      ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold shadow-xs`
-                      : isDark
-                      ? 'border-slate-800 bg-[#1c1c1e] text-slate-400 hover:border-slate-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 shadow-xs'
-                  }`}
-                >
-                  <span>{a.symbol}</span>
-                  <span className={`font-mono text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    ({formatCurrency(a.price, 0)})
-                  </span>
-                </button>
-              ))}
-            </div>
+            {/* High-Contrast Horizontal Asset Navigation Bar */}
+            <HorizontalAssetBar
+              assets={assets}
+              selectedAssetId={selectedAssetId}
+              onSelectAsset={(id) => setSelectedAssetId(id)}
+            />
 
             {/* Real-time Strategy Sliders & IBKR Cost Model */}
             <StrategyControls
