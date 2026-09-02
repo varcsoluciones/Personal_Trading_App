@@ -3,14 +3,15 @@
 import React from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
-import { ConfidenceBadge } from '@/components/ui/confidence-badge';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getTrendBadgeStyle } from '@/lib/ui/badge-styles';
 import {
   TrendingUp,
+  TrendingDown,
+  Minus,
+  Clock,
   BarChart2,
   Trash2,
-  Target,
-  Shield,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface WatchlistTableProps {
@@ -55,9 +56,9 @@ export function WatchlistTable({
             >
               <th className="py-3.5 px-4">Activo</th>
               <th className="py-3.5 px-3 text-right">Precio / 24h</th>
-              <th className="py-3.5 px-3 text-right">🎯 Entrada Sugerida</th>
-              <th className="py-3.5 px-3 text-right">🎯 Take Profit / Stop</th>
-              <th className="py-3.5 px-3 text-center">Veredicto de Confianza</th>
+              <th className="py-3.5 px-3 text-left">Tendencia Detectada</th>
+              <th className="py-3.5 px-3 text-center">Días en Tendencia</th>
+              <th className="py-3.5 px-3 text-center">Riesgo de Giro</th>
               <th className="py-3.5 px-4 text-center">Acciones</th>
             </tr>
           </thead>
@@ -68,7 +69,15 @@ export function WatchlistTable({
 
               const isSelected = asset.id === selectedAssetId;
               const isPositive = asset.change24hPct >= 0;
-              const order = analysis.orderSetup;
+              const isBullish = analysis.trend === 'BULLISH';
+              const isBearish = analysis.trend === 'BEARISH';
+              const trendStyle = getTrendBadgeStyle(analysis.trend, isDark);
+
+              const riskBadgeClass = {
+                BAJO: isDark ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30' : 'text-emerald-700 bg-emerald-50 border-emerald-200',
+                MEDIO: isDark ? 'text-amber-400 bg-amber-500/15 border-amber-500/30' : 'text-amber-700 bg-amber-50 border-amber-200',
+                ALTO: isDark ? 'text-rose-400 bg-rose-500/15 border-rose-500/30' : 'text-rose-700 bg-rose-50 border-rose-200',
+              }[analysis.reversalRisk.level];
 
               return (
                 <tr
@@ -91,7 +100,10 @@ export function WatchlistTable({
                         {asset.symbol}
                       </span>
                       <span
-                        className={`rounded-lg border px-1.5 py-0.2 text-[9px] uppercase font-bold ${getAssetTypeBadgeStyle(asset.type, isDark)}`}
+                        className={`rounded-lg border px-1.5 py-0.2 text-[9px] uppercase font-bold ${getAssetTypeBadgeStyle(
+                          asset.type,
+                          isDark
+                        )}`}
                       >
                         {asset.type}
                       </span>
@@ -111,43 +123,39 @@ export function WatchlistTable({
                     </div>
                   </td>
 
-                  {/* 3. Suggested Entry */}
-                  <td className="px-3 py-3.5 text-right">
-                    <div className="font-mono font-bold text-blue-500">
-                      {formatCurrency(order.suggestedEntryPrice)}
-                    </div>
-                    <div className="text-[10px] flex items-center justify-end gap-1 font-semibold">
-                      <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                        {order.entryLabel}
-                      </span>
-                      {order.distanceToEntryPct !== 0 && (
-                        <span className="font-mono text-amber-500 font-bold">
-                          ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
-                        </span>
+                  {/* 3. Tendencia Detectada */}
+                  <td className="px-3 py-3.5 text-left">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-semibold ${trendStyle.badgeClass}`}
+                    >
+                      {isBullish ? (
+                        <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : isBearish ? (
+                        <TrendingDown className="h-3.5 w-3.5 text-rose-500" />
+                      ) : (
+                        <Minus className="h-3.5 w-3.5 text-amber-500" />
                       )}
+                      <span>{analysis.trendLabel}</span>
+                    </span>
+                  </td>
+
+                  {/* 4. Días en Tendencia */}
+                  <td className="px-3 py-3.5 text-center font-mono">
+                    <div className={`inline-flex items-center gap-1 font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                      <Clock className="h-3.5 w-3.5 text-blue-500" />
+                      <span>{analysis.daysInTrend} d</span>
                     </div>
                   </td>
 
-                  {/* 4. TP & SL */}
-                  <td className="px-3 py-3.5 text-right font-mono text-[11px]">
-                    <div className="text-emerald-500 font-bold flex items-center justify-end gap-1">
-                      <Target className="h-3 w-3" />
-                      <span>{formatCurrency(order.suggestedTakeProfit)} (+{order.suggestedTakeProfitPct}%)</span>
-                    </div>
-                    <div className="text-rose-500 font-bold flex items-center justify-end gap-1 mt-0.5">
-                      <Shield className="h-3 w-3" />
-                      <span>{formatCurrency(order.suggestedStopLoss)} (-{order.suggestedStopLossPct}%)</span>
-                    </div>
-                  </td>
-
-                  {/* 5. Single Unified Confidence Badge */}
+                  {/* 5. Riesgo de Giro */}
                   <td className="px-3 py-3.5 text-center">
-                    <ConfidenceBadge
-                      opportunityScore={analysis.opportunityScore}
-                      isSimulated={asset.isSimulated}
-                      isDark={isDark}
-                      size="sm"
-                    />
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-0.5 text-xs font-bold ${riskBadgeClass}`}
+                    >
+                      {analysis.reversalRisk.level === 'ALTO' && <AlertTriangle className="h-3 w-3 shrink-0" />}
+                      <span>{analysis.reversalRisk.level}</span>
+                      <span className="font-mono opacity-85 font-normal">({analysis.reversalRisk.percentage}%)</span>
+                    </span>
                   </td>
 
                   {/* 6. Actions */}

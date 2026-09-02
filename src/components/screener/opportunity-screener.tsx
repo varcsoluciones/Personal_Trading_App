@@ -399,6 +399,7 @@ export function OpportunityScreener({
                   <th className="py-3.5 px-3 text-right">🎯 Entrada Sugerida</th>
                   <th className="py-3.5 px-3 text-right">🎯 Take Profit / Stop</th>
                   <th className="py-3.5 px-3 text-center">Veredicto de Confianza</th>
+                  <th className="py-3.5 px-3 text-center">Score Técnico</th>
                   <th className="py-3.5 px-4 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -485,7 +486,28 @@ export function OpportunityScreener({
                         />
                       </td>
 
-                      {/* 6. Acciones */}
+                      {/* 6. Score Técnico (Al lado derecho de Confianza) */}
+                      <td className="py-3.5 px-3 text-center font-mono">
+                        <span
+                          className={`inline-block rounded-xl border px-2.5 py-1 text-xs font-black ${
+                            analysis.opportunityScore >= 75
+                              ? isDark
+                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                                : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : analysis.opportunityScore >= 50
+                              ? isDark
+                                ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                                : 'bg-amber-50 border-amber-300 text-amber-800'
+                              : isDark
+                              ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                              : 'bg-rose-50 border-rose-300 text-rose-800'
+                          }`}
+                        >
+                          {analysis.opportunityScore}
+                        </span>
+                      </td>
+
+                      {/* 7. Acciones */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
