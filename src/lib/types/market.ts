@@ -87,6 +87,9 @@ export interface Asset {
   candles: Candle[];
   analysis?: TrendAnalysis;
   isSimulated?: boolean;
+  backtestReliabilityScore?: number;
+  backtestReliabilityLabel?: 'ALTA' | 'MEDIA' | 'BAJA';
+  backtestLowSampleWarning?: boolean;
 }
 
 export interface BacktestConfig {

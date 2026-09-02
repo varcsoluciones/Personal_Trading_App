@@ -24,6 +24,7 @@ import { useSettings } from '@/lib/context/settings-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
 import { analyzeAsset } from '@/lib/quant/trend-analyzer';
+import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '@/lib/quant/backtest-engine';
 
 interface OpportunityScreenerProps {
   assets: Asset[];
@@ -138,15 +139,22 @@ export function OpportunityScreener({
       .finally(() => setIsLoadingRankings(false));
   }, [selectedProfileId]);
 
-  // Dynamically re-analyze ALL assets in real time based on the active profile configuration
+  // Dynamically re-analyze ALL assets and recalculate walk-forward reliability in real time for the active profile
   const dynamicAssets = useMemo(() => {
     const activePreset = STRATEGY_PRESETS.find((p) => p.id === selectedProfileId) || STRATEGY_PRESETS[1];
+    const targetConfig = { ...DEFAULT_BACKTEST_CONFIG, ...activePreset.config };
+
     return assets.map((asset) => {
       if (!asset.candles || asset.candles.length === 0) return asset;
       const freshAnalysis = analyzeAsset(asset.candles, activePreset.config);
+      const backtest = runBacktest(asset.candles, targetConfig);
+
       return {
         ...asset,
         analysis: freshAnalysis,
+        backtestReliabilityScore: backtest.reliabilityScore,
+        backtestReliabilityLabel: backtest.reliabilityLabel,
+        backtestLowSampleWarning: backtest.lowSampleWarning,
       };
     });
   }, [assets, selectedProfileId]);
@@ -665,10 +673,12 @@ export function OpportunityScreener({
                         )}
                       </td>
 
-                      {/* 6. Veredicto de Confianza Unificado */}
+                      {/* 6. Veredicto de Confianza Unificado Dinámico */}
                       <td className="py-3.5 px-3 text-center">
                         <ConfidenceBadge
                           opportunityScore={analysis.opportunityScore}
+                          reliabilityScore={asset.backtestReliabilityScore}
+                          lowSampleWarning={asset.backtestLowSampleWarning}
                           isSimulated={asset.isSimulated}
                           isDark={isDark}
                           size="sm"

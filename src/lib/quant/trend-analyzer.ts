@@ -271,14 +271,18 @@ export function analyzeAsset(candles: Candle[], config?: StrategyRulesConfig): T
   if (trend === 'BULLISH') score += 20;
   if (trend === 'BEARISH') score -= 15;
 
-  // RSI component (sweet spot 40-55 for buying pullbacks = +20 pts)
-  if (currentRsi >= 40 && currentRsi <= 58) score += 20;
-  else if (currentRsi < 35 && rsiDiv === 'BULLISH') score += 22;
-  else if (currentRsi > 70) score -= 15;
+  const oversold = config?.rsiOversold ?? 38;
+  const overbought = config?.rsiOverbought ?? 70;
+  const minAdx = config?.adxMin ?? 20;
 
-  // ADX strength component (+/- 15 pts)
-  if (currentAdx >= 25 && currentPlusDI > currentMinusDI) score += 15;
-  else if (currentAdx < 15) score -= 8;
+  // RSI component dynamically calibrated to active strategy profile
+  if (currentRsi >= oversold && currentRsi <= 58) score += 20;
+  else if (currentRsi < oversold && rsiDiv === 'BULLISH') score += 22;
+  else if (currentRsi > overbought) score -= 15;
+
+  // ADX strength component dynamically calibrated to active strategy profile
+  if (currentAdx >= minAdx && currentPlusDI > currentMinusDI) score += 15;
+  else if (currentAdx < minAdx - 5) score -= 8;
 
   // Reversal Risk discount (0 to -20 pts)
   if (riskLevel === 'BAJO') score += 10;
