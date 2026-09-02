@@ -68,8 +68,18 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
             </p>
           </div>
 
+          {/* Live Dynamic Score computed from current Backtest & Walk-Forward calibration */}
           <ConfidenceBadge
-            opportunityScore={result.winRate >= 50 ? 75 : 45}
+            opportunityScore={Math.min(
+              95,
+              Math.max(
+                15,
+                Math.round(
+                  (result.winRate >= 50 ? 50 + (result.winRate - 50) * 0.8 : result.winRate * 0.9) +
+                  (result.profitFactor >= 2.0 ? 25 : result.profitFactor >= 1.2 ? 15 : result.profitFactor >= 1.0 ? 5 : -20)
+                )
+              )
+            )}
             reliabilityScore={result.reliabilityScore}
             lowSampleWarning={result.lowSampleWarning}
             size="lg"

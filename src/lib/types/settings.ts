@@ -21,6 +21,7 @@ export interface AppSettings {
   defaultRiskReward: number;
   defaultView: 'grid' | 'table';
   screenerViewMode?: 'grid' | 'table';
+  backtestAdvancedMode?: boolean;
   lastSavedAt?: string;
 }
 
@@ -136,4 +137,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultRiskReward: 2.2,
   defaultView: 'table',
   screenerViewMode: 'grid',
+  backtestAdvancedMode: false,
 };

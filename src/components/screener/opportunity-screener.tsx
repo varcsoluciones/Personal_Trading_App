@@ -6,30 +6,38 @@ import {
   TrendingUp,
   Activity,
   Flame,
-  Zap,
   Sparkles,
   BarChart2,
-  CheckCircle2,
-  Filter,
   Target,
   Shield,
-  ArrowRight,
-  TrendingDown,
-  Compass,
   LayoutGrid,
   Table as TableIcon,
+  Award,
+  Clock,
 } from 'lucide-react';
 import { Asset, AssetCategory } from '@/lib/types/market';
 import { AssetOpportunityCard } from '@/components/shared/asset-opportunity-card';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { useSettings } from '@/lib/context/settings-context';
-import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 
 interface OpportunityScreenerProps {
   assets: Asset[];
   onSelectAsset: (id: string) => void;
   onOpenChart: (id: string) => void;
   onOpenBacktest: (id: string) => void;
+}
+
+interface HistoricalRankingItem {
+  id: string;
+  symbol: string;
+  cleanSymbol: string;
+  reliabilityScore: number;
+  reliabilityLabel: 'ALTA' | 'MEDIA' | 'BAJA';
+  profitFactor: number;
+  winRate: number;
+  totalTrades: number;
+  maxDrawdown: number;
 }
 
 export function OpportunityScreener({
@@ -41,9 +49,12 @@ export function OpportunityScreener({
   const { settings, accent, formatCurrency, updateSettings } = useSettings();
   const isDark = settings.theme === 'dark';
 
+  const [rankingMode, setRankingMode] = useState<'opportunity' | 'historical'>('opportunity');
   const [selectedCategory, setSelectedCategory] = useState<AssetCategory | 'all'>('all');
   const [minScore, setMinScore] = useState<number>(50);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [historicalRankings, setHistoricalRankings] = useState<Map<string, HistoricalRankingItem>>(new Map());
+  const [isLoadingRankings, setIsLoadingRankings] = useState(false);
 
   // Sync and persist viewMode with user settings
   useEffect(() => {
@@ -56,6 +67,25 @@ export function OpportunityScreener({
     setViewMode(mode);
     updateSettings({ screenerViewMode: mode });
   };
+
+  // Fetch cached walk-forward historical rankings on mount
+  useEffect(() => {
+    setIsLoadingRankings(true);
+    fetch('/api/screener-rankings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.rankings && Array.isArray(data.rankings)) {
+          const map = new Map<string, HistoricalRankingItem>();
+          data.rankings.forEach((r: HistoricalRankingItem) => {
+            map.set(r.symbol, r);
+            map.set(r.cleanSymbol, r);
+          });
+          setHistoricalRankings(map);
+        }
+      })
+      .catch((err) => console.warn('Error loading historical screener rankings:', err))
+      .finally(() => setIsLoadingRankings(false));
+  }, []);
 
   // Categories Definition
   const categories: { id: AssetCategory | 'all'; label: string; icon: any; count: number }[] = [
@@ -91,21 +121,48 @@ export function OpportunityScreener({
     },
   ];
 
-  // Filter and Sort Assets
+  // Filter and Sort Assets based on rankingMode
   const filteredAssets = useMemo(() => {
     return assets
       .filter((asset) => {
         if (!asset.analysis) return false;
+
+        // Category filter
         if (selectedCategory !== 'all' && asset.analysis.opportunityCategory !== selectedCategory) {
           return false;
         }
+
+        // Min score filter
         if (asset.analysis.opportunityScore < minScore) {
           return false;
         }
+
+        // In Historical Consistency mode, filter out assets with low reliability (BAJA)
+        if (rankingMode === 'historical') {
+          const clean = asset.symbol.replace('/', '').replace('-', '').toUpperCase();
+          const rank = historicalRankings.get(asset.symbol) || historicalRankings.get(clean);
+          if (rank && rank.reliabilityLabel === 'BAJA') {
+            return false;
+          }
+        }
+
         return true;
       })
-      .sort((a, b) => (b.analysis?.opportunityScore || 0) - (a.analysis?.opportunityScore || 0));
-  }, [assets, selectedCategory, minScore]);
+      .sort((a, b) => {
+        if (rankingMode === 'historical') {
+          const cleanA = a.symbol.replace('/', '').replace('-', '').toUpperCase();
+          const cleanB = b.symbol.replace('/', '').replace('-', '').toUpperCase();
+          const rankA = historicalRankings.get(a.symbol) || historicalRankings.get(cleanA);
+          const rankB = historicalRankings.get(b.symbol) || historicalRankings.get(cleanB);
+          const scoreA = rankA?.reliabilityScore ?? 50;
+          const scoreB = rankB?.reliabilityScore ?? 50;
+          return scoreB - scoreA;
+        }
+
+        // Default: Sort by Opportunity Score Now
+        return (b.analysis?.opportunityScore || 0) - (a.analysis?.opportunityScore || 0);
+      });
+  }, [assets, selectedCategory, minScore, rankingMode, historicalRankings]);
 
   return (
     <div className="space-y-6">
@@ -119,26 +176,72 @@ export function OpportunityScreener({
           <div>
             <div className="flex items-center gap-2">
               <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Radar Cuantitativo de Oportunidades
+                {rankingMode === 'historical'
+                  ? 'Activos con Comportamiento Histórico Más Consistente'
+                  : 'Radar de Oportunidades & Estrategias'}
               </h3>
-              <InfoTooltip
-                text="Clasifica los activos según su estructura técnica, fuerza de impulso (ADX), riesgo de reversión y zonas proyectadas de entrada para maximizar el ratio riesgo/beneficio."
-                title="Filtro de Oportunidades"
-              />
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${accent.tintBgClass} ${accent.textClass}`}>
+                {filteredAssets.length} encontrados
+              </span>
             </div>
-            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Selecciona una estrategia según tu perfil de riesgo y estilo de trading
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {rankingMode === 'historical'
+                ? 'Basado en desempeño histórico simulado fuera de muestra (Walk-Forward). No garantiza resultados futuros.'
+                : 'Selecciona una estrategia según tu perfil de riesgo y estilo de trading'}
             </p>
           </div>
 
-          {/* View Mode Switcher (Grid vs List) */}
-          <div className="flex items-center gap-3">
+          {/* Ranking Mode & View Mode Switcher */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* 1. Ranking Mode Switcher */}
             <div
               className={`flex items-center gap-1 rounded-2xl border p-1 ${
                 isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
               }`}
             >
               <button
+                type="button"
+                onClick={() => setRankingMode('opportunity')}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                  rankingMode === 'opportunity'
+                    ? isDark
+                      ? 'bg-[#1c1c1e] text-white shadow-xs'
+                      : 'bg-white text-slate-900 shadow-xs'
+                    : isDark
+                    ? 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+                <span>Oportunidad Ahora</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRankingMode('historical')}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                  rankingMode === 'historical'
+                    ? isDark
+                      ? 'bg-[#1c1c1e] text-white shadow-xs'
+                      : 'bg-white text-slate-900 shadow-xs'
+                    : isDark
+                    ? 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Award className="h-3.5 w-3.5 text-amber-500" />
+                <span>Consistencia Histórica</span>
+              </button>
+            </div>
+
+            {/* 2. Grid vs Table View Switcher */}
+            <div
+              className={`flex items-center gap-1 rounded-2xl border p-1 ${
+                isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
+              }`}
+            >
+              <button
+                type="button"
                 onClick={() => handleToggleViewMode('grid')}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
                   viewMode === 'grid'
@@ -147,14 +250,15 @@ export function OpportunityScreener({
                       : 'bg-white text-slate-900 shadow-xs'
                     : isDark
                     ? 'text-slate-400 hover:text-slate-200'
-                    : 'text-slate-500 hover:text-slate-800'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
-                title="Vista en Cuadrícula"
+                title="Vista Cuadrícula"
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
                 <span>Tarjetas</span>
               </button>
               <button
+                type="button"
                 onClick={() => handleToggleViewMode('table')}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
                   viewMode === 'table'
@@ -163,60 +267,59 @@ export function OpportunityScreener({
                       : 'bg-white text-slate-900 shadow-xs'
                     : isDark
                     ? 'text-slate-400 hover:text-slate-200'
-                    : 'text-slate-500 hover:text-slate-800'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
-                title="Vista en Lista"
+                title="Vista Lista Compacta"
               >
                 <TableIcon className="h-3.5 w-3.5" />
                 <span>Lista</span>
               </button>
             </div>
-
-            {/* Score Slider Filter */}
-            <div className="flex items-center gap-2">
-              <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Score mín:
-              </span>
-              <input
-                type="range"
-                min="30"
-                max="90"
-                step="5"
-                value={minScore}
-                onChange={(e) => setMinScore(Number(e.target.value))}
-                className="w-24 accent-blue-500 cursor-pointer"
-              />
-              <span className={`font-mono text-xs font-bold ${accent.textClass}`}>
-                {minScore}+
-              </span>
-            </div>
           </div>
         </div>
 
-        {/* Categories Bar */}
-        <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-slate-800/40">
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            const isSelected = selectedCategory === cat.id;
+        {/* Historical Consistency Notice Banner */}
+        {rankingMode === 'historical' && (
+          <div
+            className={`mt-4 flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-xs font-medium ${
+              isDark
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                : 'border-amber-200 bg-amber-50 text-amber-900'
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4 text-amber-500 shrink-0" />
+            <div>
+              <strong>Filtro de Consistencia Activo:</strong> Se filtraron activos con baja consistencia (BAJA) para mostrar solo los de persistencia Media o Alta en prueba ciega fuera de muestra.
+            </div>
+          </div>
+        )}
 
+        {/* Categories Bar */}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat.id;
+            const Icon = cat.icon;
             return (
               <button
                 key={cat.id}
+                type="button"
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all ${
                   isSelected
-                    ? `${accent.bgClass} text-white border-transparent shadow-xs scale-[1.02]`
+                    ? isDark
+                      ? 'border-blue-500 bg-[#2c2c2e] text-white shadow-xs ring-1 ring-blue-500'
+                      : 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs ring-1 ring-blue-500'
                     : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-300 hover:bg-[#2c2c2e]'
-                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className={`h-3.5 w-3.5 ${isSelected ? 'text-blue-500' : ''}`} />
                 <span>{cat.label}</span>
                 <span
-                  className={`rounded-full px-2 py-0.2 text-[10px] font-mono font-bold ${
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                     isSelected
-                      ? 'bg-white/20 text-white'
+                      ? 'bg-blue-500 text-white'
                       : isDark
                       ? 'bg-slate-800 text-slate-400'
                       : 'bg-slate-200 text-slate-600'
@@ -228,39 +331,53 @@ export function OpportunityScreener({
             );
           })}
         </div>
+
+        {/* Score Threshold Filter */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800/40 text-xs">
+          <span className={`font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            Filtro de Score Mínimo:
+          </span>
+          <div className="flex items-center gap-2">
+            {[
+              { label: 'Todos (≥ 50)', val: 50 },
+              { label: 'Buena Calidad (≥ 65)', val: 65 },
+              { label: 'Alta Calidad (≥ 80)', val: 80 },
+            ].map((item) => (
+              <button
+                key={item.val}
+                type="button"
+                onClick={() => setMinScore(item.val)}
+                className={`rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
+                  minScore === item.val
+                    ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold`
+                    : isDark
+                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400 hover:text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Empty State */}
       {filteredAssets.length === 0 && (
         <div
-          className={`flex flex-col items-center justify-center rounded-3xl border p-12 text-center ${
-            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
+          className={`rounded-3xl border p-12 text-center transition-colors ${
+            isDark ? 'border-slate-800 bg-[#1c1c1e] text-slate-400' : 'border-slate-200 bg-white text-slate-600'
           }`}
         >
-          <div className="rounded-full bg-blue-500/10 p-4 text-blue-500 mb-3">
-            <Filter className="h-8 w-8" />
-          </div>
-          <h4 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            No hay activos con los filtros seleccionados
-          </h4>
-          <p className={`text-xs max-w-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Prueba reduciendo el Score mínimo requerido ({minScore}) o seleccionando otra categoría.
+          <Sparkles className="h-8 w-8 mx-auto mb-3 text-slate-500" />
+          <h4 className="font-bold text-sm mb-1">No se encontraron activos con estos filtros</h4>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Prueba reduciendo el umbral de score mínimo a ≥ 50 o cambiando a la categoría &quot;Todas las Oportunidades&quot;.
           </p>
-          <button
-            onClick={() => {
-              setMinScore(50);
-              setSelectedCategory('all');
-            }}
-            className={`mt-4 rounded-2xl px-4 py-2 text-xs font-bold text-white ${accent.bgClass}`}
-          >
-            Restablecer Filtros
-          </button>
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* VISTA 1: LISTA / TABLA DE OPORTUNIDADES */}
-      {/* ========================================================== */}
+      {/* VISTA 1: TABLA / LISTA COMPACTA */}
       {viewMode === 'table' && filteredAssets.length > 0 && (
         <div
           className={`overflow-hidden rounded-3xl border shadow-xs transition-colors ${
@@ -277,13 +394,11 @@ export function OpportunityScreener({
                       : 'border-slate-200 bg-slate-50 text-slate-500'
                   }`}
                 >
-                  <th className="py-3.5 px-4">Activo / Score</th>
-                  <th className="py-3.5 px-3 text-right">Precio Mercado</th>
-                  <th className="py-3.5 px-3 text-right">🎯 Entrada Proyectada</th>
-                  <th className="py-3.5 px-3 text-right">🎯 Take Profit</th>
-                  <th className="py-3.5 px-3 text-right">🛑 Stop Loss</th>
-                  <th className="py-3.5 px-3 text-center">R:B & Beneficio</th>
-                  <th className="py-3.5 px-3 text-center">Estado / Señal</th>
+                  <th className="py-3.5 px-4">Activo</th>
+                  <th className="py-3.5 px-3 text-right">Precio / 24h</th>
+                  <th className="py-3.5 px-3 text-right">🎯 Entrada Sugerida</th>
+                  <th className="py-3.5 px-3 text-right">🎯 Take Profit / Stop</th>
+                  <th className="py-3.5 px-3 text-center">Veredicto de Confianza</th>
                   <th className="py-3.5 px-4 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -291,36 +406,33 @@ export function OpportunityScreener({
                 {filteredAssets.map((asset) => {
                   const analysis = asset.analysis!;
                   const order = analysis.orderSetup;
+                  const isPositive = asset.change24hPct >= 0;
 
                   return (
                     <tr
                       key={asset.id}
                       onClick={() => onSelectAsset(asset.id)}
-                      className={`cursor-pointer transition-colors ${
+                      className={`transition-colors cursor-pointer ${
                         isDark ? 'hover:bg-[#2c2c2e]/50' : 'hover:bg-slate-50'
                       }`}
                     >
-                      {/* 1. Activo & Score */}
+                      {/* 1. Activo */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`flex h-9 w-9 items-center justify-center rounded-2xl font-mono text-xs font-black shrink-0 ${accent.tintBgClass} ${accent.textClass} border ${accent.borderClass}`}
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {asset.symbol}
+                          </span>
+                          <span
+                            className={`rounded-lg border px-1.5 py-0.2 text-[9px] uppercase font-bold ${getAssetTypeBadgeStyle(
+                              asset.type,
+                              isDark
+                            )}`}
                           >
-                            {analysis.opportunityScore}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                {asset.symbol}
-                              </span>
-                              <span className={`text-[10px] uppercase font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                                ({asset.type})
-                              </span>
-                            </div>
-                            <span className={`text-[11px] block truncate max-w-[130px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {asset.name}
-                            </span>
-                          </div>
+                            {asset.type}
+                          </span>
+                        </div>
+                        <div className={`text-[11px] truncate max-w-[150px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {asset.name}
                         </div>
                       </td>
 
@@ -329,12 +441,8 @@ export function OpportunityScreener({
                         <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {formatCurrency(asset.price)}
                         </div>
-                        <div
-                          className={`text-[11px] font-semibold ${
-                            asset.change24hPct >= 0 ? 'text-emerald-500' : 'text-rose-500'
-                          }`}
-                        >
-                          {asset.change24hPct >= 0 ? '+' : ''}{asset.change24hPct.toFixed(2)}%
+                        <div className={`text-[11px] font-semibold ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {isPositive ? '+' : ''}{asset.change24hPct.toFixed(2)}%
                         </div>
                       </td>
 
@@ -345,7 +453,7 @@ export function OpportunityScreener({
                         </div>
                         <div className="text-[10px] flex items-center justify-end gap-1 font-semibold">
                           <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                            {order.entryType === 'INMEDIATA' ? 'Comprar ahora' : order.entryLabel}
+                            {order.entryLabel}
                           </span>
                           {order.distanceToEntryPct !== 0 && (
                             <span className="font-mono text-amber-500 font-bold">
@@ -355,80 +463,56 @@ export function OpportunityScreener({
                         </div>
                       </td>
 
-                      {/* 4. Take Profit */}
-                      <td className="py-3.5 px-3 text-right font-mono">
-                        <div className="font-bold text-emerald-500">
-                          {formatCurrency(order.suggestedTakeProfit)}
+                      {/* 4. TP & SL */}
+                      <td className="py-3.5 px-3 text-right font-mono text-[11px]">
+                        <div className="text-emerald-500 font-bold flex items-center justify-end gap-1">
+                          <Target className="h-3 w-3" />
+                          <span>{formatCurrency(order.suggestedTakeProfit)} (+{order.suggestedTakeProfitPct}%)</span>
                         </div>
-                        <div className="text-[10px] text-emerald-600 font-bold">
-                          +{order.suggestedTakeProfitPct}%
-                        </div>
-                      </td>
-
-                      {/* 5. Stop Loss */}
-                      <td className="py-3.5 px-3 text-right font-mono">
-                        <div className="font-bold text-rose-500">
-                          {formatCurrency(order.suggestedStopLoss)}
-                        </div>
-                        <div className="text-[10px] text-rose-500 font-bold">
-                          -{order.suggestedStopLossPct}%
+                        <div className="text-rose-500 font-bold flex items-center justify-end gap-1 mt-0.5">
+                          <Shield className="h-3 w-3" />
+                          <span>{formatCurrency(order.suggestedStopLoss)} (-{order.suggestedStopLossPct}%)</span>
                         </div>
                       </td>
 
-                      {/* 6. Ratio R:B & Beneficio */}
-                      <td className="py-3.5 px-3 text-center font-mono">
-                        <div className="inline-block rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-bold text-blue-500">
-                          1:{order.riskRewardRatio}
-                        </div>
-                        <div className="text-[10px] text-emerald-500 font-bold mt-0.5">
-                          +{formatCurrency(order.potentialRewardUSD)}
-                        </div>
-                      </td>
-
-                      {/* 7. Estado / Señal */}
+                      {/* 5. Veredicto de Confianza Unificado */}
                       <td className="py-3.5 px-3 text-center">
-                        {analysis.signal === 'OPORTUNIDAD DE ENTRADA' ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            Comprar
-                          </span>
-                        ) : analysis.trend === 'BULLISH' ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 text-[11px] font-bold text-blue-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                            Mantener
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[11px] font-bold text-amber-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                            Esperar
-                          </span>
-                        )}
+                        <ConfidenceBadge
+                          opportunityScore={analysis.opportunityScore}
+                          isSimulated={asset.isSimulated}
+                          isDark={isDark}
+                          size="sm"
+                        />
                       </td>
 
-                      {/* 8. Acciones Rápidas */}
+                      {/* 6. Acciones */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
+                            type="button"
                             onClick={() => {
                               onSelectAsset(asset.id);
                               onOpenChart(asset.id);
                             }}
-                            className={`rounded-xl p-1.5 text-xs font-semibold transition-all ${
-                              isDark ? 'bg-[#2c2c2e] text-slate-200 hover:bg-[#3a3a3c]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            className={`rounded-xl p-1.5 transition-colors ${
+                              isDark ? 'text-slate-400 hover:bg-[#2c2c2e] hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                             }`}
                             title="Ver Gráfico"
                           >
-                            <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+                            <TrendingUp className="h-4 w-4 text-blue-500" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
                               onSelectAsset(asset.id);
                               onOpenBacktest(asset.id);
                             }}
-                            className={`rounded-xl p-1.5 text-xs font-semibold transition-all ${accent.tintBgClass} ${accent.textClass} hover:opacity-90`}
+                            className={`rounded-xl p-1.5 transition-colors ${
+                              isDark ? 'text-slate-400 hover:bg-[#2c2c2e] hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
                             title="Simular Backtest"
                           >
-                            <BarChart2 className="h-3.5 w-3.5" />
+                            <BarChart2 className="h-4 w-4 text-blue-400" />
                           </button>
                         </div>
                       </td>
@@ -441,10 +525,7 @@ export function OpportunityScreener({
         </div>
       )}
 
-      {/* ========================================================== */}
-      {/* ========================================================== */}
       {/* VISTA 2: CUADRÍCULA / TARJETAS DE OPORTUNIDADES UNIFICADAS */}
-      {/* ========================================================== */}
       {viewMode === 'grid' && filteredAssets.length > 0 && (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssets.map((asset) => (
