@@ -17,7 +17,7 @@ export function useMarketData() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const { checkAlerts } = usePriceAlerts();
   const [selectedAssetId, setSelectedAssetIdState] = useState<string>('BTCUSDT');
-  const [activeTab, setActiveTabState] = useState<'dashboard' | 'screener' | 'chart' | 'backtest'>('dashboard');
+  const [activeTab, setActiveTabState] = useState<'dashboard' | 'screener' | 'chart' | 'backtest' | 'portfolio'>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [backtestConfig, setBacktestConfig] = useState<BacktestConfig>(DEFAULT_BACKTEST_CONFIG);
 
@@ -40,7 +40,7 @@ export function useMarketData() {
     } catch (e) {}
   }, []);
 
-  const setActiveTab = useCallback((tab: 'dashboard' | 'screener' | 'chart' | 'backtest') => {
+  const setActiveTab = useCallback((tab: 'dashboard' | 'screener' | 'chart' | 'backtest' | 'portfolio') => {
     setActiveTabState(tab);
     try {
       localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);

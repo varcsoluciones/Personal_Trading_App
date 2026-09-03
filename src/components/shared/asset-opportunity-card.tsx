@@ -5,6 +5,7 @@ import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { useAlerts } from '@/lib/context/alerts-context';
+import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import {
   TrendingUp,
@@ -17,6 +18,7 @@ import {
   Shield,
   Activity,
   Clock,
+  Wallet,
 } from 'lucide-react';
 
 export interface AssetOpportunityCardProps {
@@ -41,6 +43,7 @@ export function AssetOpportunityCard({
   const { settings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
   const { getActiveAlertsCount, openAlertsModal } = useAlerts();
+  const { openApplyModal } = usePortfolioContext();
   const activeAlertsCount = getActiveAlertsCount(asset.id);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
@@ -287,6 +290,24 @@ export function AssetOpportunityCard({
           customActionButtons
         ) : (
           <>
+            {/* Aplicar en Real */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                openApplyModal(asset);
+              }}
+              title="Aplicar en Mi Cartera Real"
+              className={`flex items-center justify-center gap-1 rounded-2xl border px-2.5 py-1.5 text-xs font-bold transition-all ${
+                isDark
+                  ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              }`}
+            >
+              <Wallet className="h-3.5 w-3.5" />
+              <span>Aplicar</span>
+            </button>
+
             {/* Price Alert Bell */}
             <button
               type="button"

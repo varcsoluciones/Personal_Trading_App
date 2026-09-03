@@ -34,7 +34,7 @@ export interface AppSettings {
   defaultView: 'grid' | 'table';
 
   // Persisted Tab Navigation & Filters
-  activeTab?: 'watchlist' | 'opportunities' | 'charts' | 'backtest';
+  activeTab?: 'watchlist' | 'opportunities' | 'charts' | 'backtest' | 'portfolio';
   selectedAssetId?: string;
 
   // Persisted Watchlist Filters

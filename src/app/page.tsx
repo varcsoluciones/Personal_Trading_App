@@ -16,6 +16,10 @@ import { BacktestDashboard } from '@/components/backtesting/backtest-dashboard';
 import { TradeHistoryTable } from '@/components/backtesting/trade-history-table';
 import { PriceAlertsModal } from '@/components/alerts/price-alerts-modal';
 import { useAlerts } from '@/lib/context/alerts-context';
+import { usePortfolioContext } from '@/lib/context/portfolio-context';
+import { PortfolioDashboard } from '@/components/portfolio/portfolio-dashboard';
+import { ApplyPositionModal } from '@/components/portfolio/apply-position-modal';
+import { CapitalMovementModal } from '@/components/portfolio/capital-movement-modal';
 import { ALERT_NAVIGATE_EVENT } from '@/lib/utils/browser-notifications';
 import {
   LayoutGrid,
@@ -51,6 +55,28 @@ export default function Home() {
   const { settings, accent, lastSavedTimestamp, updateSettings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
   const { modalAsset, closeAlertsModal, activeToast, dismissToast } = useAlerts();
+  const {
+    applyModalAsset,
+    applyModalPosition,
+    closeApplyModal,
+    isMovementModalOpen,
+    closeMovementModal,
+    checkAutoClose,
+  } = usePortfolioContext();
+
+  // Check auto-close on SL / TP for open positions whenever prices refresh
+  useEffect(() => {
+    if (assets.length > 0) {
+      const priceMap: Record<string, number> = {};
+      assets.forEach((a) => {
+        priceMap[a.id] = a.price;
+        priceMap[a.symbol] = a.price;
+        const clean = a.symbol.replace("/", "").replace("-", "").toUpperCase();
+        priceMap[clean] = a.price;
+      });
+      checkAutoClose(priceMap);
+    }
+  }, [assets, checkAutoClose]);
 
   // Listen for browser notification click or in-app alert navigation events
   useEffect(() => {
@@ -400,6 +426,18 @@ export default function Home() {
           </div>
         )}
 
+        {/* TAB 5: MI CARTERA (PORTFOLIO TRACKING & REAL OPERATIONS) */}
+        {activeTab === "portfolio" && (
+          <PortfolioDashboard
+            assets={assets}
+            onOpenChart={(id) => {
+              setSelectedAssetId(id);
+              setActiveTab("chart");
+            }}
+            onOpenScreener={() => setActiveTab("screener")}
+          />
+        )}
+
       </main>
 
       {/* Footer with App Version, Last Saved Timestamp & Status */}
@@ -469,6 +507,20 @@ export default function Home() {
         asset={modalAsset}
         isOpen={!!modalAsset}
         onClose={closeAlertsModal}
+      />
+
+      {/* Apply / Edit Position Modal */}
+      <ApplyPositionModal
+        asset={applyModalAsset}
+        existingPosition={applyModalPosition}
+        isOpen={!!applyModalAsset || !!applyModalPosition}
+        onClose={closeApplyModal}
+      />
+
+      {/* Capital Movement Modal */}
+      <CapitalMovementModal
+        isOpen={isMovementModalOpen}
+        onClose={closeMovementModal}
       />
 
       {/* In-App Toast Banner Alert Notification */}

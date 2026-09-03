@@ -11,11 +11,12 @@ import {
   Settings,
   Sparkles,
   BookOpen,
+  Wallet,
 } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'screener' | 'chart' | 'backtest';
-  setActiveTab: (tab: 'dashboard' | 'screener' | 'chart' | 'backtest') => void;
+  activeTab: 'dashboard' | 'screener' | 'chart' | 'backtest' | 'portfolio';
+  setActiveTab: (tab: 'dashboard' | 'screener' | 'chart' | 'backtest' | 'portfolio') => void;
   selectedAsset: Asset | null;
   onOpenAddModal: () => void;
   onOpenSettingsModal: () => void;
@@ -142,6 +143,22 @@ export function Header({
             >
               <BarChart2 className="h-3.5 w-3.5" />
               <span>Backtesting</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('portfolio')}
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+                activeTab === 'portfolio'
+                  ? isDark
+                    ? 'bg-[#2c2c2e] text-white shadow-xs'
+                    : 'bg-white text-slate-900 shadow-xs'
+                  : isDark
+                  ? 'text-slate-400 hover:text-white'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Wallet className="h-3.5 w-3.5" />
+              <span>Mi Cartera</span>
             </button>
           </nav>
 
@@ -276,6 +293,22 @@ export function Header({
           >
             <BarChart2 className="h-3 w-3" />
             <span className="truncate">Backtest</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('portfolio')}
+            className={`flex-1 flex items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition-all ${
+              activeTab === 'portfolio'
+                ? isDark
+                  ? 'bg-[#2c2c2e] text-white shadow-xs'
+                  : 'bg-white text-slate-900 shadow-xs'
+                : isDark
+                ? 'text-slate-400'
+                : 'text-slate-500'
+            }`}
+          >
+            <Wallet className="h-3 w-3" />
+            <span className="truncate">Cartera</span>
           </button>
         </nav>
       </div>
