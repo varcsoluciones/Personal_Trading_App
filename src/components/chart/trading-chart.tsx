@@ -151,9 +151,12 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
     const container = chartContainerRef.current;
     container.innerHTML = '';
 
+    const isMobile = window.innerWidth < 640;
+    const chartHeight = isMobile ? 320 : 440;
+
     const chart: IChartApi = createChart(container, {
       width: container.clientWidth,
-      height: 440,
+      height: chartHeight,
       layout: {
         background: { type: ColorType.Solid, color: isDark ? '#1c1c1e' : '#ffffff' },
         textColor: isDark ? '#94a3b8' : '#64748b',
@@ -331,7 +334,11 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
     // Responsive Resize
     const handleResize = () => {
       if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        const currentIsMobile = window.innerWidth < 640;
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: currentIsMobile ? 320 : 440,
+        });
       }
     };
 
@@ -366,7 +373,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
 
     const rsiChart = createChart(container, {
       width: container.clientWidth,
-      height: 120,
+      height: 110,
       layout: {
         background: { type: ColorType.Solid, color: isDark ? '#1c1c1e' : '#ffffff' },
         textColor: isDark ? '#64748b' : '#64748b',
@@ -442,7 +449,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
 
     const adxChart = createChart(container, {
       width: container.clientWidth,
-      height: 120,
+      height: 110,
       layout: {
         background: { type: ColorType.Solid, color: isDark ? '#1c1c1e' : '#ffffff' },
         textColor: isDark ? '#64748b' : '#64748b',
@@ -547,16 +554,16 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
         </div>
       )}
 
-      {/* 1. FIXED-HEIGHT, MINIMALIST TOP CONTROL BAR WITH ASSET DROPDOWN FILTER */}
+      {/* 1. TOP CONTROL BAR WITH ADAPTIVE MOBILE ROW LAYOUT */}
       <div
-        className={`flex flex-wrap items-center justify-between gap-3 rounded-3xl border p-3.5 sm:p-4 backdrop-blur-md transition-colors ${
+        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border p-3 sm:p-4 backdrop-blur-md transition-colors ${
           isDark
             ? 'border-slate-800/80 bg-[#1c1c1e]'
             : 'border-slate-200/80 bg-white shadow-xs text-slate-900'
         }`}
       >
-        {/* Left Side: Interactive Asset Dropdown Filter & Status */}
-        <div className="flex items-center gap-3">
+        {/* Row 1: Asset Selector Dropdown & Alerts */}
+        <div className="flex items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto">
           {assets && onSelectAsset ? (
             <AssetDropdownSelect
               assets={assets}
@@ -566,7 +573,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
           ) : (
             <div>
               <div className="flex items-center gap-2">
-                <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{asset.symbol}</h2>
+                <h2 className={`text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{asset.symbol}</h2>
                 <span
                   className={`rounded-xl border px-2 py-0.5 text-xs font-bold uppercase ${getAssetTypeBadgeStyle(asset.type, isDark)}`}
                 >
@@ -584,52 +591,11 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
             </div>
           )}
 
-          {analysis && (
-            <span
-              className={`hidden md:inline-flex rounded-xl px-2.5 py-1 text-xs font-semibold border ${getTrendBadgeStyle(analysis.trend, isDark).badgeClass}`}
-            >
-              {analysis.trendLabel}
-            </span>
-          )}
-        </div>
-
-        {/* Right Side: Fixed-Width Timeframes, Alerts & Indicator Toggles */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Timeframe Selector (1H | 4H | 1D | 1S | 1M) */}
-          <div
-            className={`flex items-center gap-1 rounded-2xl border p-1 ${
-              isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
-            }`}
-          >
-            {TIMEFRAMES.map((tf) => {
-              const isSelected = selectedInterval === tf.id;
-              return (
-                <button
-                  key={tf.id}
-                  type="button"
-                  onClick={() => setSelectedInterval(tf.id)}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition-all ${
-                    isSelected
-                      ? isDark
-                        ? 'bg-blue-500 text-white shadow-xs'
-                        : 'bg-blue-600 text-white shadow-xs'
-                      : isDark
-                      ? 'text-slate-400 hover:text-white'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {tf.label}
-                </button>
-              );
-            })}
-            {isLoadingInterval && <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin mx-1" />}
-          </div>
-
           {/* Price Alerts Bell Button */}
           <button
             type="button"
             onClick={() => openAlertsModal(asset)}
-            className={`relative flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`relative flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-xs font-bold transition-all shrink-0 ${
               activeAlertsCount > 0
                 ? isDark
                   ? 'border-blue-500 bg-blue-500/20 text-blue-300 shadow-xs ring-1 ring-blue-500/30'
@@ -647,63 +613,98 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
               </span>
             )}
           </button>
+        </div>
+
+        {/* Row 2 (Mobile): Scrollable Timeframes & Indicators Chip Bar */}
+        <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1 sm:pb-0 w-full sm:w-auto">
+          {/* Timeframe Selector (1H | 4H | 1D | 1S | 1M) */}
+          <div
+            className={`flex items-center gap-0.5 rounded-2xl border p-1 shrink-0 ${
+              isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
+            }`}
+          >
+            {TIMEFRAMES.map((tf) => {
+              const isSelected = selectedInterval === tf.id;
+              return (
+                <button
+                  key={tf.id}
+                  type="button"
+                  onClick={() => setSelectedInterval(tf.id)}
+                  className={`rounded-xl px-2 py-1 text-xs font-bold transition-all ${
+                    isSelected
+                      ? isDark
+                        ? 'bg-blue-500 text-white shadow-xs'
+                        : 'bg-blue-600 text-white shadow-xs'
+                      : isDark
+                      ? 'text-slate-400 hover:text-white'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              );
+            })}
+            {isLoadingInterval && <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin mx-1" />}
+          </div>
 
           {/* Indicator Toggles */}
-          <button
-            onClick={toggleEma20}
-            className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
-              showEma20
-                ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
-                : isDark
-                ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
-                : 'border-slate-200 bg-slate-100 text-slate-400'
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${accent.bgClass}`} />
-            <span>EMA 20</span>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={toggleEma20}
+              className={`flex items-center gap-1 rounded-2xl border px-2.5 py-1.5 text-xs font-bold transition-all shrink-0 ${
+                showEma20
+                  ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
+                  : isDark
+                  ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
+                  : 'border-slate-200 bg-slate-100 text-slate-400'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${accent.bgClass}`} />
+              <span>EMA 20</span>
+            </button>
 
-          <button
-            onClick={toggleEma200}
-            className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
-              showEma200
-                ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-400'
-                : isDark
-                ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
-                : 'border-slate-200 bg-slate-100 text-slate-400'
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-indigo-500" />
-            <span>EMA 200</span>
-          </button>
+            <button
+              onClick={toggleEma200}
+              className={`flex items-center gap-1 rounded-2xl border px-2.5 py-1.5 text-xs font-bold transition-all shrink-0 ${
+                showEma200
+                  ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-400'
+                  : isDark
+                  ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
+                  : 'border-slate-200 bg-slate-100 text-slate-400'
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+              <span>EMA 200</span>
+            </button>
 
-          <button
-            onClick={toggleEma50}
-            className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
-              showEma50
-                ? 'border-orange-500/50 bg-orange-500/15 text-orange-500'
-                : isDark
-                ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
-                : 'border-slate-200 bg-slate-100 text-slate-400'
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-orange-400" />
-            <span>EMA 50</span>
-          </button>
+            <button
+              onClick={toggleEma50}
+              className={`flex items-center gap-1 rounded-2xl border px-2.5 py-1.5 text-xs font-bold transition-all shrink-0 ${
+                showEma50
+                  ? 'border-orange-500/50 bg-orange-500/15 text-orange-500'
+                  : isDark
+                  ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
+                  : 'border-slate-200 bg-slate-100 text-slate-400'
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+              <span>EMA 50</span>
+            </button>
 
-          <button
-            onClick={toggleMarkers}
-            className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
-              showMarkers
-                ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-500'
-                : isDark
-                ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
-                : 'border-slate-200 bg-slate-100 text-slate-400'
-            }`}
-          >
-            <CheckCircle className="h-3.5 w-3.5" />
-            <span>Señales</span>
-          </button>
+            <button
+              onClick={toggleMarkers}
+              className={`flex items-center gap-1 rounded-2xl border px-2.5 py-1.5 text-xs font-bold transition-all shrink-0 ${
+                showMarkers
+                  ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-500'
+                  : isDark
+                  ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-500'
+                  : 'border-slate-200 bg-slate-100 text-slate-400'
+              }`}
+            >
+              <CheckCircle className="h-3 w-3" />
+              <span>Señales</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -715,14 +716,14 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
       >
         {/* Sleek Fixed-Height OHLC Bar (TradingView Style, 0 Layout Shift) */}
         <div
-          className={`flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 text-xs font-mono transition-colors ${
+          className={`flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 border-b px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-mono transition-colors ${
             isDark ? 'border-slate-800/80 bg-[#2c2c2e]/40' : 'border-slate-100 bg-slate-50/90'
           }`}
         >
           {activeCandle ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className={`text-[11px] font-sans font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {hoverData ? 'Vela Seleccionada:' : 'Última Vela:'}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className={`text-[10px] sm:text-[11px] font-sans font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {hoverData ? 'Vela:' : 'Última:'}
               </span>
               <div>
                 <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>O:</span>{' '}
@@ -740,7 +741,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
                 <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>C:</span>{' '}
                 <span className={`font-bold ${accent.textClass}`}>{formatCurrency(activeCandle.close)}</span>
               </div>
-              <div className="border-l border-slate-700/40 pl-2.5">
+              <div className="border-l border-slate-700/40 pl-2">
                 <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>Var:</span>{' '}
                 <span
                   className={`font-bold ${
@@ -770,13 +771,13 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* RSI Subchart */}
         <div
-          className={`rounded-3xl border p-4 shadow-sm transition-colors ${
+          className={`rounded-3xl border p-3.5 sm:p-4 shadow-sm transition-colors ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
+              <span className="h-2 w-2 rounded-full bg-purple-500" />
               <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 Subgráfico: RSI (14 periodos)
               </span>
@@ -790,15 +791,15 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
 
         {/* ADX Subchart */}
         <div
-          className={`rounded-3xl border p-4 shadow-sm transition-colors ${
+          className={`rounded-3xl border p-3.5 sm:p-4 shadow-sm transition-colors ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${accent.bgClass}`} />
+              <span className={`h-2 w-2 rounded-full ${accent.bgClass}`} />
               <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Subgráfico: ADX & Fuerza Direccional (+DI / -DI)
+                Subgráfico: ADX & Dirección (+DI / -DI)
               </span>
             </div>
             <span className={`font-mono text-xs font-bold ${accent.textClass}`}>
@@ -811,7 +812,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
 
       {/* Suggested Stop Loss & Take Profit Target Box */}
       {analysis && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3.5 sm:gap-4 md:grid-cols-3">
           {/* Stop Loss Card */}
           <div
             className={`rounded-3xl border p-4 transition-all ${
@@ -824,7 +825,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
               <Shield className="h-4 w-4" />
               <span className="text-xs font-bold uppercase tracking-wider">Stop Loss Dinámico</span>
             </div>
-            <div className={`font-mono text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`font-mono text-xl sm:text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
               {formatCurrency(analysis.orderSetup.suggestedStopLoss)}
             </div>
             <div className={`mt-1 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -848,7 +849,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
               <Target className="h-4 w-4" />
               <span className="text-xs font-bold uppercase tracking-wider">Take Profit Sugerido</span>
             </div>
-            <div className={`font-mono text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`font-mono text-xl sm:text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
               {formatCurrency(analysis.orderSetup.suggestedTakeProfit)}
             </div>
             <div className={`mt-1 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
@@ -872,7 +873,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
               <TrendingUp className="h-4 w-4" />
               <span className="text-xs font-bold uppercase tracking-wider">Relación Riesgo / Beneficio</span>
             </div>
-            <div className={`font-mono text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`font-mono text-xl sm:text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
               1 : {analysis.orderSetup.riskRewardRatio}
             </div>
             <div className={`mt-1 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>

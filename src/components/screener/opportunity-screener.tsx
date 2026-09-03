@@ -248,7 +248,7 @@ export function OpportunityScreener({
         }`}
       >
         <div className="mb-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
             <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Perfil de Estrategia Cuantitativa
             </h3>
@@ -283,7 +283,7 @@ export function OpportunityScreener({
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
                       <div
                         className={`flex h-8 w-8 items-center justify-center rounded-xl ${
                           isSelected
@@ -339,7 +339,7 @@ export function OpportunityScreener({
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
               <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {rankingMode === 'historical'
                   ? 'Activos con Comportamiento Histórico Más Consistente'
@@ -460,7 +460,7 @@ export function OpportunityScreener({
         )}
 
         {/* Categories Bar */}
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="mt-5 flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1.5">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             const Icon = cat.icon;
@@ -502,7 +502,7 @@ export function OpportunityScreener({
           <span className={`font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             Filtro de Score Mínimo:
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
             {[
               { label: 'Todos (≥ 50)', val: 50 },
               { label: 'Buena Calidad (≥ 80)', val: 80 },
@@ -586,7 +586,7 @@ export function OpportunityScreener({
                     >
                       {/* 1. Activo */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
                           <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                             {asset.symbol}
                           </span>
