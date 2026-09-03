@@ -6,6 +6,7 @@ import { DEFAULT_ASSETS_LIST, AssetDefinition, POPULAR_ASSETS_CATALOG } from '..
 import { analyzeAsset } from '../quant/trend-analyzer';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '../quant/backtest-engine';
 import { usePriceAlerts } from './use-price-alerts';
+import { useSettings } from '../context/settings-context';
 
 const WATCHLIST_STORAGE_KEY = 'personal_trading_custom_watchlist_v1';
 const ACTIVE_TAB_STORAGE_KEY = 'quantpulse_active_tab_v2';
@@ -16,6 +17,7 @@ const BACKTEST_CONFIG_STORAGE_KEY = 'quantpulse_backtest_config_v2';
 export function useMarketData() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const { checkAlerts } = usePriceAlerts();
+  const { settings } = useSettings();
   const [selectedAssetId, setSelectedAssetIdState] = useState<string>('BTCUSDT');
   const [activeTab, setActiveTabState] = useState<'dashboard' | 'screener' | 'chart' | 'backtest' | 'portfolio'>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -173,6 +175,76 @@ export function useMarketData() {
 
     loadInitialAssets();
   }, []);
+
+  // Periodic background refresh based on user settings (30s, 60s default, or 120s)
+  useEffect(() => {
+    const intervalSec = settings.refreshInterval || 60;
+    const intervalMs = intervalSec * 1000;
+
+    const intervalId = setInterval(async () => {
+      setAssets((prevAssets) => {
+        if (prevAssets.length === 0) return prevAssets;
+
+        // Perform async background refresh
+        (async () => {
+          try {
+            const results = await Promise.allSettled(
+              prevAssets.map(async (asset) => {
+                const cleanId = asset.id.replace("/", "").toUpperCase();
+                const res = await fetch(`/api/market-data?symbol=${cleanId}&type=${asset.type}`);
+                if (!res.ok) return asset;
+                const data = await res.json();
+                if (!data.candles || data.candles.length === 0) return asset;
+
+                const candles: Candle[] = data.candles;
+                const lastCandle = candles[candles.length - 1];
+                const prevCandle = candles[candles.length - 2] || lastCandle;
+                const price = data.price ?? lastCandle.close;
+                const change24h = data.change24h ?? (price - prevCandle.close);
+                const change24hPct = data.change24hPct ?? (((price - prevCandle.close) / prevCandle.close) * 100);
+                const analysis = data.analysis ?? analyzeAsset(candles);
+
+                return {
+                  ...asset,
+                  price: Number(price.toFixed(4)),
+                  change24h: Number(change24h.toFixed(4)),
+                  change24hPct: Number(change24hPct.toFixed(2)),
+                  high24h: data.high24h ?? lastCandle.high,
+                  low24h: data.low24h ?? lastCandle.low,
+                  volume24h: data.volume24h ?? lastCandle.volume,
+                  candles,
+                  analysis,
+                } as Asset;
+              })
+            );
+
+            const updated: Asset[] = [];
+            const priceMap: Record<string, number> = {};
+
+            results.forEach((r, idx) => {
+              if (r.status === "fulfilled" && r.value) {
+                updated.push(r.value);
+                priceMap[r.value.id] = r.value.price;
+                priceMap[r.value.symbol] = r.value.price;
+              } else {
+                updated.push(prevAssets[idx]);
+              }
+            });
+
+            setAssets(updated);
+            checkAlerts(priceMap);
+          } catch (err) {
+            console.warn("[MarketData] Periodic background refresh error:", err);
+          }
+        })();
+
+        return prevAssets;
+      });
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  }, [settings.refreshInterval, checkAlerts]);
+
 
   // Selected asset
   const selectedAsset = useMemo(() => {

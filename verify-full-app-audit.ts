@@ -38,7 +38,7 @@ const macd = calculateMACD(mockCandles, 12, 26, 9);
 
 if (ema20.length === 60 && !isNaN(ema20[59])) console.log("  ✅ EMA (20 periodos) calculada correctamente.");
 if (rsi14.length === 60 && rsi14[59] >= 0 && rsi14[59] <= 100) console.log(`  ✅ RSI 14 dentro de límites [0, 100]: ${rsi14[59].toFixed(2)}`);
-if (adx14.length === 60 && adx14[59] >= 0) console.log(`  ✅ ADX 14 calculado correctamente: ${adx14[59].toFixed(2)}`);
+if (adx14.adx.length === 60 && adx14.adx[59] >= 0) console.log(`  ✅ ADX 14 calculado correctamente: ${adx14.adx[59].toFixed(2)}`);
 if (boll.upper.length === 60 && boll.upper[59] > boll.middle[59] && boll.middle[59] > boll.lower[59]) {
   console.log("  ✅ Bandas de Bollinger (20, 2) con jerarquía válida: Superior > Media > Inferior.");
 }
