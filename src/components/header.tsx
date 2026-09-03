@@ -164,25 +164,7 @@ export function Header({
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* Active Asset Pill (Desktop only) */}
-            {selectedAsset && (
-              <div
-                className={`hidden xl:flex items-center gap-2 rounded-2xl border px-3 py-1 text-xs ${
-                  isDark
-                    ? 'border-slate-800 bg-[#1c1c1e]'
-                    : 'border-slate-200 bg-slate-50 text-slate-800'
-                }`}
-              >
-                <span className="font-bold">{selectedAsset.symbol}</span>
-                <span
-                  className={`font-mono font-semibold ${
-                    selectedAsset.change24hPct >= 0 ? 'text-emerald-500' : 'text-rose-500'
-                  }`}
-                >
-                  {formatCurrency(selectedAsset.price)}
-                </span>
-              </div>
-            )}
+
 
             {/* Guide Button */}
             <button
