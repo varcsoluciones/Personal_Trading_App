@@ -170,108 +170,110 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         
-        {/* Quick Summary Widgets (5 Key Metrics including Lateral/Range) */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {/* 1. Radar Total */}
-          <div
-            className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
-              isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-            }`}
-          >
-            <div className="rounded-2xl bg-blue-500/10 p-2.5 text-blue-500">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Activos en Radar
-              </p>
-              <h4 className={`text-xl font-bold font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>{assets.length}</h4>
-            </div>
-          </div>
-
-          {/* 2. Alcistas */}
-          <div
-            className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
-              isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-            }`}
-          >
-            <div className="rounded-2xl bg-emerald-500/10 p-2.5 text-emerald-500">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Alcistas
-              </p>
-              <h4 className="text-xl font-bold text-emerald-500 font-mono">
-                {bullishCount} <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>/ {assets.length}</span>
-              </h4>
-            </div>
-          </div>
-
-          {/* 3. Laterales / En Rango */}
-          <div
-            className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
-              isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-            }`}
-          >
-            <div className="rounded-2xl bg-amber-500/10 p-2.5 text-amber-500">
-              <Minus className="h-5 w-5 stroke-[3]" />
-            </div>
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Laterales / Rango
-              </p>
-              <h4 className="text-xl font-bold text-amber-500 font-mono">
-                {neutralCount} <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>/ {assets.length}</span>
-              </h4>
-            </div>
-          </div>
-
-          {/* 4. Bajistas */}
-          <div
-            className={`flex items-center gap-3 rounded-3xl border p-4 transition-colors ${
-              isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-            }`}
-          >
-            <div className="rounded-2xl bg-rose-500/10 p-2.5 text-rose-500">
-              <TrendingDown className="h-5 w-5" />
-            </div>
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Bajistas
-              </p>
-              <h4 className="text-xl font-bold text-rose-500 font-mono">
-                {bearishCount} <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>/ {assets.length}</span>
-              </h4>
-            </div>
-          </div>
-
-          {/* 5. Mejor Score */}
-          <div
-            className={`flex items-center gap-3 rounded-3xl border p-4 col-span-2 sm:col-span-1 transition-colors ${
-              isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-            }`}
-          >
-            <div
-              className="rounded-2xl p-2.5 text-white shadow-xs"
-              style={{ backgroundColor: accent.hex }}
-            >
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Mejor Score
-              </p>
-              <h4 className={`text-sm font-bold line-clamp-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {topAsset ? `${topAsset.symbol} (${topAsset.analysis?.opportunityScore})` : '--'}
-              </h4>
-            </div>
-          </div>
-        </div>
-
         {/* TAB 1: WATCHLIST & DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-5">
+            {/* Quick Summary Widgets (5 Key Metrics) - Compact on Mobile, Spacious on Desktop */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-5">
+              {/* 1. Radar Total */}
+              <div
+                className={`flex items-center gap-2 sm:gap-3 rounded-2xl sm:rounded-3xl border p-2.5 sm:p-4 transition-colors ${
+                  isDark ? "border-slate-800/80 bg-[#1c1c1e]" : "border-slate-200/80 bg-white shadow-xs"
+                }`}
+              >
+                <div className="rounded-xl sm:rounded-2xl bg-blue-500/10 p-2 sm:p-2.5 text-blue-500 shrink-0">
+                  <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Activos en Radar
+                  </p>
+                  <h4 className={`text-base sm:text-xl font-bold font-mono leading-tight ${isDark ? "text-white" : "text-slate-900"}`}>
+                    {assets.length}
+                  </h4>
+                </div>
+              </div>
+
+              {/* 2. Alcistas */}
+              <div
+                className={`flex items-center gap-2 sm:gap-3 rounded-2xl sm:rounded-3xl border p-2.5 sm:p-4 transition-colors ${
+                  isDark ? "border-slate-800/80 bg-[#1c1c1e]" : "border-slate-200/80 bg-white shadow-xs"
+                }`}
+              >
+                <div className="rounded-xl sm:rounded-2xl bg-emerald-500/10 p-2 sm:p-2.5 text-emerald-500 shrink-0">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Alcistas
+                  </p>
+                  <h4 className="text-base sm:text-xl font-bold text-emerald-500 font-mono leading-tight">
+                    {bullishCount} <span className={`text-[10px] sm:text-xs font-normal ${isDark ? "text-slate-500" : "text-slate-400"}`}>/ {assets.length}</span>
+                  </h4>
+                </div>
+              </div>
+
+              {/* 3. Laterales / En Rango */}
+              <div
+                className={`flex items-center gap-2 sm:gap-3 rounded-2xl sm:rounded-3xl border p-2.5 sm:p-4 transition-colors ${
+                  isDark ? "border-slate-800/80 bg-[#1c1c1e]" : "border-slate-200/80 bg-white shadow-xs"
+                }`}
+              >
+                <div className="rounded-xl sm:rounded-2xl bg-amber-500/10 p-2 sm:p-2.5 text-amber-500 shrink-0">
+                  <Minus className="h-4 w-4 sm:h-5 sm:w-5 stroke-[3]" />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Laterales / Rango
+                  </p>
+                  <h4 className="text-base sm:text-xl font-bold text-amber-500 font-mono leading-tight">
+                    {neutralCount} <span className={`text-[10px] sm:text-xs font-normal ${isDark ? "text-slate-500" : "text-slate-400"}`}>/ {assets.length}</span>
+                  </h4>
+                </div>
+              </div>
+
+              {/* 4. Bajistas */}
+              <div
+                className={`flex items-center gap-2 sm:gap-3 rounded-2xl sm:rounded-3xl border p-2.5 sm:p-4 transition-colors ${
+                  isDark ? "border-slate-800/80 bg-[#1c1c1e]" : "border-slate-200/80 bg-white shadow-xs"
+                }`}
+              >
+                <div className="rounded-xl sm:rounded-2xl bg-rose-500/10 p-2 sm:p-2.5 text-rose-500 shrink-0">
+                  <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Bajistas
+                  </p>
+                  <h4 className="text-base sm:text-xl font-bold text-rose-500 font-mono leading-tight">
+                    {bearishCount} <span className={`text-[10px] sm:text-xs font-normal ${isDark ? "text-slate-500" : "text-slate-400"}`}>/ {assets.length}</span>
+                  </h4>
+                </div>
+              </div>
+
+              {/* 5. Mejor Score */}
+              <div
+                className={`flex items-center gap-2 sm:gap-3 rounded-2xl sm:rounded-3xl border p-2.5 sm:p-4 col-span-2 sm:col-span-1 transition-colors ${
+                  isDark ? "border-slate-800/80 bg-[#1c1c1e]" : "border-slate-200/80 bg-white shadow-xs"
+                }`}
+              >
+                <div
+                  className="rounded-xl sm:rounded-2xl p-2 sm:p-2.5 text-white shadow-xs shrink-0"
+                  style={{ backgroundColor: accent.hex }}
+                >
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Mejor Score
+                  </p>
+                  <h4 className={`text-xs sm:text-sm font-bold truncate ${isDark ? "text-white" : "text-slate-900"}`}>
+                    {topAsset ? `${topAsset.symbol} (${topAsset.analysis?.opportunityScore})` : "--"}
+                  </h4>
+                </div>
+              </div>
+            </div>
+
             {/* Search + View Toggle */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="relative flex-1 max-w-md">
