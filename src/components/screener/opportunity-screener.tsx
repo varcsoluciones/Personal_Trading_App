@@ -7,6 +7,7 @@ import { AssetOpportunityCard } from '@/components/shared/asset-opportunity-card
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import {
   Sparkles,
   TrendingUp,
@@ -25,6 +26,7 @@ import {
   Sliders,
   ChevronDown,
   ChevronUp,
+  Trophy,
 } from 'lucide-react';
 import { analyzeAsset } from '@/lib/quant/trend-analyzer';
 import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
@@ -165,6 +167,21 @@ export function OpportunityScreener({
       };
     });
   }, [assets, selectedProfileId]);
+
+  // Top 3 Recommended Assets for the currently selected strategy profile
+  const top3Recommended = useMemo(() => {
+    return [...dynamicAssets]
+      .filter((a) => a.analysis && a.analysis.opportunityScore >= 50)
+      .sort((a, b) => {
+        // Combined scoring: 60% Opportunity Score + 40% Walk-Forward Reliability Score
+        const relA = a.backtestReliabilityScore ?? 60;
+        const relB = b.backtestReliabilityScore ?? 60;
+        const scoreA = (a.analysis?.opportunityScore || 50) * 0.6 + relA * 0.4;
+        const scoreB = (b.analysis?.opportunityScore || 50) * 0.6 + relB * 0.4;
+        return scoreB - scoreA;
+      })
+      .slice(0, 3);
+  }, [dynamicAssets]);
 
   // Categories Definition
   const categories: { id: AssetCategory | 'all'; label: string; icon: any; count: number }[] = [
@@ -543,6 +560,111 @@ export function OpportunityScreener({
           </div>
         )}
       </div>
+
+      {/* 3. TOP 3 ASSETS RECOMENDADOS (Compact Podium / Selection) */}
+      {top3Recommended.length > 0 && (
+        <div
+          className={`rounded-3xl border p-4 sm:p-5 shadow-xs transition-colors ${
+            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2 mb-3.5">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                <Trophy className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className={`text-sm font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Top 3 Activos Recomendados
+                </h4>
+                <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Opciones más seguras y rentables para el perfil <strong>{STRATEGY_PRESETS.find(p => p.id === selectedProfileId)?.name || 'Activo'}</strong>
+                </p>
+              </div>
+            </div>
+
+            <span className="hidden sm:inline-flex rounded-full bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-400">
+              Selección Cuantitativa
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {top3Recommended.map((item, idx) => {
+              const rankColor =
+                idx === 0
+                  ? isDark
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/30'
+                    : 'border-amber-300 bg-amber-50/80 text-amber-900 ring-1 ring-amber-400/30'
+                  : idx === 1
+                  ? isDark
+                    ? 'border-slate-600/60 bg-slate-500/10 text-slate-200'
+                    : 'border-slate-300 bg-slate-100 text-slate-800'
+                  : isDark
+                  ? 'border-orange-500/30 bg-orange-500/10 text-orange-300'
+                  : 'border-orange-200 bg-orange-50/70 text-orange-900';
+
+              const rankBadge = idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : '🥉 #3';
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    onSelectAsset(item.id);
+                    onOpenChart(item.id);
+                  }}
+                  className={`group relative flex flex-col justify-between rounded-2xl border p-3.5 transition-all cursor-pointer hover:scale-[1.01] ${rankColor} ${
+                    isDark ? 'hover:bg-[#2c2c2e]' : 'hover:bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-sm sm:text-base font-black tracking-tight">
+                          {item.symbol}
+                        </span>
+                        <span
+                          className={`rounded-md border px-1.5 py-0.2 text-[9px] font-bold uppercase ${getAssetTypeBadgeStyle(
+                            item.type,
+                            isDark
+                          )}`}
+                        >
+                          {item.type}
+                        </span>
+                      </div>
+                      <p className={`truncate text-[11px] opacity-75 mt-0.5`}>
+                        {item.name}
+                      </p>
+                    </div>
+
+                    <span className="shrink-0 rounded-xl px-2 py-0.5 text-xs font-black font-mono">
+                      {rankBadge}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-current/15 flex items-center justify-between text-xs font-mono">
+                    <div>
+                      <span className="font-bold">{formatCurrency(item.price)}</span>
+                      <span
+                        className={`ml-1 text-[11px] font-bold ${
+                          item.change24hPct >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                        }`}
+                      >
+                        {item.change24hPct >= 0 ? '+' : ''}
+                        {item.change24hPct.toFixed(2)}%
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-[11px] font-bold">
+                      <span className="opacity-75">Score:</span>
+                      <strong className="text-emerald-400">{item.analysis?.opportunityScore || 50}</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* No Results Fallback */}
       {filteredAssets.length === 0 && (
