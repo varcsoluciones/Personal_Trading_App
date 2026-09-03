@@ -23,6 +23,7 @@ import { getTrendBadgeStyle, getAssetTypeBadgeStyle } from '@/lib/ui/badge-style
 import { useSettings } from '@/lib/context/settings-context';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { AssetDropdownSelect } from '@/components/shared/asset-dropdown-select';
+import { ChartExecutiveAnalysis } from './chart-executive-analysis';
 import {
   TrendingUp,
   Shield,
@@ -1270,6 +1271,13 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
           </div>
         </div>
       )}
+
+      {/* 7. Executive Managerial Analysis & Parameter Breakdown */}
+      <ChartExecutiveAnalysis
+        asset={asset}
+        candles={chartCandles}
+        selectedInterval={selectedInterval}
+      />
     </div>
   );
 }
