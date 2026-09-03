@@ -712,7 +712,7 @@ export function OpportunityScreener({
                   <th className="py-3.5 px-4">Activo</th>
                   <th className="py-3.5 px-3">Estructura & Señal</th>
                   <th className="py-3.5 px-3 text-right">Precio & Variación</th>
-                  <th className="py-3.5 px-3">Setup Sugerido (Entrada / TP / SL)</th>
+                  <th className="py-3.5 px-3 min-w-[210px]">Setup Sugerido (Entrada / TP / SL)</th>
                   <th className="py-3.5 px-3 text-center">Horizonte</th>
                   <th className="py-3.5 px-3 text-center">Veredicto Confianza</th>
                   <th className="py-3.5 px-3 text-center">Score Técnico</th>
@@ -793,23 +793,57 @@ export function OpportunityScreener({
                         </div>
                       </td>
 
-                      {/* 4. Setup Sugerido (Entrada / TP / SL) */}
-                      <td className="py-3.5 px-3">
-                        <div className="space-y-1 text-[11px] font-mono">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-blue-500 font-bold">E:</span>
-                            <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                              {formatCurrency(order.suggestedEntryPrice)}
+                      {/* 4. Setup Sugerido (Entrada / TP / SL) Symmetrical Alignment */}
+                      <td className="py-3 px-3">
+                        <div className="flex flex-col gap-1 text-[11px] font-mono min-w-[200px]">
+                          {/* Entrada */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-blue-500 font-bold font-sans flex items-center gap-1.5 text-[10px] uppercase">
+                              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                              Entrada:
                             </span>
-                            {order.distanceToEntryPct !== 0 && (
-                              <span className="text-[10px] text-amber-500 font-bold">
-                                ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
+                            <div className="flex items-center gap-1 text-right">
+                              <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {formatCurrency(order.suggestedEntryPrice)}
                               </span>
-                            )}
+                              {order.distanceToEntryPct !== 0 && (
+                                <span className="text-[10px] text-amber-400 font-semibold">
+                                  ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-[10px]">
-                            <span className="text-emerald-500 font-bold">TP: {formatCurrency(order.suggestedTakeProfit)} (+{order.suggestedTakeProfitPct}%)</span>
-                            <span className="text-rose-500 font-bold">SL: {formatCurrency(order.suggestedStopLoss)} (-{order.suggestedStopLossPct}%)</span>
+
+                          {/* Take Profit */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-emerald-500 font-bold font-sans flex items-center gap-1.5 text-[10px] uppercase">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Take Profit:
+                            </span>
+                            <div className="flex items-center gap-1 text-right">
+                              <span className="font-bold text-emerald-400">
+                                {formatCurrency(order.suggestedTakeProfit)}
+                              </span>
+                              <span className="text-[10px] text-emerald-500 font-semibold">
+                                (+{order.suggestedTakeProfitPct}%)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Stop Loss */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-rose-500 font-bold font-sans flex items-center gap-1.5 text-[10px] uppercase">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                              Stop Loss:
+                            </span>
+                            <div className="flex items-center gap-1 text-right">
+                              <span className="font-bold text-rose-400">
+                                {formatCurrency(order.suggestedStopLoss)}
+                              </span>
+                              <span className="text-[10px] text-rose-500 font-semibold">
+                                (-{order.suggestedStopLossPct}%)
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </td>
