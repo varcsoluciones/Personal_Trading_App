@@ -15,6 +15,7 @@ export interface ChartIndicatorSettings {
   showEma20: boolean;
   showEma50: boolean;
   showEma200: boolean;
+  showBollinger?: boolean;
   showMarkers: boolean;
   showVolume?: boolean;
   showRsi?: boolean;
@@ -174,6 +175,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     showEma20: true,
     showEma50: true,
     showEma200: true,
+    showBollinger: true,
     showMarkers: true,
     showVolume: true,
     showRsi: true,

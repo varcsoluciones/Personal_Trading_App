@@ -63,6 +63,55 @@ export function calculateEMA(data: number[], period: number): number[] {
   return result;
 }
 
+export interface BollingerBandsResult {
+  upper: number[];
+  middle: number[];
+  lower: number[];
+}
+
+/**
+ * Calculates Bollinger Bands (BOLL)
+ * Standard Configuration: Period = 20, Multiplier = 2
+ * - Middle Band = 20-period SMA
+ * - Upper Band = Middle Band + (Multiplier * 20-period Standard Deviation)
+ * - Lower Band = Middle Band - (Multiplier * 20-period Standard Deviation)
+ */
+export function calculateBollingerBands(
+  data: number[],
+  period = 20,
+  stdDevMultiplier = 2
+): BollingerBandsResult {
+  const len = data.length;
+  const upper: number[] = new Array(len).fill(NaN);
+  const middle: number[] = new Array(len).fill(NaN);
+  const lower: number[] = new Array(len).fill(NaN);
+
+  if (len < period) {
+    return { upper, middle, lower };
+  }
+
+  const sma = calculateSMA(data, period);
+
+  for (let i = period - 1; i < len; i++) {
+    const mean = sma[i];
+    if (isNaN(mean)) continue;
+
+    let sumSquaredDiff = 0;
+    for (let j = 0; j < period; j++) {
+      const diff = data[i - j] - mean;
+      sumSquaredDiff += diff * diff;
+    }
+
+    const stdDev = Math.sqrt(sumSquaredDiff / period);
+
+    middle[i] = mean;
+    upper[i] = mean + stdDevMultiplier * stdDev;
+    lower[i] = mean - stdDevMultiplier * stdDev;
+  }
+
+  return { upper, middle, lower };
+}
+
 /**
  * Calculates Relative Strength Index (RSI) using Wilder's Smoothing
  */

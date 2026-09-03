@@ -12,7 +12,13 @@ import {
   LogicalRange,
 } from 'lightweight-charts';
 import { Asset, Candle } from '@/lib/types/market';
-import { calculateADX, calculateEMA, calculateRSI, calculateMACD } from '@/lib/quant/indicators';
+import {
+  calculateADX,
+  calculateEMA,
+  calculateRSI,
+  calculateMACD,
+  calculateBollingerBands,
+} from '@/lib/quant/indicators';
 import { getTrendBadgeStyle, getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import { useSettings } from '@/lib/context/settings-context';
 import { useAlerts } from '@/lib/context/alerts-context';
@@ -48,6 +54,9 @@ interface HoverData {
   ema20?: number;
   ema50?: number;
   ema200?: number;
+  bollUpper?: number;
+  bollMiddle?: number;
+  bollLower?: number;
   rsi?: number;
   adx?: number;
   macd?: number;
@@ -90,6 +99,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
     showEma20: true,
     showEma50: true,
     showEma200: true,
+    showBollinger: true,
     showMarkers: true,
     showVolume: true,
     showMacd: true,
@@ -101,6 +111,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
   const [showEma20, setShowEma20] = useState(chartIndicators.showEma20);
   const [showEma50, setShowEma50] = useState(chartIndicators.showEma50);
   const [showEma200, setShowEma200] = useState(chartIndicators.showEma200);
+  const [showBollinger, setShowBollinger] = useState(chartIndicators.showBollinger);
   const [showMarkers, setShowMarkers] = useState(chartIndicators.showMarkers);
   const [showVolume, setShowVolume] = useState(chartIndicators.showVolume);
   const [showMacd, setShowMacd] = useState(chartIndicators.showMacd);
@@ -126,6 +137,12 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
     const next = !showEma200;
     setShowEma200(next);
     updateSettings({ chartIndicators: { ...chartIndicators, showEma200: next } });
+  };
+
+  const toggleBollinger = () => {
+    const next = !showBollinger;
+    setShowBollinger(next);
+    updateSettings({ chartIndicators: { ...chartIndicators, showBollinger: next } });
   };
 
   const toggleMarkers = () => {
@@ -232,12 +249,13 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
     const ema20Data = calculateEMA(closes, 20);
     const ema50Data = calculateEMA(closes, 50);
     const ema200Data = calculateEMA(closes, 200);
+    const { upper: bollUpper, middle: bollMiddle, lower: bollLower } = calculateBollingerBands(closes, 20, 2);
     const rsiValues = calculateRSI(closes, 14);
     const { adx: adxValues, plusDI, minusDI } = calculateADX(chartCandles, 14);
     const { macdLine, signalLine, histogram: macdHist } = calculateMACD(chartCandles, 12, 26, 9);
 
     // ==========================================
-    // 1. MAIN CANDLESTICK & EMA CHART
+    // 1. MAIN CANDLESTICK, EMA & BOLL CHART
     // ==========================================
     const mainContainer = chartContainerRef.current;
     mainContainer.innerHTML = '';
@@ -297,6 +315,42 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
       ema200Series.setData(
         chartCandles
           .map((c, i) => ({ time: c.time as Time, value: ema200Data[i] }))
+          .filter((d) => !isNaN(d.value))
+      );
+    }
+
+    // BOLLINGER BANDS (20, 2)
+    const bollUpperSeries = mainChart.addLineSeries({
+      color: '#0ea5e9',
+      lineWidth: 1,
+      title: 'BOLL Sup',
+    });
+    const bollMiddleSeries = mainChart.addLineSeries({
+      color: isDark ? 'rgba(148, 163, 184, 0.7)' : 'rgba(100, 116, 139, 0.7)',
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      title: 'BOLL Media',
+    });
+    const bollLowerSeries = mainChart.addLineSeries({
+      color: '#0ea5e9',
+      lineWidth: 1,
+      title: 'BOLL Inf',
+    });
+
+    if (showBollinger) {
+      bollUpperSeries.setData(
+        chartCandles
+          .map((c, i) => ({ time: c.time as Time, value: bollUpper[i] }))
+          .filter((d) => !isNaN(d.value))
+      );
+      bollMiddleSeries.setData(
+        chartCandles
+          .map((c, i) => ({ time: c.time as Time, value: bollMiddle[i] }))
+          .filter((d) => !isNaN(d.value))
+      );
+      bollLowerSeries.setData(
+        chartCandles
+          .map((c, i) => ({ time: c.time as Time, value: bollLower[i] }))
           .filter((d) => !isNaN(d.value))
       );
     }
@@ -626,6 +680,9 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
             ema20: !isNaN(ema20Data[idx]) ? ema20Data[idx] : undefined,
             ema50: !isNaN(ema50Data[idx]) ? ema50Data[idx] : undefined,
             ema200: !isNaN(ema200Data[idx]) ? ema200Data[idx] : undefined,
+            bollUpper: !isNaN(bollUpper[idx]) ? bollUpper[idx] : undefined,
+            bollMiddle: !isNaN(bollMiddle[idx]) ? bollMiddle[idx] : undefined,
+            bollLower: !isNaN(bollLower[idx]) ? bollLower[idx] : undefined,
             rsi: !isNaN(rsiValues[idx]) ? Number(rsiValues[idx].toFixed(1)) : undefined,
             adx: !isNaN(adxValues[idx]) ? Number(adxValues[idx].toFixed(1)) : undefined,
             macd: !isNaN(macdLine[idx]) ? Number(macdLine[idx].toFixed(2)) : undefined,
@@ -665,6 +722,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
     showEma20,
     showEma50,
     showEma200,
+    showBollinger,
     showMarkers,
     showVolume,
     showMacd,
@@ -857,6 +915,21 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
                 EMA 200
               </button>
 
+              {/* BOLLINGER BANDS (20, 2) */}
+              <button
+                type="button"
+                onClick={toggleBollinger}
+                className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                  showBollinger
+                    ? 'border-sky-500/40 bg-sky-500/15 text-sky-400'
+                    : isDark
+                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                BOLL (20, 2)
+              </button>
+
               {/* Signals */}
               <button
                 type="button"
@@ -993,6 +1066,15 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
                   {activeCandle.variationPct.toFixed(2)}%
                 </span>
               </div>
+
+              {/* BOLL readings in Hover pill if active */}
+              {showBollinger && hoverData?.bollUpper !== undefined && (
+                <div className="hidden md:flex items-center gap-2 border-l border-slate-700/40 pl-2 text-[11px]">
+                  <span className="text-sky-400">BS: {formatCurrency(hoverData.bollUpper)}</span>
+                  <span className="text-slate-400">BM: {formatCurrency(hoverData.bollMiddle || 0)}</span>
+                  <span className="text-sky-400">BI: {formatCurrency(hoverData.bollLower || 0)}</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="h-4" />
