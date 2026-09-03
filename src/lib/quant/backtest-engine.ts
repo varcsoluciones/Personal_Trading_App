@@ -68,7 +68,7 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
       } else if (!isNaN(f)) {
         trend = wClose >= f ? 'BULLISH' : 'BEARISH';
       }
-      weeklyTrendMap.set(weeklyCandles[w].time, trend);
+      weeklyTrendMap.set(String(weeklyCandles[w].time), trend);
     }
   }
 
@@ -125,7 +125,7 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
         const investableCapital = capital - entryFee;
         shares = investableCapital / effectiveEntryPrice;
         entryPrice = effectiveEntryPrice;
-        entryDate = candle.time;
+        entryDate = String(candle.time);
         entryIndex = i;
 
         // Dynamic Stop Loss & Take Profit from the actual fill price
@@ -235,7 +235,7 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
         trades.push({
           id: `trade-${trades.length + 1}`,
           entryDate,
-          exitDate: candle.time,
+          exitDate: String(candle.time),
           type: 'LONG',
           entryPrice: Number(entryPrice.toFixed(4)),
           exitPrice: Number(exitPrice.toFixed(4)),
@@ -259,7 +259,7 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
     // 3. IF NOT IN POSITION & NO PENDING ORDER, EVALUATE ENTRY AT CLOSE OF CANDLE i
     if (!inPosition && !pendingOrder && i < candles.length - 1) {
       // Find weekly trend of the PREVIOUS completed week (Strict zero look-ahead bias)
-      const d = new Date(candle.time);
+      const d = typeof candle.time === 'number' ? new Date(candle.time * 1000) : new Date(candle.time);
       const day = d.getUTCDay();
       const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
       const currentWeekMonday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
@@ -301,7 +301,7 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
         pendingOrder = {
           limitPrice: entryPlan.suggestedEntryPrice,
           signalIndex: i,
-          signalDate: candle.time,
+          signalDate: String(candle.time),
           signalAtr: currentAtr,
           remainingBars: 5, // Order remains active for up to 5 bars
         };
@@ -309,7 +309,7 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
     }
 
     equityCurve.push({
-      date: candle.time,
+      date: String(candle.time),
       equity: Number(currentEquity.toFixed(2)),
       buyAndHoldEquity: Number(buyAndHoldEquity.toFixed(2)),
       drawdownPct: Number(currentDrawdownPct.toFixed(2)),

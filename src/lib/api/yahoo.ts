@@ -9,11 +9,68 @@ const USER_AGENTS = [
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Fetches real stock and ETF daily data from Yahoo Finance API with retry and fallback handling.
+ * Maps standard unified interval codes ('1h', '4h', '1d', '1w', '1M')
+ * to Yahoo Finance query parameters (range, interval).
+ */
+export function mapIntervalToYahooParams(interval: string): { yahooInterval: string; range: string; isIntraday: boolean } {
+  switch (interval) {
+    case '1h':
+      return { yahooInterval: '1h', range: '730d', isIntraday: true };
+    case '4h':
+      // Yahoo doesn't support 4h natively, we query 1h and aggregate into 4h bars
+      return { yahooInterval: '1h', range: '730d', isIntraday: true };
+    case '1w':
+      return { yahooInterval: '1wk', range: '5y', isIntraday: false };
+    case '1M':
+      return { yahooInterval: '1mo', range: '10y', isIntraday: false };
+    case '1d':
+    default:
+      return { yahooInterval: '1d', range: '2y', isIntraday: false };
+  }
+}
+
+/**
+ * Aggregates 1-hour candles into 4-hour candles.
+ */
+function aggregate1hTo4h(hourlyCandles: Candle[]): Candle[] {
+  if (hourlyCandles.length === 0) return [];
+  const aggregated: Candle[] = [];
+
+  for (let i = 0; i < hourlyCandles.length; i += 4) {
+    const chunk = hourlyCandles.slice(i, i + 4);
+    if (chunk.length === 0) continue;
+
+    const open = chunk[0].open;
+    const close = chunk[chunk.length - 1].close;
+    let high = -Infinity;
+    let low = Infinity;
+    let volume = 0;
+
+    chunk.forEach((c) => {
+      if (c.high > high) high = c.high;
+      if (c.low < low) low = c.low;
+      volume += c.volume || 0;
+    });
+
+    aggregated.push({
+      time: chunk[0].time,
+      open,
+      high,
+      low,
+      close,
+      volume,
+    });
+  }
+
+  return aggregated;
+}
+
+/**
+ * Fetches real stock, ETF and crypto daily/intraday data from Yahoo Finance API.
  */
 export async function fetchStockKlines(
   symbol = 'VOO',
-  range = '2y',
+  customRange?: string,
   interval = '1d',
   maxRetries = 2
 ): Promise<Candle[]> {
@@ -23,9 +80,12 @@ export async function fetchStockKlines(
     'https://query2.finance.yahoo.com',
   ];
 
+  const { yahooInterval, range: defaultRange, isIntraday } = mapIntervalToYahooParams(interval);
+  const selectedRange = customRange || defaultRange;
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const host = hosts[attempt % hosts.length];
-    const url = `${host}/v8/finance/chart/${encodeURIComponent(cleanSym)}?interval=${interval}&range=${range}`;
+    const url = `${host}/v8/finance/chart/${encodeURIComponent(cleanSym)}?interval=${yahooInterval}&range=${selectedRange}`;
 
     try {
       const res = await fetch(url, {
@@ -33,7 +93,7 @@ export async function fetchStockKlines(
           'User-Agent': USER_AGENTS[attempt % USER_AGENTS.length],
           'Accept': '*/*',
         },
-        next: { revalidate: 300 }, // 5 minutes cache
+        next: { revalidate: isIntraday ? 60 : 300 },
       });
 
       if (res.status === 429) {
@@ -67,9 +127,12 @@ export async function fetchStockKlines(
             const l = lows[i];
 
             if (c !== null && o !== null && h !== null && l !== null && !isNaN(c)) {
-              const dateStr = new Date(timestamps[i] * 1000).toISOString().split('T')[0];
+              const timeVal = isIntraday
+                ? timestamps[i]
+                : new Date(timestamps[i] * 1000).toISOString().split('T')[0];
+
               candles.push({
-                time: dateStr,
+                time: timeVal,
                 open: Number(o.toFixed(2)),
                 high: Number(h.toFixed(2)),
                 low: Number(l.toFixed(2)),
@@ -79,7 +142,10 @@ export async function fetchStockKlines(
             }
           }
 
-          if (candles.length > 20) {
+          if (candles.length > 5) {
+            if (interval === '4h') {
+              return aggregate1hTo4h(candles);
+            }
             return candles;
           }
         }
@@ -98,7 +164,7 @@ export async function fetchStockKlines(
 /**
  * Generates realistic deterministic historical price series for explicit demo mode or testing.
  */
-export function generateDeterministicCandles(symbol: string, days = 380): Candle[] {
+export function generateDeterministicCandles(symbol: string, days = 380, interval = '1d'): Candle[] {
   const basePrices: Record<string, { base: number; vol: number; drift: number }> = {
     VOO: { base: 525, vol: 0.009, drift: 0.0004 },
     QQQ: { base: 495, vol: 0.014, drift: 0.0006 },
@@ -138,23 +204,27 @@ export function generateDeterministicCandles(symbol: string, days = 380): Candle
     return x - Math.floor(x);
   }
 
-  for (let i = days; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+  const isIntraday = interval === '1h' || interval === '4h';
+  const stepMs = interval === '1h' ? 3600 * 1000 : interval === '4h' ? 4 * 3600 * 1000 : 24 * 3600 * 1000;
+  const count = isIntraday ? Math.min(days * 4, 400) : days;
+
+  for (let i = count; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * stepMs);
     const dayOfWeek = d.getDay();
     const isCrypto = symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH');
-    if (!isCrypto && (dayOfWeek === 0 || dayOfWeek === 6)) {
+    if (!isCrypto && (dayOfWeek === 0 || dayOfWeek === 6) && !isIntraday) {
       continue;
     }
 
-    const dateStr = d.toISOString().split('T')[0];
+    const timeVal = isIntraday ? Math.floor(d.getTime() / 1000) : d.toISOString().split('T')[0];
 
     const r1 = seededRandom() - 0.48;
-    const dailyReturn = assetConfig.drift + r1 * assetConfig.vol * 2.5;
+    const dailyReturn = assetConfig.drift + r1 * assetConfig.vol * (isIntraday ? 0.6 : 2.5);
     const open = currentPrice;
     const close = Math.max(0.01, open * (1 + dailyReturn));
 
-    const wickUp = seededRandom() * assetConfig.vol * open * 1.5;
-    const wickDown = seededRandom() * assetConfig.vol * open * 1.5;
+    const wickUp = seededRandom() * assetConfig.vol * open * (isIntraday ? 0.5 : 1.5);
+    const wickDown = seededRandom() * assetConfig.vol * open * (isIntraday ? 0.5 : 1.5);
     const high = Math.max(open, close) + wickUp;
     const low = Math.min(open, close) - wickDown;
 
@@ -162,7 +232,7 @@ export function generateDeterministicCandles(symbol: string, days = 380): Candle
     const volume = Math.round(baseVol * (0.6 + seededRandom() * 0.8));
 
     candles.push({
-      time: dateStr,
+      time: timeVal,
       open: Number(open.toFixed(2)),
       high: Number(high.toFixed(2)),
       low: Number(low.toFixed(2)),
