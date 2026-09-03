@@ -15,6 +15,9 @@ import { StrategyControls } from '@/components/backtesting/strategy-controls';
 import { BacktestDashboard } from '@/components/backtesting/backtest-dashboard';
 import { TradeHistoryTable } from '@/components/backtesting/trade-history-table';
 import { HorizontalAssetBar } from '@/components/shared/horizontal-asset-bar';
+import { PriceAlertsModal } from '@/components/alerts/price-alerts-modal';
+import { useAlerts } from '@/lib/context/alerts-context';
+import { ALERT_NAVIGATE_EVENT } from '@/lib/utils/browser-notifications';
 import {
   LayoutGrid,
   Table as TableIcon,
@@ -27,6 +30,7 @@ import {
   BookOpen,
   Database,
   CheckCircle2,
+  Bell,
 } from 'lucide-react';
 
 export default function Home() {
@@ -47,6 +51,25 @@ export default function Home() {
 
   const { settings, accent, lastSavedTimestamp, updateSettings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
+  const { modalAsset, closeAlertsModal, activeToast, dismissToast } = useAlerts();
+
+  // Listen for browser notification click or in-app alert navigation events
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ assetId: string; symbol: string; tab?: string }>;
+      if (customEvent.detail) {
+        if (customEvent.detail.assetId) {
+          setSelectedAssetId(customEvent.detail.assetId);
+        }
+        if (customEvent.detail.tab) {
+          setActiveTab(customEvent.detail.tab as any);
+        }
+      }
+    };
+
+    window.addEventListener(ALERT_NAVIGATE_EVENT, handleNavigate);
+    return () => window.removeEventListener(ALERT_NAVIGATE_EVENT, handleNavigate);
+  }, [setSelectedAssetId, setActiveTab]);
 
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [searchQuery, setSearchQuery] = useState('');
@@ -448,6 +471,65 @@ export default function Home() {
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
       />
+
+      {/* Price Alerts Creation & Management Modal */}
+      <PriceAlertsModal
+        asset={modalAsset}
+        isOpen={!!modalAsset}
+        onClose={closeAlertsModal}
+      />
+
+      {/* In-App Toast Banner Alert Notification */}
+      {activeToast && (
+        <div className="fixed top-5 right-5 z-50 max-w-md animate-fade-in">
+          <div
+            className={`flex items-start gap-3 rounded-3xl border p-4 shadow-2xl backdrop-blur-xl transition-all ${
+              isDark
+                ? "border-blue-500/50 bg-[#1c1c1e]/95 text-white ring-2 ring-blue-500/40 shadow-blue-500/20"
+                : "border-blue-400 bg-white/95 text-slate-900 ring-2 ring-blue-500/30 shadow-blue-500/20"
+            }`}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500 text-white shadow-md">
+              <Bell className="h-5 w-5 animate-pulse" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-blue-500">
+                  {activeToast.title}
+                </h4>
+                <span className="text-[10px] text-slate-400 font-mono">{activeToast.timestamp}</span>
+              </div>
+              <p className={`text-xs font-medium mt-1 leading-relaxed ${isDark ? "text-slate-200" : "text-slate-700"}`}>
+                {activeToast.body}
+              </p>
+
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedAssetId(activeToast.alert.assetId);
+                    setActiveTab('chart');
+                    dismissToast();
+                  }}
+                  className="rounded-xl bg-blue-500 px-3 py-1 text-xs font-bold text-white hover:bg-blue-600 transition-colors shadow-xs"
+                >
+                  Ver en Gráfico →
+                </button>
+                <button
+                  type="button"
+                  onClick={dismissToast}
+                  className={`rounded-xl px-2.5 py-1 text-xs font-semibold transition-colors ${
+                    isDark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

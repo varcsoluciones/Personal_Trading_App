@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
+import { useAlerts } from '@/lib/context/alerts-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import {
   TrendingUp,
@@ -38,6 +39,8 @@ export function AssetOpportunityCard({
 }: AssetOpportunityCardProps) {
   const { settings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
+  const { getActiveAlertsCount, openAlertsModal } = useAlerts();
+  const activeAlertsCount = getActiveAlertsCount(asset.id);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
   const analysis = asset.analysis;

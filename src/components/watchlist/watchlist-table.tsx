@@ -3,6 +3,7 @@
 import React from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
+import { useAlerts } from '@/lib/context/alerts-context';
 import { getAssetTypeBadgeStyle, getTrendBadgeStyle } from '@/lib/ui/badge-styles';
 import {
   TrendingUp,
@@ -13,6 +14,7 @@ import {
   Trash2,
   AlertTriangle,
   Coins,
+  Bell,
 } from 'lucide-react';
 
 interface WatchlistTableProps {
@@ -49,6 +51,7 @@ export function WatchlistTable({
 }: WatchlistTableProps) {
   const { settings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
+  const { getActiveAlertsCount, openAlertsModal } = useAlerts();
 
   if (assets.length === 0) {
     return null;
@@ -84,6 +87,7 @@ export function WatchlistTable({
             {assets.map((asset) => {
               const analysis = asset.analysis;
               if (!analysis) return null;
+              const activeAlertsCount = getActiveAlertsCount(asset.id);
 
               const isSelected = asset.id === selectedAssetId;
               const isPositive = asset.change24hPct >= 0;
@@ -207,6 +211,29 @@ export function WatchlistTable({
                   {/* 8. Actions */}
                   <td className="px-4 py-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {/* Price Alert Bell */}
+                      <button
+                        type="button"
+                        onClick={() => openAlertsModal(asset)}
+                        title={activeAlertsCount > 0 ? `${activeAlertsCount} alerta(s) de precio activa(s)` : "Crear alerta de precio"}
+                        className={`relative rounded-xl p-1.5 transition-all ${
+                          activeAlertsCount > 0
+                            ? isDark
+                              ? "bg-blue-500/20 text-blue-400 border border-blue-500/40 shadow-xs ring-1 ring-blue-500/30"
+                              : "bg-blue-50 text-blue-700 border border-blue-200 shadow-xs ring-1 ring-blue-500/30"
+                            : isDark
+                            ? "text-slate-400 hover:bg-[#2c2c2e] hover:text-white"
+                            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                        }`}
+                      >
+                        <Bell className="h-4 w-4" />
+                        {activeAlertsCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-xs">
+                            {activeAlertsCount}
+                          </span>
+                        )}
+                      </button>
+
                       <button
                         onClick={() => {
                           onSelectAsset(asset.id);

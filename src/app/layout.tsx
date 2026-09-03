@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/lib/context/settings-context";
+import { AlertsProvider } from "@/lib/context/alerts-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +31,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col font-sans transition-colors duration-200">
-        <SettingsProvider>{children}</SettingsProvider>
+        <SettingsProvider>
+          <AlertsProvider>{children}</AlertsProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

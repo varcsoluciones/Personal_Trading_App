@@ -5,6 +5,7 @@ import { Asset, BacktestConfig, BacktestResult, Candle } from '../types/market';
 import { DEFAULT_ASSETS_LIST, AssetDefinition, POPULAR_ASSETS_CATALOG } from '../api/default-data';
 import { analyzeAsset } from '../quant/trend-analyzer';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '../quant/backtest-engine';
+import { usePriceAlerts } from './use-price-alerts';
 
 const WATCHLIST_STORAGE_KEY = 'personal_trading_custom_watchlist_v1';
 const ACTIVE_TAB_STORAGE_KEY = 'quantpulse_active_tab_v2';
@@ -14,6 +15,7 @@ const BACKTEST_CONFIG_STORAGE_KEY = 'quantpulse_backtest_config_v2';
 
 export function useMarketData() {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const { checkAlerts } = usePriceAlerts();
   const [selectedAssetId, setSelectedAssetIdState] = useState<string>('BTCUSDT');
   const [activeTab, setActiveTabState] = useState<'dashboard' | 'screener' | 'chart' | 'backtest'>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -154,6 +156,15 @@ export function useMarketData() {
       }
 
       setAssets(successfulAssets);
+
+      // Check price alerts with freshly loaded asset prices
+      const priceMap: Record<string, number> = {};
+      successfulAssets.forEach((a) => {
+        priceMap[a.id] = a.price;
+        priceMap[a.symbol] = a.price;
+      });
+      checkAlerts(priceMap);
+
       if (successfulAssets.length > 0 && !successfulAssets.some(a => a.id === selectedAssetId)) {
         setSelectedAssetId(successfulAssets[0].id);
       }
@@ -231,6 +242,9 @@ export function useMarketData() {
           } catch (e) {}
           return next;
         });
+
+        // Check alerts for new asset price
+        checkAlerts({ [newAsset.id]: newAsset.price, [newAsset.symbol]: newAsset.price });
         setSelectedAssetId(newAsset.id);
       } catch (err) {
         console.error(`Failed to add asset ${symbol}:`, err);

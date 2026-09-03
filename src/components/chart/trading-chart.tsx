@@ -14,12 +14,14 @@ import { Asset } from '@/lib/types/market';
 import { calculateADX, calculateEMA, calculateRSI } from '@/lib/quant/indicators';
 import { getAssetTypeBadgeStyle, getTrendBadgeStyle } from '@/lib/ui/badge-styles';
 import { useSettings } from '@/lib/context/settings-context';
+import { useAlerts } from '@/lib/context/alerts-context';
 import {
   TrendingUp,
   TrendingDown,
   Shield,
   Target,
   CheckCircle,
+  Bell,
 } from 'lucide-react';
 
 interface TradingChartProps {
@@ -29,6 +31,8 @@ interface TradingChartProps {
 export function TradingChart({ asset }: TradingChartProps) {
   const { settings, accent, formatCurrency, updateSettings } = useSettings();
   const isDark = settings.theme === 'dark';
+  const { getActiveAlertsCount, openAlertsModal } = useAlerts();
+  const activeAlertsCount = getActiveAlertsCount(asset.id);
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const rsiContainerRef = useRef<HTMLDivElement>(null);
@@ -528,8 +532,30 @@ export function TradingChart({ asset }: TradingChartProps) {
           )}
         </div>
 
-        {/* Indicator Toggles */}
+        {/* Indicator Toggles & Price Alerts */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Price Alerts Bell Button */}
+          <button
+            type="button"
+            onClick={() => openAlertsModal(asset)}
+            className={`relative flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
+              activeAlertsCount > 0
+                ? isDark
+                  ? "border-blue-500 bg-blue-500/20 text-blue-300 shadow-xs ring-1 ring-blue-500/30"
+                  : "border-blue-500 bg-blue-50 text-blue-700 shadow-xs ring-1 ring-blue-500/30"
+                : isDark
+                ? "border-slate-800 bg-[#2c2c2e]/60 text-slate-300 hover:border-slate-700 hover:text-white"
+                : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            <Bell className="h-3.5 w-3.5 text-blue-500" />
+            <span>Alertas</span>
+            {activeAlertsCount > 0 && (
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-xs">
+                {activeAlertsCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={toggleEma20}
             className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${

@@ -14,6 +14,7 @@ import {
   Table as TableIcon,
   Award,
   Clock,
+  Bell,
   Scale,
   Zap,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { Asset, AssetCategory } from '@/lib/types/market';
 import { AssetOpportunityCard } from '@/components/shared/asset-opportunity-card';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { useSettings } from '@/lib/context/settings-context';
+import { useAlerts } from '@/lib/context/alerts-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
 import { analyzeAsset } from '@/lib/quant/trend-analyzer';
@@ -53,6 +55,7 @@ export function OpportunityScreener({
 }: OpportunityScreenerProps) {
   const { settings, accent, formatCurrency, updateSettings } = useSettings();
   const isDark = settings.theme === 'dark';
+  const { getActiveAlertsCount, openAlertsModal } = useAlerts();
 
   const [selectedProfileId, setSelectedProfileId] = useState<'conservative' | 'balanced' | 'aggressive'>(
     settings.screenerPresetProfile || 'balanced'
@@ -569,6 +572,7 @@ export function OpportunityScreener({
               <tbody className="divide-y divide-slate-800/40">
                 {filteredAssets.map((asset) => {
                   const analysis = asset.analysis!;
+                  const activeAlertsCount = getActiveAlertsCount(asset.id);
                   const order = analysis.orderSetup;
                   const isPositive = asset.change24hPct >= 0;
 
@@ -713,6 +717,29 @@ export function OpportunityScreener({
                       {/* 8. Acciones */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          {/* Price Alert Bell */}
+                          <button
+                            type="button"
+                            onClick={() => openAlertsModal(asset)}
+                            title={activeAlertsCount > 0 ? `${activeAlertsCount} alerta(s) de precio activa(s)` : "Crear alerta de precio"}
+                            className={`relative rounded-xl p-1.5 transition-all ${
+                              activeAlertsCount > 0
+                                ? isDark
+                                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/40 shadow-xs ring-1 ring-blue-500/30"
+                                  : "bg-blue-50 text-blue-700 border border-blue-200 shadow-xs ring-1 ring-blue-500/30"
+                                : isDark
+                                ? "text-slate-400 hover:bg-[#2c2c2e] hover:text-white"
+                                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            }`}
+                          >
+                            <Bell className="h-4 w-4 text-blue-500" />
+                            {activeAlertsCount > 0 && (
+                              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-xs">
+                                {activeAlertsCount}
+                              </span>
+                            )}
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => {
