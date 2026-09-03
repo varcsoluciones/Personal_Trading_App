@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   createChart,
   IChartApi,
@@ -141,6 +141,7 @@ export function TradingChart({ asset }: TradingChartProps) {
   }, [asset.id, asset.symbol, asset.type, asset.candles, selectedInterval]);
 
   const analysis = asset.analysis;
+  const isPositiveChange = asset.change24hPct >= 0;
 
   // 1. Candlestick Chart Initialization
   useEffect(() => {
@@ -518,6 +519,17 @@ export function TradingChart({ asset }: TradingChartProps) {
     };
   }, [chartCandles, isDark, accent]);
 
+  // Active Candle for constant, non-jumping OHLC bar (hovered candle OR latest candle)
+  const lastCandle = chartCandles.length > 0 ? chartCandles[chartCandles.length - 1] : null;
+  const activeCandle = hoverData || (lastCandle ? {
+    time: lastCandle.time,
+    open: lastCandle.open,
+    high: lastCandle.high,
+    low: lastCandle.low,
+    close: lastCandle.close,
+    variationPct: lastCandle.open ? ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100 : 0,
+  } : null);
+
   return (
     <div className="space-y-4">
       {/* Unsupported Interval Error Warning Banner */}
@@ -534,7 +546,7 @@ export function TradingChart({ asset }: TradingChartProps) {
         </div>
       )}
 
-      {/* Chart Top Control Bar */}
+      {/* 1. FIXED-HEIGHT, MINIMALIST TOP CONTROL BAR (Never shifts or jumps on hover) */}
       <div
         className={`flex flex-wrap items-center justify-between gap-3 rounded-3xl border p-4 backdrop-blur-md transition-colors ${
           isDark
@@ -542,6 +554,7 @@ export function TradingChart({ asset }: TradingChartProps) {
             : 'border-slate-200/80 bg-white shadow-xs text-slate-900'
         }`}
       >
+        {/* Left Side: Asset Identity & Current Price */}
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -559,48 +572,22 @@ export function TradingChart({ asset }: TradingChartProps) {
                 </span>
               )}
             </div>
-            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{asset.name}</p>
-          </div>
-
-          <div className={`hidden h-8 w-[1px] sm:block ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
-
-          {/* Current OHLC Hover Values with Variation Percentage */}
-          {hoverData && (
-            <div className="hidden flex-wrap items-center gap-2.5 font-mono text-xs sm:flex">
-              <div>
-                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>O:</span>{' '}
-                <span className={isDark ? 'text-white' : 'text-slate-800'}>{formatCurrency(hoverData.open || 0)}</span>
-              </div>
-              <div>
-                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>H:</span>{' '}
-                <span className="text-emerald-500">{formatCurrency(hoverData.high || 0)}</span>
-              </div>
-              <div>
-                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>L:</span>{' '}
-                <span className="text-rose-500">{formatCurrency(hoverData.low || 0)}</span>
-              </div>
-              <div>
-                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>C:</span>{' '}
-                <span className={`font-bold ${accent.textClass}`}>{formatCurrency(hoverData.close || 0)}</span>
-              </div>
-              <div className="border-l border-slate-700/50 pl-2">
-                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>Var:</span>{' '}
-                <span
-                  className={`font-bold ${
-                    hoverData.variationPct >= 0 ? 'text-emerald-500' : 'text-rose-500'
-                  }`}
-                >
-                  {hoverData.variationPct >= 0 ? '+' : ''}
-                  {hoverData.variationPct.toFixed(2)}%
-                </span>
-              </div>
+            <div className="flex items-center gap-2 mt-0.5 text-xs">
+              <span className={`font-mono font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {formatCurrency(asset.price)}
+              </span>
+              <span className={`font-mono font-semibold text-[11px] ${isPositiveChange ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {isPositiveChange ? '+' : ''}{asset.change24hPct.toFixed(2)}%
+              </span>
+              <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>•</span>
+              <span className={`truncate max-w-[140px] sm:max-w-none ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{asset.name}</span>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Right Side: Timeframe Selector, Indicator Toggles & Price Alerts */}
+        {/* Right Side: Fixed-Width Timeframes, Alerts & Indicator Toggles */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* 1. Timeframe Selector (1H | 4H | 1D | 1S | 1M) */}
+          {/* Timeframe Selector (1H | 4H | 1D | 1S | 1M) */}
           <div
             className={`flex items-center gap-1 rounded-2xl border p-1 ${
               isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
@@ -630,7 +617,7 @@ export function TradingChart({ asset }: TradingChartProps) {
             {isLoadingInterval && <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin mx-1" />}
           </div>
 
-          {/* 2. Price Alerts Bell Button */}
+          {/* Price Alerts Bell Button */}
           <button
             type="button"
             onClick={() => openAlertsModal(asset)}
@@ -653,7 +640,7 @@ export function TradingChart({ asset }: TradingChartProps) {
             )}
           </button>
 
-          {/* 3. Indicators Toggles */}
+          {/* Indicator Toggles */}
           <button
             onClick={toggleEma20}
             className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
@@ -712,12 +699,62 @@ export function TradingChart({ asset }: TradingChartProps) {
         </div>
       </div>
 
-      {/* Main Candlestick Canvas Container */}
+      {/* 2. MAIN CANDLESTICK CANVAS CONTAINER WITH DEDICATED OHLC LEGEND BAR */}
       <div
         className={`relative overflow-hidden rounded-3xl border shadow-lg transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
+        {/* Sleek Fixed-Height OHLC Bar (TradingView Style, 0 Layout Shift) */}
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 text-xs font-mono transition-colors ${
+            isDark ? 'border-slate-800/80 bg-[#2c2c2e]/40' : 'border-slate-100 bg-slate-50/90'
+          }`}
+        >
+          {activeCandle ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`text-[11px] font-sans font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {hoverData ? 'Vela Seleccionada:' : 'Última Vela:'}
+              </span>
+              <div>
+                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>O:</span>{' '}
+                <span className={isDark ? 'text-slate-200' : 'text-slate-800'}>{formatCurrency(activeCandle.open)}</span>
+              </div>
+              <div>
+                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>H:</span>{' '}
+                <span className="text-emerald-500 font-semibold">{formatCurrency(activeCandle.high)}</span>
+              </div>
+              <div>
+                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>L:</span>{' '}
+                <span className="text-rose-500 font-semibold">{formatCurrency(activeCandle.low)}</span>
+              </div>
+              <div>
+                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>C:</span>{' '}
+                <span className={`font-bold ${accent.textClass}`}>{formatCurrency(activeCandle.close)}</span>
+              </div>
+              <div className="border-l border-slate-700/40 pl-2.5">
+                <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>Var:</span>{' '}
+                <span
+                  className={`font-bold ${
+                    activeCandle.variationPct >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                  }`}
+                >
+                  {activeCandle.variationPct >= 0 ? '+' : ''}
+                  {activeCandle.variationPct.toFixed(2)}%
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="h-4" />
+          )}
+
+          {/* Timeframe indicator badge */}
+          <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-400 font-sans">
+            <Clock className="h-3 w-3" />
+            <span>Temporalidad: <strong className="text-blue-400 font-mono uppercase">{selectedInterval}</strong></span>
+          </div>
+        </div>
+
         <div ref={chartContainerRef} className="w-full" />
       </div>
 
