@@ -14,7 +14,6 @@ import { TradingChart } from '@/components/chart/trading-chart';
 import { StrategyControls } from '@/components/backtesting/strategy-controls';
 import { BacktestDashboard } from '@/components/backtesting/backtest-dashboard';
 import { TradeHistoryTable } from '@/components/backtesting/trade-history-table';
-import { HorizontalAssetBar } from '@/components/shared/horizontal-asset-bar';
 import { PriceAlertsModal } from '@/components/alerts/price-alerts-modal';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { ALERT_NAVIGATE_EVENT } from '@/lib/utils/browser-notifications';
@@ -368,31 +367,24 @@ export default function Home() {
         {/* TAB 3: CHART VIEW WITH EMAs 20/50/200 */}
         {activeTab === 'chart' && selectedAsset && (
           <div className="space-y-4">
-            {/* High-Contrast Horizontal Asset Navigation Bar */}
-            <HorizontalAssetBar
+            <TradingChart
+              asset={selectedAsset}
               assets={assets}
-              selectedAssetId={selectedAssetId}
               onSelectAsset={(id) => setSelectedAssetId(id)}
             />
-
-            <TradingChart asset={selectedAsset} />
           </div>
         )}
 
         {/* TAB 4: BACKTESTING LAB (INTERACTIVE BROKERS REALISTIC PRICING) */}
         {activeTab === 'backtest' && selectedAsset && (
           <div className="space-y-6">
-            {/* High-Contrast Horizontal Asset Navigation Bar */}
-            <HorizontalAssetBar
-              assets={assets}
-              selectedAssetId={selectedAssetId}
-              onSelectAsset={(id) => setSelectedAssetId(id)}
-            />
-
-            {/* Real-time Strategy Sliders & IBKR Cost Model */}
+            {/* Real-time Strategy Sliders with Integrated Asset Dropdown */}
             <StrategyControls
               config={backtestConfig}
               onChange={updateBacktestConfig}
+              assets={assets}
+              selectedAsset={selectedAsset}
+              onSelectAsset={(id) => setSelectedAssetId(id)}
             />
 
             {/* Dashboard Metrics and Equity Curve */}

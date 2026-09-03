@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { BacktestConfig } from '@/lib/types/market';
+import { Asset, BacktestConfig } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { AssetDropdownSelect } from '@/components/shared/asset-dropdown-select';
 import {
   RotateCcw,
   Shield,
@@ -18,6 +19,9 @@ import {
 interface StrategyControlsProps {
   config: BacktestConfig;
   onChange: (updates: Partial<BacktestConfig>) => void;
+  assets?: Asset[];
+  selectedAsset?: Asset;
+  onSelectAsset?: (id: string) => void;
 }
 
 interface StrategyPreset {
@@ -83,7 +87,13 @@ const STRATEGY_PRESETS: StrategyPreset[] = [
   },
 ];
 
-export function StrategyControls({ config, onChange }: StrategyControlsProps) {
+export function StrategyControls({
+  config,
+  onChange,
+  assets,
+  selectedAsset,
+  onSelectAsset,
+}: StrategyControlsProps) {
   const { settings, accent, updateSettings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
   const isAdvanced = !!settings.backtestAdvancedMode;
@@ -110,19 +120,29 @@ export function StrategyControls({ config, onChange }: StrategyControlsProps) {
 
   return (
     <div
-      className={`rounded-3xl border p-5 backdrop-blur-md transition-colors ${
+      className={`rounded-3xl border p-4 sm:p-5 backdrop-blur-md transition-colors ${
         isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
       }`}
     >
-      {/* Header Bar */}
+      {/* Header Bar with Integrated Asset Dropdown Filter */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div>
-          <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            Configuración de la Estrategia
-          </h3>
-          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Selecciona un perfil predeterminado o despliega los controles avanzados
-          </p>
+        <div className="flex flex-wrap items-center gap-3">
+          {assets && selectedAsset && onSelectAsset && (
+            <AssetDropdownSelect
+              assets={assets}
+              selectedAsset={selectedAsset}
+              onSelectAsset={onSelectAsset}
+            />
+          )}
+
+          <div>
+            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Simulación de Estrategia Quant
+            </h3>
+            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Selecciona un perfil predeterminado o despliega los controles avanzados
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -153,7 +173,7 @@ export function StrategyControls({ config, onChange }: StrategyControlsProps) {
             }`}
           >
             <RotateCcw className="h-3 w-3" />
-            <span>Restablecer</span>
+            <span className="hidden sm:inline">Restablecer</span>
           </button>
         </div>
       </div>
@@ -180,131 +200,125 @@ export function StrategyControls({ config, onChange }: StrategyControlsProps) {
               }`}
             >
               <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                      className={`flex h-7 w-7 items-center justify-center rounded-xl ${
                         isSelected
-                          ? 'bg-blue-500 text-white shadow-xs'
+                          ? 'bg-blue-500 text-white'
                           : isDark
-                          ? 'bg-[#1c1c1e] text-slate-400'
-                          : 'bg-white text-slate-600 border border-slate-200'
+                          ? 'bg-slate-800 text-slate-400'
+                          : 'bg-slate-200 text-slate-600'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
                     </div>
-                    <div>
-                      <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {preset.name}
-                      </h4>
-                      <p className={`text-[10px] font-semibold ${isSelected ? 'text-blue-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {preset.tagline}
-                      </p>
-                    </div>
+                    <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      {preset.name}
+                    </span>
                   </div>
 
-                  {isSelected && (
-                    <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-500">
-                      Activo
+                  {preset.id === 'balanced' && (
+                    <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.2 text-[9px] font-bold text-blue-500">
+                      Recomendado
                     </span>
                   )}
                 </div>
 
-                <p className={`text-xs leading-relaxed mt-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <p className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {preset.tagline}
+                </p>
+                <p className={`mt-1 text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                   {preset.description}
                 </p>
               </div>
 
-              {/* Quick Strategy Blueprint Pill */}
-              <div className={`mt-3 pt-2 border-t flex items-center justify-between text-[10px] font-mono font-semibold ${
-                isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
-              }`}>
-                <span>SL: -{preset.config.stopLossPct}%</span>
-                <span>TP: 1:{preset.config.takeProfitRatio}x</span>
-                <span>RSI: {preset.config.rsiOversold}-{preset.config.rsiOverbought}</span>
+              {/* Quick Metrics Summary */}
+              <div className={`mt-3 flex items-center justify-between border-t pt-2 text-[10px] font-mono ${isDark ? 'border-slate-700/50 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+                <span>Stop: -{preset.config.stopLossPct}%</span>
+                <span>R:B 1:{preset.config.takeProfitRatio}x</span>
+                <span>RSI: {preset.config.rsiOversold}/{preset.config.rsiOverbought}</span>
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* ADVANCED SLIDERS & CONTROLS (COLLAPSIBLE) */}
+      {/* ADVANCED CUSTOM CONTROLS DRAWER */}
       {isAdvanced && (
         <div
-          className={`mt-5 pt-5 border-t space-y-5 transition-all ${
-            isDark ? 'border-slate-800/80' : 'border-slate-100'
+          className={`mt-5 rounded-2xl border p-4 sm:p-5 transition-all animate-fade-in ${
+            isDark ? 'border-slate-700/80 bg-[#252528]' : 'border-slate-200 bg-slate-50/90 shadow-inner'
           }`}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between border-b pb-3 mb-4 border-slate-700/40">
             <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Ajuste Fino de Parámetros Cuantitativos
+              Parámetros Cuantitativos Manuales
             </h4>
-            {activePresetId === null && (
-              <span className="text-[11px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
-                Configuración Manual Personalizada
-              </span>
-            )}
+            <span className="text-[11px] text-slate-400 font-mono">
+              Los cambios recalculan instantáneamente la simulación
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {/* 1. RSI Period */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1">
                   <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Periodo RSI:</span>
-                  <InfoTooltip text="Número de velas para calcular el oscilador RSI (14 es el estándar de Wilder)." title="Periodo RSI" />
+                  <InfoTooltip text="Número de velas usadas para calcular el Relative Strength Index." title="Periodo RSI" />
                 </div>
-                <span className={`font-mono font-bold ${accent.textClass}`}>{config.rsiPeriod} velas</span>
+                <span className="font-mono font-bold text-purple-500">{config.rsiPeriod} velas</span>
               </div>
               <input
                 type="range"
                 min={7}
-                max={28}
+                max={21}
                 step={1}
                 value={config.rsiPeriod}
                 onChange={(e) => onChange({ rsiPeriod: Number(e.target.value) })}
-                className="w-full accent-blue-500 cursor-pointer"
+                className="w-full accent-purple-500 cursor-pointer"
               />
               <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>7 (Rápido)</span>
                 <span>14 (Estándar)</span>
-                <span>28 (Lento)</span>
+                <span>21 (Lento)</span>
               </div>
             </div>
 
-            {/* 2. RSI Oversold (Compra) */}
+            {/* 2. RSI Oversold */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Umbral de Sobreventa (RSI Entrada):</span>
-                  <InfoTooltip text="Nivel de RSI a partir del cual se busca comprar retrocesos (pullbacks)." title="RSI Sobreventa" />
+                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Umbral Sobrevenda (Compra):</span>
+                  <InfoTooltip text="Nivel de RSI por debajo del cual se considera una oportunidad de rebote alcista." title="Umbral Sobrevenda" />
                 </div>
-                <span className="font-mono font-bold text-emerald-500">&lt;= {config.rsiOversold}</span>
+                <span className="font-mono font-bold text-emerald-500">&lt; {config.rsiOversold}</span>
               </div>
               <input
                 type="range"
-                min={25}
-                max={50}
+                min={20}
+                max={45}
                 step={1}
                 value={config.rsiOversold}
                 onChange={(e) => onChange({ rsiOversold: Number(e.target.value) })}
                 className="w-full accent-emerald-500 cursor-pointer"
               />
               <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                <span>25 (Extremo)</span>
+                <span>20 (Extremo)</span>
                 <span>38 (Recomendado)</span>
-                <span>50 (Temprano)</span>
+                <span>45 (Flexible)</span>
               </div>
             </div>
 
-            {/* 3. RSI Overbought (Salida) */}
+            {/* 3. RSI Overbought */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Umbral de Sobrecompra (RSI Salida):</span>
-                  <InfoTooltip text="Nivel de RSI donde se cierran posiciones para asegurar ganancias." title="RSI Sobrecompra" />
+                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Umbral Sobrecompra (Cierre):</span>
+                  <InfoTooltip text="Nivel de RSI a partir del cual el activo se considera agotado y se toma ganancia." title="Umbral Sobrecompra" />
                 </div>
-                <span className="font-mono font-bold text-rose-500">&gt;= {config.rsiOverbought}</span>
+                <span className="font-mono font-bold text-rose-500">&gt; {config.rsiOverbought}</span>
               </div>
               <input
                 type="range"
@@ -316,8 +330,8 @@ export function StrategyControls({ config, onChange }: StrategyControlsProps) {
                 className="w-full accent-rose-500 cursor-pointer"
               />
               <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                <span>60 (Prudente)</span>
-                <span>70 (Defecto)</span>
+                <span>60 (Pronto)</span>
+                <span>70 (Estándar)</span>
                 <span>85 (Extremo)</span>
               </div>
             </div>
@@ -326,8 +340,8 @@ export function StrategyControls({ config, onChange }: StrategyControlsProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>EMA Rápida:</span>
-                  <InfoTooltip text="Media móvil rápida (suele ser 20 periodos) para detectar giros de corto plazo." title="EMA Rápida" />
+                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>EMA Rápida (Gatillo Entrada):</span>
+                  <InfoTooltip text="Media móvil exponencial de reacción rápida (suele ser 20 periodos)." title="EMA Rápida" />
                 </div>
                 <span className={`font-mono font-bold ${accent.textClass}`}>EMA {config.emaFastPeriod}</span>
               </div>
@@ -338,7 +352,7 @@ export function StrategyControls({ config, onChange }: StrategyControlsProps) {
                 step={1}
                 value={config.emaFastPeriod}
                 onChange={(e) => onChange({ emaFastPeriod: Number(e.target.value) })}
-                className="w-full accent-blue-500 cursor-pointer"
+                className="w-full cursor-pointer"
               />
               <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>9</span>

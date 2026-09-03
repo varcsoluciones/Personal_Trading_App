@@ -1,20 +1,18 @@
 'use client';
 
 import React from 'react';
+import { Asset } from '@/lib/types/market';
+import { useSettings } from '@/lib/context/settings-context';
 import {
   Layers,
   Compass,
   TrendingUp,
   BarChart2,
-  Sparkles,
   Settings,
-  Sun,
-  Moon,
+  Sparkles,
   BookOpen,
   Zap,
 } from 'lucide-react';
-import { Asset } from '@/lib/types/market';
-import { useSettings } from '@/lib/context/settings-context';
 
 interface HeaderProps {
   activeTab: 'dashboard' | 'screener' | 'chart' | 'backtest';
@@ -33,7 +31,7 @@ export function Header({
   onOpenSettingsModal,
   onOpenGuideModal,
 }: HeaderProps) {
-  const { settings, accent, toggleTheme, formatCurrency } = useSettings();
+  const { settings, accent, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
 
   return (
@@ -178,19 +176,6 @@ export function Header({
           >
             <BookOpen className="h-3.5 w-3.5" />
             <span className="hidden lg:inline">Guía</span>
-          </button>
-
-          {/* Theme Switcher Button */}
-          <button
-            onClick={toggleTheme}
-            title={isDark ? 'Cambiar a Fondo Claro' : 'Cambiar a Fondo Oscuro'}
-            className={`flex h-8 w-8 items-center justify-center rounded-2xl border transition-all ${
-              isDark
-                ? 'border-slate-800 bg-[#1c1c1e] text-amber-400 hover:bg-[#2c2c2e]'
-                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-xs'
-            }`}
-          >
-            {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </button>
 
           {/* Settings Button */}

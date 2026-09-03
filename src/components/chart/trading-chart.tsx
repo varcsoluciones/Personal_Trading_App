@@ -12,12 +12,12 @@ import {
 } from 'lightweight-charts';
 import { Asset, Candle } from '@/lib/types/market';
 import { calculateADX, calculateEMA, calculateRSI } from '@/lib/quant/indicators';
-import { getAssetTypeBadgeStyle, getTrendBadgeStyle } from '@/lib/ui/badge-styles';
+import { getTrendBadgeStyle, getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import { useSettings } from '@/lib/context/settings-context';
 import { useAlerts } from '@/lib/context/alerts-context';
+import { AssetDropdownSelect } from '@/components/shared/asset-dropdown-select';
 import {
   TrendingUp,
-  TrendingDown,
   Shield,
   Target,
   CheckCircle,
@@ -29,6 +29,8 @@ import {
 
 interface TradingChartProps {
   asset: Asset;
+  assets?: Asset[];
+  onSelectAsset?: (id: string) => void;
 }
 
 interface HoverData {
@@ -51,7 +53,7 @@ const TIMEFRAMES = [
   { id: '1M', label: '1M' },
 ];
 
-export function TradingChart({ asset }: TradingChartProps) {
+export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps) {
   const { settings, accent, formatCurrency, updateSettings } = useSettings();
   const isDark = settings.theme === 'dark';
   const { getActiveAlertsCount, openAlertsModal } = useAlerts();
@@ -141,7 +143,6 @@ export function TradingChart({ asset }: TradingChartProps) {
   }, [asset.id, asset.symbol, asset.type, asset.candles, selectedInterval]);
 
   const analysis = asset.analysis;
-  const isPositiveChange = asset.change24hPct >= 0;
 
   // 1. Candlestick Chart Initialization
   useEffect(() => {
@@ -546,43 +547,50 @@ export function TradingChart({ asset }: TradingChartProps) {
         </div>
       )}
 
-      {/* 1. FIXED-HEIGHT, MINIMALIST TOP CONTROL BAR (Never shifts or jumps on hover) */}
+      {/* 1. FIXED-HEIGHT, MINIMALIST TOP CONTROL BAR WITH ASSET DROPDOWN FILTER */}
       <div
-        className={`flex flex-wrap items-center justify-between gap-3 rounded-3xl border p-4 backdrop-blur-md transition-colors ${
+        className={`flex flex-wrap items-center justify-between gap-3 rounded-3xl border p-3.5 sm:p-4 backdrop-blur-md transition-colors ${
           isDark
             ? 'border-slate-800/80 bg-[#1c1c1e]'
             : 'border-slate-200/80 bg-white shadow-xs text-slate-900'
         }`}
       >
-        {/* Left Side: Asset Identity & Current Price */}
+        {/* Left Side: Interactive Asset Dropdown Filter & Status */}
         <div className="flex items-center gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{asset.symbol}</h2>
-              <span
-                className={`rounded-xl border px-2 py-0.5 text-xs font-bold uppercase ${getAssetTypeBadgeStyle(asset.type, isDark)}`}
-              >
-                {asset.type}
-              </span>
-              {analysis && (
+          {assets && onSelectAsset ? (
+            <AssetDropdownSelect
+              assets={assets}
+              selectedAsset={asset}
+              onSelectAsset={onSelectAsset}
+            />
+          ) : (
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{asset.symbol}</h2>
                 <span
-                  className={`rounded-xl px-2.5 py-0.5 text-xs font-semibold border ${getTrendBadgeStyle(analysis.trend, isDark).badgeClass}`}
+                  className={`rounded-xl border px-2 py-0.5 text-xs font-bold uppercase ${getAssetTypeBadgeStyle(asset.type, isDark)}`}
                 >
-                  {analysis.trendLabel}
+                  {asset.type}
                 </span>
-              )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 text-xs">
+                <span className={`font-mono font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {formatCurrency(asset.price)}
+                </span>
+                <span className={`font-mono font-semibold text-[11px] ${asset.change24hPct >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {asset.change24hPct >= 0 ? '+' : ''}{asset.change24hPct.toFixed(2)}%
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 mt-0.5 text-xs">
-              <span className={`font-mono font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {formatCurrency(asset.price)}
-              </span>
-              <span className={`font-mono font-semibold text-[11px] ${isPositiveChange ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {isPositiveChange ? '+' : ''}{asset.change24hPct.toFixed(2)}%
-              </span>
-              <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>•</span>
-              <span className={`truncate max-w-[140px] sm:max-w-none ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{asset.name}</span>
-            </div>
-          </div>
+          )}
+
+          {analysis && (
+            <span
+              className={`hidden md:inline-flex rounded-xl px-2.5 py-1 text-xs font-semibold border ${getTrendBadgeStyle(analysis.trend, isDark).badgeClass}`}
+            >
+              {analysis.trendLabel}
+            </span>
+          )}
         </div>
 
         {/* Right Side: Fixed-Width Timeframes, Alerts & Indicator Toggles */}
