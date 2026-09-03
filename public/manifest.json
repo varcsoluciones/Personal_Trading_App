@@ -4,8 +4,8 @@
   "description": "Análisis Cuantitativo, Señales & Backtesting para Criptomonedas, Acciones y ETFs",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#881337",
+  "theme_color": "#881337",
   "orientation": "portrait",
   "icons": [
     {
