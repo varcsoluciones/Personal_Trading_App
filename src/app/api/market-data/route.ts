@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchBinanceKlines } from '@/lib/api/binance';
+import { normalizeCryptoSymbol } from '@/lib/utils/symbol-normalizer';
 import { fetchStockKlines, generateDeterministicCandles } from '@/lib/api/yahoo';
 import { analyzeAsset } from '@/lib/quant/trend-analyzer';
 import { Candle } from '@/lib/types/market';
@@ -18,8 +19,8 @@ const serverCache = new Map<string, CacheEntry>();
 const CRYPTO_CACHE_TTL_MS = 60 * 1000;    // 60 seconds for crypto
 const STOCK_CACHE_TTL_MS = 180 * 1000;    // 3 minutes for stocks/ETFs
 
-// Symbol regex validation (Alphanumeric, dots, dashes, underscores, max 20 chars)
-const SYMBOL_REGEX = /^[A-Za-z0-9.\-_=]{1,20}$/;
+// Symbol regex validation (Alphanumeric, dots, dashes, underscores, slashes, max 20 chars)
+const SYMBOL_REGEX = /^[A-Za-z0-9.\-_=\/]{1,20}$/;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -35,8 +36,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const cleanSymbol = rawSymbol.replace('/', '').replace('-', '').toUpperCase();
-  const cacheKey = `${cleanSymbol}:${type}:${forceDemo}`;
+  const isCrypto =
+    type === 'crypto' ||
+    rawSymbol.toUpperCase().includes('USDT') ||
+    rawSymbol.toUpperCase().includes('BTC') ||
+    rawSymbol.toUpperCase().includes('ETH') ||
+    rawSymbol.toUpperCase().includes('SOL') ||
+    rawSymbol.toUpperCase().includes('BNB') ||
+    rawSymbol.toUpperCase().includes('XRP');
+
+  // Normalize symbol: Crypto always becomes {TICKER}USDT (e.g. ETH -> ETHUSDT, ETHUSD -> ETHUSDT)
+  const normalizedSymbol = isCrypto
+    ? normalizeCryptoSymbol(rawSymbol)
+    : rawSymbol.replace(/[\/\-\s_]/g, '').toUpperCase();
+
+  const cacheKey = `${normalizedSymbol}:${type}:${forceDemo}`;
   const now = Date.now();
 
   // 2. Check Shared Server-Side In-Memory Cache
@@ -51,28 +65,26 @@ export async function GET(request: NextRequest) {
     let candles: Candle[] = [];
     let isSimulated = false;
 
-    const isCrypto =
-      type === 'crypto' ||
-      cleanSymbol.includes('USDT') ||
-      cleanSymbol.includes('BTC') ||
-      cleanSymbol.includes('ETH');
-
     if (forceDemo) {
-      candles = generateDeterministicCandles(cleanSymbol, 380);
+      candles = generateDeterministicCandles(normalizedSymbol, 380);
       isSimulated = true;
     } else if (isCrypto) {
-      candles = await fetchBinanceKlines(cleanSymbol, '1d', 500);
+      // Primary: Query Binance with validated USDT pair
+      candles = await fetchBinanceKlines(normalizedSymbol, '1d', 500);
+
+      // Fallback: Query Yahoo Finance with {TICKER}-USD (e.g. ETH-USD) to avoid stock ticker collisions
       if (!candles || candles.length === 0) {
-        candles = await fetchStockKlines(cleanSymbol, '2y', '1d');
+        const yahooCryptoSymbol = normalizedSymbol.replace(/USDT$/, '-USD');
+        candles = await fetchStockKlines(yahooCryptoSymbol, '2y', '1d');
       }
     } else {
       candles = await fetchStockKlines(rawSymbol, '2y', '1d');
     }
 
-    // Explicit fallback with isSimulated flag if public API is blocked by 429
+    // High-fidelity contingency fallback if network is completely offline
     if (!candles || candles.length === 0) {
-      console.warn(`[MarketAPI] Real fetch returned empty for ${cleanSymbol}. Providing high-fidelity simulated fallback.`);
-      candles = generateDeterministicCandles(cleanSymbol, 380);
+      console.warn(`[MarketAPI] Real fetch returned empty for ${normalizedSymbol}. Providing simulated fallback.`);
+      candles = generateDeterministicCandles(normalizedSymbol, 380);
       isSimulated = true;
     }
 
@@ -86,6 +98,7 @@ export async function GET(request: NextRequest) {
 
     const payload = {
       symbol: rawSymbol,
+      normalizedSymbol,
       price: Number(price.toFixed(4)),
       change24h: Number(change24h.toFixed(4)),
       change24hPct: Number(change24hPct.toFixed(2)),
