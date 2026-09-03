@@ -10,6 +10,7 @@ import {
   calculateMACD,
   calculateBollingerBands,
 } from '@/lib/quant/indicators';
+import { ConfidenceBadge, calculateConfidence } from '@/components/ui/confidence-badge';
 import {
   TrendingUp,
   TrendingDown,
@@ -25,6 +26,8 @@ import {
   Zap,
   Layers,
   HelpCircle,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface ChartExecutiveAnalysisProps {
@@ -44,6 +47,21 @@ export function ChartExecutiveAnalysis({
   const isDark = settings.theme === 'dark';
   const analysis = asset.analysis;
 
+  // Reliability & Confidence calculations
+  const reliabilityScore = asset.backtestReliabilityScore ?? 60;
+  const reliabilityLabel = asset.backtestReliabilityLabel ?? 'MEDIA';
+  const lowSampleWarning = Boolean(asset.backtestLowSampleWarning);
+  const isSimulated = Boolean(asset.isSimulated);
+
+  const confidence = useMemo(() => {
+    return calculateConfidence({
+      opportunityScore: analysis?.opportunityScore ?? 50,
+      reliabilityScore,
+      lowSampleWarning,
+      isSimulated,
+    });
+  }, [analysis?.opportunityScore, reliabilityScore, lowSampleWarning, isSimulated]);
+
   // Real-time calculations across the currently selected candles/timeframe
   const metrics = useMemo(() => {
     if (!candles || candles.length === 0) return null;
@@ -51,7 +69,6 @@ export function ChartExecutiveAnalysis({
     const len = candles.length;
     const closes = candles.map((c) => c.close);
     const currentClose = closes[len - 1];
-    const prevClose = len > 1 ? closes[len - 2] : currentClose;
 
     // 1. EMAs
     const ema20 = calculateEMA(closes, 20);
@@ -82,7 +99,6 @@ export function ChartExecutiveAnalysis({
     const curMacd = macdRes.macdLine[len - 1];
     const curSignal = macdRes.signalLine[len - 1];
     const curHist = macdRes.histogram[len - 1];
-    const prevHist = len > 1 ? macdRes.histogram[len - 2] : curHist;
 
     // 6. Volume
     const currentVol = candles[len - 1].volume || 0;
@@ -114,7 +130,6 @@ export function ChartExecutiveAnalysis({
     let bollStatus: SignalEvaluation = 'NEUTRAL';
     let bollSummary = '';
     if (!isNaN(curBollUp) && !isNaN(curBollLow) && !isNaN(curBollMid)) {
-      const bandwidth = (curBollUp - curBollLow) / curBollMid;
       if (currentClose >= curBollUp) {
         bollStatus = 'DESFAVORABLE';
         bollSummary = 'Sobreextensión en Banda Superior. Alta probabilidad de retroceso o consolidación a la media.';
@@ -233,7 +248,6 @@ export function ChartExecutiveAnalysis({
   const score = analysis.opportunityScore;
   const isScoreHigh = score >= 80;
   const isScoreMedium = score >= 50 && score < 80;
-  const isScoreLow = score < 50;
 
   // Helper for Status Badge
   const renderBadge = (status: SignalEvaluation) => {
@@ -274,7 +288,7 @@ export function ChartExecutiveAnalysis({
         isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
       }`}
     >
-      {/* 1. Header Section: Title, Asset Context & Executive Verdict Pill */}
+      {/* 1. Header Section: Title, Asset Context & Integrated Confidence & Score Verdict */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-5 border-slate-800/40">
         <div>
           <div className="flex items-center gap-2">
@@ -294,8 +308,9 @@ export function ChartExecutiveAnalysis({
           </div>
         </div>
 
-        {/* Global Opportunity Score & Operational Verdict */}
-        <div className="flex items-center gap-3 self-start sm:self-auto">
+        {/* Global Opportunity Score + Unified Confidence Pill */}
+        <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+          {/* Opportunity Score Pill */}
           <div className="text-right">
             <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
               Score Técnico
@@ -311,27 +326,24 @@ export function ChartExecutiveAnalysis({
             </div>
           </div>
 
-          <div
-            className={`rounded-2xl border px-3.5 py-2 text-center text-xs font-bold shadow-xs ${
-              isScoreHigh
-                ? isDark
-                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
-                  : 'border-emerald-200 bg-emerald-50 text-emerald-800 ring-1 ring-emerald-500/30'
-                : isScoreMedium
-                ? isDark
-                  ? 'border-blue-500/40 bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30'
-                  : 'border-blue-200 bg-blue-50 text-blue-800 ring-1 ring-blue-500/30'
-                : isDark
-                ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
-                : 'border-amber-200 bg-amber-50 text-amber-900'
-            }`}
-          >
-            {isScoreHigh ? '🟢 Entrada Recomendada' : isScoreMedium ? '🔵 Mantener en Radar' : '🟡 Esperar Confirmación'}
+          {/* Unified Confidence Badge */}
+          <div className="flex flex-col items-end gap-1">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+              Confiabilidad
+            </div>
+            <ConfidenceBadge
+              opportunityScore={score}
+              reliabilityScore={reliabilityScore}
+              lowSampleWarning={lowSampleWarning}
+              isSimulated={isSimulated}
+              size="md"
+              isDark={isDark}
+            />
           </div>
         </div>
       </div>
 
-      {/* 2. Executive Pillar Breakdown (5 Dimensions of the active charts) */}
+      {/* 2. Executive Pillar Breakdown (6 Dimensions of the active charts) */}
       <div className="space-y-3">
         <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
           Desglose Técnico de Parámetros & Señales
@@ -490,37 +502,73 @@ export function ChartExecutiveAnalysis({
         </div>
       </div>
 
-      {/* 3. Executive Summary & Strategy Justification */}
+      {/* 3. Executive Summary, Reliability Reasoning & Action Plan */}
       <div
-        className={`rounded-2xl border p-4 sm:p-5 space-y-3 ${
+        className={`rounded-2xl border p-4 sm:p-5 space-y-3.5 ${
           isDark
             ? 'border-blue-500/30 bg-blue-950/15 text-slate-200'
             : 'border-blue-200 bg-blue-50/60 text-slate-800'
         }`}
       >
-        <div className="flex items-center gap-2 text-blue-500 font-bold text-sm">
-          <Layers className="h-4 w-4" />
-          <span>Conclusión Gerencial & Justificación del Score ({score}/100)</span>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-blue-500 font-bold text-sm">
+            <Layers className="h-4 w-4" />
+            <span>Conclusión Gerencial & Razonamiento de Confiabilidad ({confidence.compositeScore}/100)</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Confiabilidad Histórica:</span>
+            <span className={`font-mono font-bold ${
+              reliabilityLabel === 'ALTA' ? 'text-emerald-500' : reliabilityLabel === 'MEDIA' ? 'text-amber-500' : 'text-rose-500'
+            }`}>
+              {reliabilityLabel} ({reliabilityScore}/100)
+            </span>
+          </div>
         </div>
 
-        <p className="text-xs leading-relaxed">
-          {score >= 80 ? (
-            <>
-              <strong>Veredicto Favorable:</strong> El activo <strong>{asset.symbol}</strong> presenta una alta alineación técnica cuantitativa ({score}/100). La estructura de medias móviles, el momentum RSI sin sobrecompra y la dirección positiva del MACD generan una ventaja estadística asimétrica. Se recomienda operar respetando el plan de entrada proyectado y los niveles de stop loss automáticos.
-            </>
-          ) : score >= 50 ? (
-            <>
-              <strong>Veredicto Neutral / En Seguimiento:</strong> El activo <strong>{asset.symbol}</strong> mantiene un puntaje moderado ({score}/100). Aunque algunos indicadores muestran estabilidad o soporte en rango, aún no existe un consenso pleno de ruptura institucional. Es aconsejable esperar un retroceso a la zona de entrada ideal (${analysis.orderSetup.suggestedEntryPrice}) antes de abrir nuevas posiciones.
-            </>
-          ) : (
-            <>
-              <strong>Veredicto Cauteloso:</strong> El activo <strong>{asset.symbol}</strong> se encuentra bajo presión técnica ({score}/100) debido a divergencias bajistas o pérdida de medias clave. No se recomienda abrir compras agresivas hasta que el precio recupere la EMA 20 y el RSI muestre giro alcista con volumen.
-            </>
-          )}
-        </p>
+        {/* Narrative Justification integrating Technical Score + Historical Reliability */}
+        <div className="space-y-2 text-xs leading-relaxed">
+          <p>
+            {score >= 80 ? (
+              <>
+                <strong>Veredicto Favorable:</strong> El activo <strong>{asset.symbol}</strong> presenta una excelente alineación técnica cuantitativa ({score}/100). La estructura de medias móviles, el momentum RSI sin sobrecompra y la dirección positiva del MACD generan una ventaja estadística asimétrica.
+              </>
+            ) : score >= 50 ? (
+              <>
+                <strong>Veredicto Neutral / En Seguimiento:</strong> El activo <strong>{asset.symbol}</strong> mantiene un puntaje moderado ({score}/100). Aunque algunos indicadores muestran estabilidad o soporte en rango, aún no existe un consenso pleno de ruptura institucional.
+              </>
+            ) : (
+              <>
+                <strong>Veredicto Cauteloso:</strong> El activo <strong>{asset.symbol}</strong> se encuentra bajo presión técnica ({score}/100) debido a divergencias bajistas o pérdida de medias clave. Se aconseja no abrir compras agresivas hasta que el precio recupere la EMA 20 con volumen.
+              </>
+            )}
+          </p>
 
-        {/* Actionable Executive Execution Box (Key Trade Parameters) */}
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 pt-2 border-t border-blue-500/20 font-mono text-xs">
+          {/* Explicit Reasoning on Historical Reliability */}
+          <div className={`rounded-xl border p-3 flex items-start gap-2.5 ${
+            reliabilityLabel === 'ALTA' && !lowSampleWarning
+              ? isDark ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50/80 text-emerald-900'
+              : reliabilityLabel === 'MEDIA' || lowSampleWarning
+              ? isDark ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-amber-200 bg-amber-50/80 text-amber-900'
+              : isDark ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-rose-200 bg-rose-50/80 text-rose-900'
+          }`}>
+            <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <strong className="font-bold">Razonamiento de Confiabilidad Histórica:</strong>
+              <p className="text-[11px] leading-relaxed">
+                {reliabilityLabel === 'ALTA' && !lowSampleWarning
+                  ? `La señal técnica actual cuenta con un respaldo estadístico robusto fuera de muestra (Confiabilidad ${reliabilityScore}/100). Las simulaciones históricas Walk-Forward confirman que este activo ha mantenido una consistencia de ganancias y control de drawdown favorable ante estas condiciones.`
+                  : lowSampleWarning
+                  ? `La confiabilidad histórica es calificada como ${reliabilityLabel} (${reliabilityScore}/100) debido a un historial operativo limitado (menos de 30 operaciones simuladas). Aunque la configuración técnica es prometedora, se aconseja utilizar un tamaño de posición conservador.`
+                  : reliabilityLabel === 'MEDIA'
+                  ? `La confiabilidad histórica es moderada (${reliabilityScore}/100). El activo muestra rentabilidad histórica aceptable pero con cierta variabilidad entre periodos de prueba y validación.`
+                  : `Precaución: La confiabilidad histórica es baja (${reliabilityScore}/100), lo que refleja alta dispersión o bajo rendimiento en pruebas históricas previas. Se recomienda esperar una confirmación de mayor calidad.`}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Actionable Executive Execution Box (5 Key Trade Parameters) */}
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5 pt-2 border-t border-blue-500/20 font-mono text-xs">
           {/* Suggested Entry */}
           <div className={`rounded-xl border p-2.5 ${isDark ? 'border-slate-800 bg-[#1c1c1e]' : 'border-slate-200 bg-white'}`}>
             <span className="text-[10px] text-blue-500 font-sans font-bold flex items-center gap-1">
@@ -557,6 +605,21 @@ export function ChartExecutiveAnalysis({
             </div>
             <div className="text-[10px] text-emerald-400 font-sans mt-0.5">
               +{analysis.orderSetup.suggestedTakeProfitPct}% objetivo
+            </div>
+          </div>
+
+          {/* Confiabilidad Cuantitativa */}
+          <div className={`rounded-xl border p-2.5 ${isDark ? 'border-slate-800 bg-[#1c1c1e]' : 'border-slate-200 bg-white'}`}>
+            <span className="text-[10px] text-amber-500 font-sans font-bold flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3" /> Confiabilidad
+            </span>
+            <div className={`font-bold text-sm sm:text-base mt-0.5 ${
+              confidence.level === 'ALTA' ? 'text-emerald-500' : confidence.level === 'MEDIA' ? 'text-amber-500' : 'text-rose-500'
+            }`}>
+              {confidence.level} ({confidence.compositeScore})
+            </div>
+            <div className="text-[10px] text-slate-400 font-sans mt-0.5 truncate">
+              {confidence.sublabel}
             </div>
           </div>
 

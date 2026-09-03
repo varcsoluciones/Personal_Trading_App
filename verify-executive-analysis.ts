@@ -38,15 +38,17 @@ if (
   process.exit(1);
 }
 
-// Check executive summary & score justification
+// Check executive summary, reliability reasoning & 5-box execution plan
 if (
-  execAnalysisCode.includes("Conclusión Gerencial & Justificación del Score") &&
+  execAnalysisCode.includes("Conclusión Gerencial & Razonamiento de Confiabilidad") &&
+  execAnalysisCode.includes("Razonamiento de Confiabilidad Histórica") &&
   execAnalysisCode.includes("Entrada Sugerida") &&
   execAnalysisCode.includes("Stop Loss Límit") &&
   execAnalysisCode.includes("Take Profit Obj.") &&
+  execAnalysisCode.includes("Confiabilidad") &&
   execAnalysisCode.includes("Horizonte")
 ) {
-  console.log("✅ [3] Resumen gerencial, justificación del score y plan de ejecución en 4 cajas presentes.");
+  console.log("✅ [3] Resumen gerencial, razonamiento de confiabilidad y plan de 5 cajas presentes.");
 } else {
   console.error("❌ Falta resumen gerencial o plan de ejecución.");
   process.exit(1);
@@ -65,5 +67,5 @@ if (
 }
 
 console.log("\n----------------------------------------------------------------------");
-console.log("✨ TODAS LAS PRUEBAS DE DIAGNÓSTICO GERENCIAL PASARON AL 100%.");
+console.log("✨ TODAS LAS PRUEBAS DE DIAGNÓSTICO GERENCIAL Y CONFIABILIDAD PASARON.");
 console.log("----------------------------------------------------------------------");
