@@ -511,6 +511,7 @@ export default function Home() {
 
       {/* Apply / Edit Position Modal */}
       <ApplyPositionModal
+        assets={assets}
         asset={applyModalAsset}
         existingPosition={applyModalPosition}
         isOpen={!!applyModalAsset || !!applyModalPosition}

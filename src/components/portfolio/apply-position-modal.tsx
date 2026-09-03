@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Asset } from '@/lib/types/market';
 import { RealPosition } from '@/lib/types/portfolio';
 import { useSettings } from '@/lib/context/settings-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
+import { AssetDropdownSelect } from '@/components/shared/asset-dropdown-select';
 import {
   X,
   Wallet,
@@ -22,6 +23,7 @@ import {
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 
 interface ApplyPositionModalProps {
+  assets: Asset[];
   asset?: Asset | null;
   existingPosition?: RealPosition | null;
   isOpen: boolean;
@@ -29,6 +31,7 @@ interface ApplyPositionModalProps {
 }
 
 export function ApplyPositionModal({
+  assets,
   asset,
   existingPosition,
   isOpen,
@@ -40,6 +43,26 @@ export function ApplyPositionModal({
 
   const isEditing = Boolean(existingPosition);
   const isClosed = existingPosition?.status === 'CLOSED';
+
+  // Currently selected asset ID (for new position creation)
+  const [selectedAssetId, setSelectedAssetId] = useState<string>(
+    asset?.id ?? assets[0]?.id ?? ''
+  );
+
+  const activeAsset = useMemo(() => {
+    if (existingPosition) {
+      return (
+        assets.find(
+          (a) =>
+            a.id === existingPosition.assetId ||
+            a.symbol === existingPosition.symbol ||
+            a.symbol.replace('/', '').replace('-', '').toUpperCase() ===
+              existingPosition.symbol.replace('/', '').replace('-', '').toUpperCase()
+        ) || null
+      );
+    }
+    return assets.find((a) => a.id === selectedAssetId) || asset || assets[0] || null;
+  }, [assets, selectedAssetId, existingPosition, asset]);
 
   // Form states
   const [entryPrice, setEntryPrice] = useState<string>('');
@@ -57,8 +80,35 @@ export function ApplyPositionModal({
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Initialize or reset form values
+  // Helper to apply suggested values for a specific asset
+  const applySuggestedValuesForAsset = (targetAsset: Asset) => {
+    const suggestedEntry =
+      targetAsset.analysis?.orderSetup.suggestedEntryPrice ?? targetAsset.price;
+    const suggestedSL =
+      targetAsset.analysis?.orderSetup.suggestedStopLoss ?? suggestedEntry * 0.95;
+    const suggestedTP =
+      targetAsset.analysis?.orderSetup.suggestedTakeProfit ?? suggestedEntry * 1.10;
+
+    setEntryPrice(suggestedEntry.toString());
+    setUseStopLoss(true);
+    setStopLoss(suggestedSL.toFixed(4));
+    setUseTakeProfit(true);
+    setTakeProfit(suggestedTP.toFixed(4));
+  };
+
+  // Handle switching asset in dropdown
+  const handleSelectAsset = (assetId: string) => {
+    setSelectedAssetId(assetId);
+    const newAsset = assets.find((a) => a.id === assetId);
+    if (newAsset) {
+      applySuggestedValuesForAsset(newAsset);
+    }
+  };
+
+  // Initialize or reset form values when opening or when asset/position props change
   useEffect(() => {
+    if (!isOpen) return;
+
     if (existingPosition) {
       setEntryPrice(existingPosition.entryPrice.toString());
       setCapitalAllocated(existingPosition.capitalAllocated.toString());
@@ -73,17 +123,13 @@ export function ApplyPositionModal({
         setExitDate(existingPosition.exitDate || '');
         setCloseReason(existingPosition.closeReason || 'MANUAL');
       }
-    } else if (asset) {
-      const suggestedEntry = asset.analysis?.orderSetup.suggestedEntryPrice ?? asset.price;
-      const suggestedSL = asset.analysis?.orderSetup.suggestedStopLoss ?? suggestedEntry * 0.95;
-      const suggestedTP = asset.analysis?.orderSetup.suggestedTakeProfit ?? suggestedEntry * 1.10;
-
-      setEntryPrice(suggestedEntry.toString());
+    } else {
+      const initialAsset = asset || assets.find((a) => a.id === selectedAssetId) || assets[0];
+      if (initialAsset) {
+        setSelectedAssetId(initialAsset.id);
+        applySuggestedValuesForAsset(initialAsset);
+      }
       setCapitalAllocated('1000');
-      setUseStopLoss(true);
-      setStopLoss(suggestedSL.toFixed(4));
-      setUseTakeProfit(true);
-      setTakeProfit(suggestedTP.toFixed(4));
       setEntryDate(new Date().toISOString().split('T')[0]);
       setExitPrice('');
       setExitDate('');
@@ -94,11 +140,10 @@ export function ApplyPositionModal({
 
   if (!isOpen) return null;
 
-  const symbol = existingPosition?.symbol ?? asset?.symbol ?? 'ACTIVO';
-  const assetName = asset?.name ?? (existingPosition ? `Posición ${existingPosition.symbol}` : '');
-  const assetType = asset?.type ?? 'crypto';
-
-  const order = asset?.analysis?.orderSetup;
+  const symbol = existingPosition?.symbol ?? activeAsset?.symbol ?? 'ACTIVO';
+  const assetName = activeAsset?.name ?? (existingPosition ? `Posición ${existingPosition.symbol}` : '');
+  const assetType = activeAsset?.type ?? 'crypto';
+  const order = activeAsset?.analysis?.orderSetup;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,9 +170,9 @@ export function ApplyPositionModal({
       }
 
       updatePosition(existingPosition.id, changes);
-    } else if (asset) {
+    } else if (activeAsset) {
       openPosition(
-        { id: asset.id, symbol: asset.symbol },
+        { id: activeAsset.id, symbol: activeAsset.symbol },
         ep,
         cap,
         sl,
@@ -192,7 +237,11 @@ export function ApplyPositionModal({
                 )}
               </div>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {isEditing ? (isClosed ? 'Editar Operación Cerrada' : 'Editar Posición Abierta') : 'Aplicar Operación en Mi Cartera'}
+                {isEditing
+                  ? isClosed
+                    ? 'Editar Operación Cerrada'
+                    : 'Editar Posición Abierta'
+                  : 'Aplicar Operación en Mi Cartera'}
               </p>
             </div>
           </div>
@@ -219,19 +268,40 @@ export function ApplyPositionModal({
             </div>
           )}
 
-          {/* Quick Suggested Reference Pills (if creating from asset analysis) */}
+          {/* Asset Dropdown Selector (Only for new operations) */}
+          {!isEditing && assets.length > 0 && activeAsset && (
+            <div>
+              <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Seleccionar Activo para la Operación:
+              </label>
+              <AssetDropdownSelect
+                assets={assets}
+                selectedAsset={activeAsset}
+                onSelectAsset={handleSelectAsset}
+                className="w-full"
+              />
+            </div>
+          )}
+
+          {/* Quick Suggested Reference Pills (Auto-calculated for activeAsset) */}
           {!isEditing && order && (
-            <div className={`rounded-2xl border p-3 space-y-1.5 ${
-              isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
-            }`}>
+            <div
+              className={`rounded-2xl border p-3 space-y-1.5 ${
+                isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
               <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400">
-                <span>Valores sugeridos por el algoritmo:</span>
+                <span>Parámetros sugeridos para {activeAsset?.symbol}:</span>
                 <span className="text-blue-500 font-bold">Auto-completados</span>
               </div>
               <div className="flex flex-wrap gap-2 text-[11px] font-mono">
                 <span className="text-blue-400 font-bold">Entrada: ${order.suggestedEntryPrice}</span>
-                <span className="text-emerald-400 font-bold">TP: ${order.suggestedTakeProfit} (+{order.suggestedTakeProfitPct}%)</span>
-                <span className="text-rose-400 font-bold">SL: ${order.suggestedStopLoss} (-{order.suggestedStopLossPct}%)</span>
+                <span className="text-emerald-400 font-bold">
+                  TP: ${order.suggestedTakeProfit} (+{order.suggestedTakeProfitPct}%)
+                </span>
+                <span className="text-rose-400 font-bold">
+                  SL: ${order.suggestedStopLoss} (-{order.suggestedStopLossPct}%)
+                </span>
               </div>
             </div>
           )}
@@ -280,9 +350,11 @@ export function ApplyPositionModal({
           {/* Row 2: Stop Loss & Take Profit */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {/* Stop Loss with optional toggle */}
-            <div className={`rounded-2xl border p-3 space-y-2 ${
-              isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
-            }`}>
+            <div
+              className={`rounded-2xl border p-3 space-y-2 ${
+                isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-rose-400 flex items-center gap-1">
                   <Shield className="h-3.5 w-3.5" /> Stop Loss ($)
@@ -303,7 +375,7 @@ export function ApplyPositionModal({
                 disabled={!useStopLoss}
                 value={stopLoss}
                 onChange={(e) => setStopLoss(e.target.value)}
-                placeholder={useStopLoss ? "ej. 71500" : "Sin Stop Loss"}
+                placeholder={useStopLoss ? 'ej. 71500' : 'Sin Stop Loss'}
                 className={`w-full rounded-xl border px-3 py-2 font-mono text-xs font-bold transition-colors ${
                   !useStopLoss
                     ? 'opacity-40 cursor-not-allowed bg-slate-900/50 border-transparent'
@@ -315,9 +387,11 @@ export function ApplyPositionModal({
             </div>
 
             {/* Take Profit with optional toggle */}
-            <div className={`rounded-2xl border p-3 space-y-2 ${
-              isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
-            }`}>
+            <div
+              className={`rounded-2xl border p-3 space-y-2 ${
+                isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-emerald-400 flex items-center gap-1">
                   <Target className="h-3.5 w-3.5" /> Take Profit ($)
@@ -338,7 +412,7 @@ export function ApplyPositionModal({
                 disabled={!useTakeProfit}
                 value={takeProfit}
                 onChange={(e) => setTakeProfit(e.target.value)}
-                placeholder={useTakeProfit ? "ej. 82000" : "Sin Take Profit"}
+                placeholder={useTakeProfit ? 'ej. 82000' : 'Sin Take Profit'}
                 className={`w-full rounded-xl border px-3 py-2 font-mono text-xs font-bold transition-colors ${
                   !useTakeProfit
                     ? 'opacity-40 cursor-not-allowed bg-slate-900/50 border-transparent'
@@ -370,9 +444,11 @@ export function ApplyPositionModal({
 
           {/* If editing a CLOSED position, show editable exit fields */}
           {isClosed && (
-            <div className={`rounded-2xl border p-4 space-y-3 ${
-              isDark ? 'border-amber-500/30 bg-amber-500/10' : 'border-amber-200 bg-amber-50'
-            }`}>
+            <div
+              className={`rounded-2xl border p-4 space-y-3 ${
+                isDark ? 'border-amber-500/30 bg-amber-500/10' : 'border-amber-200 bg-amber-50'
+              }`}
+            >
               <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500">
                 <AlertTriangle className="h-4 w-4" />
                 <span>Corrección de Datos de Cierre Real</span>

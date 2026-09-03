@@ -162,13 +162,7 @@ export function PortfolioDashboard({
 
             <button
               type="button"
-              onClick={() => {
-                if (assets.length > 0) {
-                  openApplyModal(assets[0]);
-                } else {
-                  openApplyModal(null);
-                }
-              }}
+              onClick={() => openApplyModal(assets[0] || null)}
               className={`flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold text-white transition-all shadow-md ${
                 accent.bgClass
               } hover:opacity-95 active:scale-[0.99]`}
