@@ -111,10 +111,10 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
       </div>
 
       {/* 4 TOP PERFORMANCE METRICS (RESPONSIVE GRID) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="relative z-20 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* KPI 1: Win Rate */}
         <div
-          className={`relative overflow-hidden rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
@@ -144,7 +144,7 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
 
         {/* KPI 2: Max Drawdown (Riesgo Controlado) */}
         <div
-          className={`relative overflow-hidden rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
@@ -169,7 +169,7 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
 
         {/* KPI 3: Retorno Total Neto de Estrategia */}
         <div
-          className={`relative overflow-hidden rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
@@ -212,7 +212,7 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
 
         {/* KPI 4: Factor de Beneficio */}
         <div
-          className={`relative overflow-hidden rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >

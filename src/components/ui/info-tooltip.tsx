@@ -4,18 +4,44 @@ import React, { useState } from 'react';
 import { Info } from 'lucide-react';
 import { useSettings } from '@/lib/context/settings-context';
 
-interface InfoTooltipProps {
+export interface InfoTooltipProps {
   text: string;
   title?: string;
+  align?: 'auto' | 'right' | 'left' | 'center';
+  position?: 'top' | 'bottom';
 }
 
-export function InfoTooltip({ text, title }: InfoTooltipProps) {
+export function InfoTooltip({
+  text,
+  title,
+  align = 'auto',
+  position = 'top',
+}: InfoTooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { settings } = useSettings();
   const isDark = settings.theme === 'dark';
 
+  // Alignment classes to prevent off-screen clipping
+  const getAlignmentClass = () => {
+    switch (align) {
+      case 'left':
+        return 'left-0';
+      case 'right':
+        return 'right-0';
+      case 'center':
+        return 'left-1/2 -translate-x-1/2';
+      case 'auto':
+      default:
+        // Default auto: align to right on small screens, center on larger screens
+        return 'right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2';
+    }
+  };
+
+  const positionClass =
+    position === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2';
+
   return (
-    <div className="relative inline-flex items-center">
+    <div className="relative inline-flex items-center z-30">
       <button
         type="button"
         onMouseEnter={() => setIsOpen(true)}
@@ -24,25 +50,33 @@ export function InfoTooltip({ text, title }: InfoTooltipProps) {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className={`rounded-full p-0.5 transition-colors ${
+        className={`rounded-full p-1 transition-colors ${
           isDark
-            ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
-            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+            ? 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+            : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
         }`}
+        aria-label={title || 'Información'}
       >
         <Info className="h-3.5 w-3.5" />
       </button>
 
       {isOpen && (
         <div
-          className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-56 rounded-2xl border p-3 shadow-xl text-left backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none ${
+          className={`absolute ${positionClass} ${getAlignmentClass()} z-[100] w-64 sm:w-72 rounded-2xl border p-3.5 shadow-2xl text-left backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 pointer-events-none ${
             isDark
-              ? 'border-slate-700/80 bg-[#1c1c1e]/95 text-slate-200'
-              : 'border-slate-200 bg-white/95 text-slate-800 shadow-slate-200'
+              ? 'border-slate-700/90 bg-[#1c1c1e]/98 text-slate-100 shadow-black/80'
+              : 'border-slate-300 bg-white/98 text-slate-900 shadow-slate-400/50'
           }`}
         >
-          {title && <p className="font-bold text-[11px] mb-1 text-blue-500">{title}</p>}
-          <p className="text-[11px] leading-relaxed">{text}</p>
+          {title && (
+            <div className="flex items-center gap-1.5 mb-1 text-blue-500 font-bold text-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              <span>{title}</span>
+            </div>
+          )}
+          <p className="text-xs leading-relaxed opacity-90 font-medium">
+            {text}
+          </p>
         </div>
       )}
     </div>
