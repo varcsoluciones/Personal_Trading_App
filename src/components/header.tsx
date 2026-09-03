@@ -11,7 +11,6 @@ import {
   Settings,
   Sparkles,
   BookOpen,
-  Zap,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -48,10 +47,13 @@ export function Header({
           {/* Brand */}
           <div className="flex items-center gap-2.5 min-w-0">
             <div
-              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-2xl shadow-xs text-white"
-              style={{ backgroundColor: accent.hex }}
+              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-2xl overflow-hidden shadow-xs border border-slate-800/80 bg-black"
             >
-              <Zap className="h-4 w-4 fill-white" />
+              <img
+                src="/app-logo.png"
+                alt="Personal Trading Pro Logo"
+                className="h-full w-full object-cover"
+              />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
