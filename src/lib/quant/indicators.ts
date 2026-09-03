@@ -64,59 +64,131 @@ export function calculateEMA(data: number[], period: number): number[] {
 }
 
 /**
- * Calculates Relative Strength Index (RSI) using Wilder's smoothing method (14 standard)
+ * Calculates Relative Strength Index (RSI) using Wilder's Smoothing
  */
-export function calculateRSI(closes: number[], period = 14): number[] {
-  const rsi: number[] = new Array(closes.length).fill(NaN);
-  if (closes.length <= period) return rsi;
+export function calculateRSI(data: number[], period = 14): number[] {
+  const result: number[] = [];
+  const gains: number[] = [];
+  const losses: number[] = [];
 
-  let gains = 0;
-  let losses = 0;
-
-  // First period average gain/loss
-  for (let i = 1; i <= period; i++) {
-    const diff = closes[i] - closes[i - 1];
-    if (diff >= 0) {
-      gains += diff;
-    } else {
-      losses -= diff;
+  for (let i = 0; i < data.length; i++) {
+    if (i === 0) {
+      result.push(NaN);
+      continue;
     }
-  }
 
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
+    const diff = data[i] - data[i - 1];
+    gains.push(Math.max(0, diff));
+    losses.push(Math.max(0, -diff));
 
-  if (avgLoss === 0) {
-    rsi[period] = 100;
-  } else {
-    const rs = avgGain / avgLoss;
-    rsi[period] = 100 - 100 / (1 + rs);
-  }
+    if (i < period) {
+      result.push(NaN);
+      continue;
+    }
 
-  // Subsequent periods using Wilder's smoothed values
-  for (let i = period + 1; i < closes.length; i++) {
-    const diff = closes[i] - closes[i - 1];
-    const currentGain = diff > 0 ? diff : 0;
-    const currentLoss = diff < 0 ? -diff : 0;
+    if (i === period) {
+      let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+      let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
 
-    avgGain = (avgGain * (period - 1) + currentGain) / period;
-    avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
+      if (avgLoss === 0) {
+        result.push(100);
+      } else {
+        const rs = avgGain / avgLoss;
+        result.push(100 - 100 / (1 + rs));
+      }
+      continue;
+    }
+
+    // Wilder's smoothing
+    const prevRSI = result[i - 1];
+    let prevAvgGain: number;
+    let prevAvgLoss: number;
+
+    if (prevRSI === 100) {
+      prevAvgGain = 1;
+      prevAvgLoss = 0;
+    } else {
+      const prevRS = (100 - prevRSI) === 0 ? 100 : (100 / (100 - prevRSI)) - 1;
+      prevAvgLoss = 1 / (1 + prevRS);
+      prevAvgGain = prevRS * prevAvgLoss;
+    }
+
+    const currentGain = gains[gains.length - 1];
+    const currentLoss = losses[losses.length - 1];
+
+    const avgGain = (prevAvgGain * (period - 1) + currentGain) / period;
+    const avgLoss = (prevAvgLoss * (period - 1) + currentLoss) / period;
 
     if (avgLoss === 0) {
-      rsi[i] = 100;
+      result.push(100);
     } else {
       const rs = avgGain / avgLoss;
-      rsi[i] = 100 - 100 / (1 + rs);
+      result.push(100 - 100 / (1 + rs));
     }
   }
 
-  return rsi;
+  return result;
+}
+
+export interface MACDResult {
+  macdLine: number[];
+  signalLine: number[];
+  histogram: number[];
 }
 
 /**
- * Calculates True Range (TR) and Average True Range (ATR)
+ * Calculates Moving Average Convergence Divergence (MACD)
+ * Standard formula:
+ * MACD Line = EMA(fastPeriod) - EMA(slowPeriod) on closes
+ * Signal Line = EMA(signalPeriod) on MACD Line
+ * Histogram = MACD Line - Signal Line
  */
-export function calculateATR(candles: Candle[], period = 14): { atr: number[]; tr: number[] } {
+export function calculateMACD(
+  candles: Candle[],
+  fastPeriod = 12,
+  slowPeriod = 26,
+  signalPeriod = 9
+): MACDResult {
+  const len = candles.length;
+  const closes = candles.map((c) => c.close);
+
+  if (len < slowPeriod) {
+    return {
+      macdLine: new Array(len).fill(NaN),
+      signalLine: new Array(len).fill(NaN),
+      histogram: new Array(len).fill(NaN),
+    };
+  }
+
+  const fastEMA = calculateEMA(closes, fastPeriod);
+  const slowEMA = calculateEMA(closes, slowPeriod);
+
+  const macdLine: number[] = new Array(len).fill(NaN);
+  for (let i = 0; i < len; i++) {
+    if (!isNaN(fastEMA[i]) && !isNaN(slowEMA[i])) {
+      macdLine[i] = fastEMA[i] - slowEMA[i];
+    }
+  }
+
+  const signalLine = calculateEMA(macdLine, signalPeriod);
+  const histogram: number[] = new Array(len).fill(NaN);
+
+  for (let i = 0; i < len; i++) {
+    if (!isNaN(macdLine[i]) && !isNaN(signalLine[i])) {
+      histogram[i] = macdLine[i] - signalLine[i];
+    }
+  }
+
+  return { macdLine, signalLine, histogram };
+}
+
+/**
+ * Calculates Average True Range (ATR) & True Range (TR)
+ */
+export function calculateATR(
+  candles: Candle[],
+  period = 14
+): { atr: number[]; tr: number[] } {
   const tr: number[] = [];
   const atr: number[] = new Array(candles.length).fill(NaN);
 

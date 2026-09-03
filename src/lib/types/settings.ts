@@ -16,6 +16,10 @@ export interface ChartIndicatorSettings {
   showEma50: boolean;
   showEma200: boolean;
   showMarkers: boolean;
+  showVolume?: boolean;
+  showRsi?: boolean;
+  showAdx?: boolean;
+  showMacd?: boolean;
 }
 
 export interface AppSettings {
@@ -166,5 +170,15 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultView: 'table',
   screenerViewMode: 'grid',
   screenerAdvancedFiltersOpen: false,
+  chartIndicators: {
+    showEma20: true,
+    showEma50: true,
+    showEma200: true,
+    showMarkers: true,
+    showVolume: true,
+    showRsi: true,
+    showAdx: true,
+    showMacd: true,
+  },
   backtestAdvancedMode: false,
 };
