@@ -37,7 +37,7 @@ def create_png_file(filename, size):
     height = size
     raw_data = bytearray()
     
-    # Lightning Bolt Polygon (Normalized coordinates 0..1)
+    # Lightning Bolt Polygon (Centered, crisp proportions)
     zap_poly_norm = [
         (0.56, 0.16),
         (0.32, 0.48),
@@ -47,18 +47,6 @@ def create_png_file(filename, size):
         (0.54, 0.42),
     ]
     zap_poly = [(px * width, py * height) for px, py in zap_poly_norm]
-    
-    # Pulse wave line segments
-    pulse_pts_norm = [
-        (0.18, 0.68),
-        (0.34, 0.68),
-        (0.40, 0.58),
-        (0.48, 0.76),
-        (0.54, 0.62),
-        (0.60, 0.68),
-        (0.82, 0.68)
-    ]
-    pulse_pts = [(px * width, py * height) for px, py in pulse_pts_norm]
 
     # Supersampling factor for smooth anti-aliased edges
     for y in range(height):
@@ -69,15 +57,11 @@ def create_png_file(filename, size):
             
             # 1. Background: Deep obsidian space with subtle gradient and blue glow
             dist_center = math.sqrt(nx * nx + ny * ny)
-            
-            # Subtle radial glow
             glow = max(0.0, 1.0 - dist_center * 0.9)
             bg_r = int(10 + glow * 15)
             bg_g = int(14 + glow * 40)
             bg_b = int(24 + glow * 85)
             
-            # Outer squircle / rounded corner mask for iOS
-            # (iOS auto-masks touch icons, but for generic web icon we add subtle rounded aesthetic)
             r, g, b, a = bg_r, bg_g, bg_b, 255
             
             # 2. Check 4 sub-pixel samples for anti-aliasing
@@ -93,16 +77,6 @@ def create_png_file(filename, size):
                 if point_in_polygon(sx, sy, zap_poly):
                     zap_hits += 1
             
-            # Check pulse line
-            min_line_dist = 999.0
-            for i in range(len(pulse_pts) - 1):
-                d = dist_to_segment(x + 0.5, y + 0.5, pulse_pts[i][0], pulse_pts[i][1], pulse_pts[i+1][0], pulse_pts[i+1][1])
-                if d < min_line_dist:
-                    min_line_dist = d
-            
-            line_thickness = max(1.5, width * 0.018)
-            line_intensity = max(0.0, min(1.0, 1.0 - (min_line_dist - line_thickness * 0.5) / 1.5)) if min_line_dist < line_thickness + 1.5 else 0.0
-            
             if zap_hits > 0:
                 # Electric gradient on lightning bolt: top cyan (0, 240, 255) to bottom vibrant blue (0, 122, 255)
                 progress = (y / height)
@@ -114,14 +88,8 @@ def create_png_file(filename, size):
                 r = int(r * (1 - blend) + zr * blend)
                 g = int(g * (1 - blend) + zg * blend)
                 b = int(b * (1 - blend) + zb * blend)
-            elif line_intensity > 0:
-                # Pulse line glow
-                lr, lg, lb = 0, 180, 255
-                r = int(r * (1 - line_intensity * 0.7) + lr * (line_intensity * 0.7))
-                g = int(g * (1 - line_intensity * 0.7) + lg * (line_intensity * 0.7))
-                b = int(b * (1 - line_intensity * 0.7) + lb * (line_intensity * 0.7))
             else:
-                # Ambient lightning halo glow
+                # Ambient lightning halo glow around the bolt
                 min_zap_dist = 999.0
                 for i in range(len(zap_poly)):
                     p1 = zap_poly[i]
@@ -151,47 +119,12 @@ def create_png_file(filename, size):
     
     with open(filename, "wb") as f:
         f.write(png)
-    print(f"✅ Generated {filename} ({width}x{height})")
+    print(f"✅ Generated {filename} ({width}x{height}) without background pulse line")
 
-# Generate all standard mobile & web app icons
+# Generate all standard mobile & web app icons (Clean, Rayo puro)
 create_png_file("public/apple-touch-icon.png", 180)
 create_png_file("public/apple-touch-icon-precomposed.png", 180)
 create_png_file("public/icon-192.png", 192)
 create_png_file("public/icon-512.png", 512)
 create_png_file("public/favicon.png", 64)
 
-# Create Web App Manifest (for Android, Chrome, and iOS PWA support)
-manifest = """{
-  "name": "Personal Trading Pro",
-  "short_name": "Trading Pro",
-  "description": "Análisis Cuantitativo, Señales & Backtesting para Criptomonedas, Acciones y ETFs",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    }
-  ]
-}
-"""
-
-with open("public/manifest.json", "w", encoding="utf-8") as f:
-    f.write(manifest)
-print("✅ Generated public/manifest.json")
