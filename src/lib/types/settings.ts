@@ -42,6 +42,7 @@ export interface AppSettings {
   screenerPresetProfile?: 'conservative' | 'balanced' | 'aggressive';
   screenerRankingMode?: 'opportunity' | 'historical';
   screenerViewMode?: 'grid' | 'table';
+  screenerAdvancedFiltersOpen?: boolean;
 
   // Persisted Chart Preferences
   chartIndicators?: ChartIndicatorSettings;
@@ -164,5 +165,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultRiskReward: 2.2,
   defaultView: 'table',
   screenerViewMode: 'grid',
+  screenerAdvancedFiltersOpen: false,
   backtestAdvancedMode: false,
 };

@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Trash2,
   BarChart2,
+  Bell,
   ChevronDown,
   ChevronUp,
   Target,
@@ -48,65 +49,94 @@ export function AssetOpportunityCard({
 
   const isPositiveChange = asset.change24hPct >= 0;
   const order = analysis.orderSetup;
-  const typeBadgeClass = getAssetTypeBadgeStyle(asset.type, isDark);
 
   return (
     <div
       onClick={onSelect}
-      className={`group relative flex flex-col justify-between rounded-3xl border p-5 shadow-xs transition-all duration-200 ${
-        onSelect ? 'cursor-pointer' : ''
-      } ${
+      className={`group relative flex flex-col justify-between rounded-3xl border p-4 sm:p-5 transition-all cursor-pointer ${
         isSelected
           ? isDark
-            ? 'border-blue-500 bg-[#1c1c1e] shadow-lg shadow-blue-500/10 ring-1 ring-blue-500'
-            : 'border-blue-500 bg-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500'
+            ? 'border-blue-500 bg-[#2c2c2e] shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/50'
+            : 'border-blue-500 bg-blue-50/50 shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/50'
           : isDark
-          ? 'border-slate-800/80 bg-[#1c1c1e]/90 hover:border-slate-700 hover:bg-[#2c2c2e]/60'
-          : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-xs'
+          ? 'border-slate-800/80 bg-[#1c1c1e] hover:border-slate-700 hover:bg-[#2c2c2e]/70 shadow-xs'
+          : 'border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/80 shadow-xs'
       }`}
     >
+      {/* Card Header: Score, Confidence, Ticker, Type & Remove */}
       <div>
-        {/* Top bar: Asset Type & Single Unified Confidence Badge */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className={`rounded-xl border px-2 py-0.5 text-[10px] font-bold uppercase ${typeBadgeClass}`}>
-              {asset.type}
+        <div className="flex items-start justify-between gap-2">
+          {/* Unified Score + Confidence Badge */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Opportunity Score Pill */}
+            <span
+              className={`rounded-xl border px-2 py-0.5 text-xs font-black font-mono shadow-xs ${
+                analysis.opportunityScore >= 95
+                  ? isDark
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 ring-1 ring-emerald-500/40'
+                    : 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-1 ring-emerald-500/40'
+                  : analysis.opportunityScore >= 80
+                  ? isDark
+                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                    : 'bg-blue-50 border-blue-300 text-blue-800'
+                  : analysis.opportunityScore >= 50
+                  ? isDark
+                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                    : 'bg-amber-50 border-amber-300 text-amber-800'
+                  : isDark
+                  ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                  : 'bg-rose-50 border-rose-300 text-rose-800'
+              }`}
+            >
+              {analysis.opportunityScore} pts
             </span>
-          </div>
 
-          <div className="flex items-center gap-1">
+            {/* Confidence Verdict */}
             <ConfidenceBadge
               opportunityScore={analysis.opportunityScore}
+              reliabilityScore={asset.backtestReliabilityScore}
+              lowSampleWarning={asset.backtestLowSampleWarning}
               isSimulated={asset.isSimulated}
               isDark={isDark}
               size="sm"
             />
-            {onRemove && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(e);
-                }}
-                title="Eliminar de favoritos"
-                className={`opacity-0 group-hover:opacity-100 rounded-full p-1.5 transition-all ${
-                  isDark
-                    ? 'text-slate-500 hover:bg-rose-500/10 hover:text-rose-400'
-                    : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'
-                }`}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
           </div>
+
+          {/* Remove from watchlist button (if provided) */}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(e);
+              }}
+              title="Eliminar de seguimiento"
+              className={`rounded-xl p-1.5 opacity-0 group-hover:opacity-100 transition-all ${
+                isDark ? 'text-slate-500 hover:text-rose-400 hover:bg-[#2c2c2e]' : 'text-slate-400 hover:text-rose-600 hover:bg-slate-100'
+              }`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Symbol & Price (iOS Stocks Style) */}
-        <div className="mt-3 flex items-baseline justify-between">
-          <div>
-            <h3 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              {asset.symbol}
-            </h3>
-            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'} line-clamp-1`}>
+        {/* Ticker, Name & Price */}
+        <div className="mt-3 flex items-baseline justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={`font-mono text-base sm:text-lg font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {asset.symbol}
+              </span>
+              <span
+                className={`rounded-lg border px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider ${getAssetTypeBadgeStyle(
+                  asset.type,
+                  isDark
+                )}`}
+              >
+                {asset.type}
+              </span>
+            </div>
+            <p className={`truncate text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               {asset.name}
             </p>
           </div>
@@ -247,7 +277,7 @@ export function AssetOpportunityCard({
         </div>
       </div>
 
-      {/* Action Footer */}
+      {/* Action Footer with Price Alert Bell Button */}
       <div
         className={`mt-4 pt-3 border-t flex items-center justify-between gap-2 ${
           isDark ? 'border-slate-800/80' : 'border-slate-100'
@@ -257,6 +287,36 @@ export function AssetOpportunityCard({
           customActionButtons
         ) : (
           <>
+            {/* Price Alert Bell */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                openAlertsModal(asset);
+              }}
+              title={
+                activeAlertsCount > 0
+                  ? `${activeAlertsCount} alerta(s) de precio activa(s)`
+                  : 'Crear alerta de precio'
+              }
+              className={`relative flex items-center justify-center rounded-2xl border p-2 transition-all shrink-0 ${
+                activeAlertsCount > 0
+                  ? isDark
+                    ? 'border-blue-500/40 bg-blue-500/20 text-blue-400 shadow-xs ring-1 ring-blue-500/30'
+                    : 'border-blue-200 bg-blue-50 text-blue-700 shadow-xs ring-1 ring-blue-500/30'
+                  : isDark
+                  ? 'border-slate-700/80 bg-[#2c2c2e]/70 text-slate-400 hover:bg-[#3a3a3c] hover:text-white'
+                  : 'border-slate-200 bg-slate-100/80 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+              }`}
+            >
+              <Bell className="h-4 w-4 text-blue-500" />
+              {activeAlertsCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-xs">
+                  {activeAlertsCount}
+                </span>
+              )}
+            </button>
+
             {onOpenChart && (
               <button
                 type="button"

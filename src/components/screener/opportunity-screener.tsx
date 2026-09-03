@@ -1,31 +1,33 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  ShieldCheck,
-  TrendingUp,
-  Activity,
-  Flame,
-  Sparkles,
-  BarChart2,
-  Target,
-  Shield,
-  LayoutGrid,
-  Table as TableIcon,
-  Award,
-  Clock,
-  Bell,
-  Scale,
-  Zap,
-} from 'lucide-react';
 import { Asset, AssetCategory } from '@/lib/types/market';
+import { useSettings } from '@/lib/context/settings-context';
 import { AssetOpportunityCard } from '@/components/shared/asset-opportunity-card';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
-import { useSettings } from '@/lib/context/settings-context';
 import { useAlerts } from '@/lib/context/alerts-context';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
-import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import {
+  Sparkles,
+  TrendingUp,
+  Flame,
+  Activity,
+  ShieldCheck,
+  LayoutGrid,
+  Table as TableIcon,
+  BarChart2,
+  Bell,
+  Award,
+  Shield,
+  Zap,
+  Scale,
+  Clock,
+  Sliders,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { analyzeAsset } from '@/lib/quant/trend-analyzer';
+import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '@/lib/quant/backtest-engine';
 
 interface OpportunityScreenerProps {
@@ -72,6 +74,8 @@ export function OpportunityScreener({
   );
   const [historicalRankings, setHistoricalRankings] = useState<Map<string, HistoricalRankingItem>>(new Map());
   const [isLoadingRankings, setIsLoadingRankings] = useState(false);
+
+  const isAdvancedFiltersOpen = Boolean(settings.screenerAdvancedFiltersOpen);
 
   // Sync and persist all screener filters with user settings across navigation & refreshes
   useEffect(() => {
@@ -196,7 +200,7 @@ export function OpportunityScreener({
     },
   ];
 
-  // Filter and Sort Assets based on rankingMode
+  // Filter and Sort Assets based on rankingMode (minScore is always preserved and applied)
   const filteredAssets = useMemo(() => {
     return dynamicAssets
       .filter((asset) => {
@@ -207,7 +211,7 @@ export function OpportunityScreener({
           return false;
         }
 
-        // Min score filter
+        // Min score filter (always applied whether advanced panel is open or collapsed)
         if (asset.analysis.opportunityScore < minScore) {
           return false;
         }
@@ -331,12 +335,13 @@ export function OpportunityScreener({
         </div>
       </div>
 
-      {/* 2. CATEGORY PILLS & CONTROLS HEADER */}
+      {/* 2. CATEGORY PILLS & STREAMLINED CONTROLS HEADER */}
       <div
         className={`rounded-3xl border p-5 shadow-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
+        {/* ROW 1: Title, Ranking Mode & View Mode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
@@ -356,9 +361,9 @@ export function OpportunityScreener({
             </p>
           </div>
 
-          {/* Ranking Mode & View Mode Switcher */}
+          {/* Ranking Mode, View Mode & Advanced Filters Toggle */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* 1. Ranking Mode Switcher */}
+            {/* 1. Ranking Mode Switcher with Tooltip for Historical Mode */}
             <div
               className={`flex items-center gap-1 rounded-2xl border p-1 ${
                 isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
@@ -396,6 +401,12 @@ export function OpportunityScreener({
               >
                 <Award className="h-3.5 w-3.5 text-amber-500" />
                 <span>Consistencia Histórica</span>
+                <InfoTooltip
+                  title="Filtro de Consistencia"
+                  text={`Se recalcularon las simulaciones para el perfil ${
+                    STRATEGY_PRESETS.find((p) => p.id === selectedProfileId)?.name || 'seleccionado'
+                  } y se filtraron los activos con persistencia estadística baja (BAJA).`}
+                />
               </button>
             </div>
 
@@ -440,26 +451,27 @@ export function OpportunityScreener({
                 <span>Lista</span>
               </button>
             </div>
+
+            {/* 3. Advanced Filters Toggle Button (same visual language as strategy-controls.tsx) */}
+            <button
+              type="button"
+              onClick={() => updateSettings({ screenerAdvancedFiltersOpen: !isAdvancedFiltersOpen })}
+              className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                isAdvancedFiltersOpen
+                  ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
+                  : isDark
+                  ? 'border-slate-700/80 bg-[#2c2c2e] text-slate-300 hover:bg-[#3a3a3c]'
+                  : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <Sliders className="h-3.5 w-3.5" />
+              <span>{isAdvancedFiltersOpen ? 'Ocultar filtros avanzados' : 'Filtros avanzados ⚙'}</span>
+              {isAdvancedFiltersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
           </div>
         </div>
 
-        {/* Historical Consistency Notice Banner */}
-        {rankingMode === 'historical' && (
-          <div
-            className={`mt-4 flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-xs font-medium ${
-              isDark
-                ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-                : 'border-amber-200 bg-amber-50 text-amber-900'
-            }`}
-          >
-            <ShieldCheck className="h-4 w-4 text-amber-500 shrink-0" />
-            <div>
-              <strong>Filtro de Consistencia Activo:</strong> Se recalcularon las simulaciones para el perfil <strong>{STRATEGY_PRESETS.find(p => p.id === selectedProfileId)?.name}</strong> y se filtraron los activos con persistencia baja (BAJA).
-            </div>
-          </div>
-        )}
-
-        {/* Categories Bar */}
+        {/* ROW 2: Categories Bar */}
         <div className="mt-5 flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1.5">
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
@@ -497,52 +509,72 @@ export function OpportunityScreener({
           })}
         </div>
 
-        {/* Score Threshold Filter */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800/40 text-xs">
-          <span className={`font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            Filtro de Score Mínimo:
-          </span>
-          <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
-            {[
-              { label: 'Todos (≥ 50)', val: 50 },
-              { label: 'Buena Calidad (≥ 80)', val: 80 },
-              { label: 'Alta Calidad (≥ 95)', val: 95 },
-            ].map((item) => (
-              <button
-                key={item.val}
-                type="button"
-                onClick={() => handleSetMinScore(item.val)}
-                className={`rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
-                  minScore === item.val
-                    ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold`
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400 hover:text-white'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+        {/* ROW 3: Collapsible Advanced Filters (Score Threshold Filter) */}
+        {isAdvancedFiltersOpen && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800/40 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2">
+              <Sliders className="h-3.5 w-3.5 text-blue-500" />
+              <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Filtro de Score Técnico Mínimo:
+              </span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
+              {[
+                { label: 'Todos (≥ 50)', val: 50 },
+                { label: 'Buena Calidad (≥ 80)', val: 80 },
+                { label: 'Alta Calidad (≥ 95)', val: 95 },
+              ].map((item) => (
+                <button
+                  key={item.val}
+                  type="button"
+                  onClick={() => handleSetMinScore(item.val)}
+                  className={`rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
+                    minScore === item.val
+                      ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold`
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400 hover:text-white'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Empty State */}
+      {/* No Results Fallback */}
       {filteredAssets.length === 0 && (
         <div
           className={`rounded-3xl border p-12 text-center transition-colors ${
-            isDark ? 'border-slate-800 bg-[#1c1c1e] text-slate-400' : 'border-slate-200 bg-white text-slate-600'
+            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
           }`}
         >
-          <Sparkles className="h-8 w-8 mx-auto mb-3 text-slate-500" />
-          <h4 className="font-bold text-sm mb-1">No se encontraron activos con estos filtros</h4>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Prueba reduciendo el umbral de score mínimo a ≥ 50 o cambiando a la categoría &quot;Todas las Oportunidades&quot;.
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/10 text-blue-500 mb-3">
+            <Activity className="h-6 w-6" />
+          </div>
+          <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            No hay oportunidades que coincidan con estos filtros
+          </h3>
+          <p className={`text-xs mt-1 max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            Intenta seleccionar otra categoría, reducir el score mínimo o cambiar al perfil de estrategia equilibrado.
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCategory('all');
+              setMinScore(50);
+              updateSettings({ screenerCategory: 'all', screenerMinScore: 50 });
+            }}
+            className="mt-4 rounded-2xl bg-blue-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-600 transition-all"
+          >
+            Restablecer Filtros
+          </button>
         </div>
       )}
 
-      {/* VISTA 1: TABLA / LISTA COMPACTA */}
+      {/* VISTA 1: TABLA COMPACTA DE OPORTUNIDADES */}
       {viewMode === 'table' && filteredAssets.length > 0 && (
         <div
           className={`overflow-hidden rounded-3xl border shadow-xs transition-colors ${
@@ -550,61 +582,86 @@ export function OpportunityScreener({
           }`}
         >
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr
-                  className={`border-b text-[11px] font-bold uppercase tracking-wider ${
-                    isDark
-                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400'
-                      : 'border-slate-200 bg-slate-50 text-slate-500'
-                  }`}
-                >
+                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                  isDark ? 'border-slate-800 bg-[#2c2c2e]/60 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
+                }`}>
                   <th className="py-3.5 px-4">Activo</th>
-                  <th className="py-3.5 px-3 text-right">Precio / 24h</th>
-                  <th className="py-3.5 px-3 text-right">🎯 Entrada Sugerida</th>
-                  <th className="py-3.5 px-3 text-right">🎯 Take Profit / Stop</th>
-                  <th className="py-3.5 px-3 text-center">⏱️ Sugerencia & Plazo</th>
-                  <th className="py-3.5 px-3 text-center">Veredicto de Confianza</th>
+                  <th className="py-3.5 px-3">Estructura & Señal</th>
+                  <th className="py-3.5 px-3 text-right">Precio & Variación</th>
+                  <th className="py-3.5 px-3">Setup Sugerido (Entrada / TP / SL)</th>
+                  <th className="py-3.5 px-3 text-center">Horizonte</th>
+                  <th className="py-3.5 px-3 text-center">Veredicto Confianza</th>
                   <th className="py-3.5 px-3 text-center">Score Técnico</th>
                   <th className="py-3.5 px-4 text-center">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/40">
+              <tbody className="divide-y divide-slate-800/30">
                 {filteredAssets.map((asset) => {
                   const analysis = asset.analysis!;
-                  const activeAlertsCount = getActiveAlertsCount(asset.id);
                   const order = analysis.orderSetup;
                   const isPositive = asset.change24hPct >= 0;
+                  const activeAlertsCount = getActiveAlertsCount(asset.id);
 
                   return (
                     <tr
                       key={asset.id}
-                      onClick={() => onSelectAsset(asset.id)}
-                      className={`transition-colors cursor-pointer ${
-                        isDark ? 'hover:bg-[#2c2c2e]/50' : 'hover:bg-slate-50'
+                      onClick={() => {
+                        onSelectAsset(asset.id);
+                        onOpenChart(asset.id);
+                      }}
+                      className={`group cursor-pointer transition-colors ${
+                        isDark ? 'hover:bg-[#2c2c2e]/60' : 'hover:bg-slate-50/80'
                       }`}
                     >
                       {/* 1. Activo */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
-                          <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            {asset.symbol}
-                          </span>
-                          <span
-                            className={`rounded-lg border px-1.5 py-0.2 text-[9px] uppercase font-bold ${getAssetTypeBadgeStyle(
-                              asset.type,
-                              isDark
-                            )}`}
-                          >
-                            {asset.type}
-                          </span>
-                        </div>
-                        <div className={`text-[11px] truncate max-w-[150px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {asset.name}
+                        <div className="flex items-center gap-2.5">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`font-bold font-mono text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {asset.symbol}
+                              </span>
+                              <span className={`rounded-md border px-1.5 py-0.2 text-[9px] font-bold uppercase ${
+                                asset.type === 'crypto'
+                                  ? isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'
+                                  : asset.type === 'stock'
+                                  ? isDark ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-800'
+                                  : isDark ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-purple-50 border-purple-200 text-purple-800'
+                              }`}>
+                                {asset.type}
+                              </span>
+                            </div>
+                            <p className={`truncate text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {asset.name}
+                            </p>
+                          </div>
                         </div>
                       </td>
 
-                      {/* 2. Precio Mercado */}
+                      {/* 2. Estructura & Señal */}
+                      <td className="py-3.5 px-3">
+                        <div className="space-y-1">
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-xl px-2 py-0.5 text-[10px] font-bold ${
+                              analysis.signal === 'OPORTUNIDAD DE ENTRADA'
+                                ? isDark ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                                : analysis.signal === 'OPORTUNIDAD DE SALIDA'
+                                ? isDark ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-800 border border-rose-300'
+                                : isDark ? 'bg-slate-700/40 text-slate-300 border border-slate-700' : 'bg-slate-100 text-slate-700 border border-slate-300'
+                            }`}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            <span>{analysis.signal}</span>
+                          </span>
+                          <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {analysis.trendLabel}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* 3. Precio & Variación */}
                       <td className="py-3.5 px-3 text-right font-mono">
                         <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {formatCurrency(asset.price)}
@@ -614,36 +671,28 @@ export function OpportunityScreener({
                         </div>
                       </td>
 
-                      {/* 3. Entrada Proyectada */}
-                      <td className="py-3.5 px-3 text-right">
-                        <div className="font-mono font-bold text-blue-500">
-                          {formatCurrency(order.suggestedEntryPrice)}
-                        </div>
-                        <div className="text-[10px] flex items-center justify-end gap-1 font-semibold">
-                          <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
-                            {order.entryLabel}
-                          </span>
-                          {order.distanceToEntryPct !== 0 && (
-                            <span className="font-mono text-amber-500 font-bold">
-                              ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
+                      {/* 4. Setup Sugerido (Entrada / TP / SL) */}
+                      <td className="py-3.5 px-3">
+                        <div className="space-y-1 text-[11px] font-mono">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-blue-500 font-bold">E:</span>
+                            <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                              {formatCurrency(order.suggestedEntryPrice)}
                             </span>
-                          )}
+                            {order.distanceToEntryPct !== 0 && (
+                              <span className="text-[10px] text-amber-500 font-bold">
+                                ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px]">
+                            <span className="text-emerald-500 font-bold">TP: {formatCurrency(order.suggestedTakeProfit)} (+{order.suggestedTakeProfitPct}%)</span>
+                            <span className="text-rose-500 font-bold">SL: {formatCurrency(order.suggestedStopLoss)} (-{order.suggestedStopLossPct}%)</span>
+                          </div>
                         </div>
                       </td>
 
-                      {/* 4. TP & SL */}
-                      <td className="py-3.5 px-3 text-right font-mono text-[11px]">
-                        <div className="text-emerald-500 font-bold flex items-center justify-end gap-1">
-                          <Target className="h-3 w-3" />
-                          <span>{formatCurrency(order.suggestedTakeProfit)} (+{order.suggestedTakeProfitPct}%)</span>
-                        </div>
-                        <div className="text-rose-500 font-bold flex items-center justify-end gap-1 mt-0.5">
-                          <Shield className="h-3 w-3" />
-                          <span>{formatCurrency(order.suggestedStopLoss)} (-{order.suggestedStopLossPct}%)</span>
-                        </div>
-                      </td>
-
-                      {/* 5. Sugerencia de Horizonte & Duración Estimada */}
+                      {/* 5. Horizonte Temporal Sugerido */}
                       <td className="py-3.5 px-3 text-center">
                         {order.horizonSuggestion ? (
                           <div className="flex flex-col items-center gap-0.5">
