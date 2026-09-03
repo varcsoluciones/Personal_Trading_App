@@ -55,7 +55,7 @@ export function AssetDropdownSelect({
   const isPositive = selectedAsset.change24hPct >= 0;
 
   return (
-    <div className={`relative inline-block text-left ${className}`} ref={dropdownRef}>
+    <div className={`relative inline-block text-left ${isOpen ? 'z-50' : 'z-20'} ${className}`} ref={dropdownRef}>
       {/* Dropdown Trigger Button */}
       <button
         type="button"

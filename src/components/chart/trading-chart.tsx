@@ -556,7 +556,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
 
       {/* 1. TOP CONTROL BAR WITH ADAPTIVE MOBILE ROW LAYOUT */}
       <div
-        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border p-3 sm:p-4 backdrop-blur-md transition-colors ${
+        className={`relative z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border p-3 sm:p-4 backdrop-blur-md transition-colors ${
           isDark
             ? 'border-slate-800/80 bg-[#1c1c1e]'
             : 'border-slate-200/80 bg-white shadow-xs text-slate-900'
@@ -710,7 +710,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
 
       {/* 2. MAIN CANDLESTICK CANVAS CONTAINER WITH DEDICATED OHLC LEGEND BAR */}
       <div
-        className={`relative overflow-hidden rounded-3xl border shadow-lg transition-colors ${
+        className={`relative z-10 overflow-hidden rounded-3xl border shadow-lg transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
