@@ -19,6 +19,7 @@ import { useAlerts } from '@/lib/context/alerts-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import { PortfolioDashboard } from '@/components/portfolio/portfolio-dashboard';
 import { ApplyPositionModal } from '@/components/portfolio/apply-position-modal';
+import { PositionHistoryModal } from '@/components/portfolio/position-history-modal';
 import { CapitalMovementModal } from '@/components/portfolio/capital-movement-modal';
 import { PortfolioWalletsModal } from '@/components/portfolio/portfolio-wallets-modal';
 import { ALERT_NAVIGATE_EVENT } from '@/lib/utils/browser-notifications';
@@ -65,6 +66,8 @@ export default function Home() {
     applyModalAsset,
     applyModalPosition,
     closeApplyModal,
+    historyModalPosition,
+    closeHistoryModal,
     isMovementModalOpen,
     closeMovementModal,
     isWalletModalOpen,
@@ -577,6 +580,13 @@ export default function Home() {
         existingPosition={applyModalPosition}
         isOpen={!!applyModalAsset || !!applyModalPosition}
         onClose={closeApplyModal}
+      />
+
+      {/* Position Purchase Lots History & Weighted DCA Modal */}
+      <PositionHistoryModal
+        position={historyModalPosition}
+        isOpen={!!historyModalPosition}
+        onClose={closeHistoryModal}
       />
 
       {/* Capital Movement Modal */}

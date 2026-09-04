@@ -17,14 +17,24 @@ export interface CapitalMovement {
   date: string;
 }
 
+export interface PositionPurchaseLot {
+  id: string;
+  date: string;
+  price: number;
+  capitalAllocated: number;
+  shares: number;
+  note?: string;
+}
+
 export interface RealPosition {
   id: string;
   portfolioId?: string; // Cartera a la que pertenece la posición
   assetId: string;
   symbol: string;
-  entryPrice: number;
-  entryDate: string;
-  capitalAllocated: number; // capital real que el usuario invirtió en esta operación
+  entryPrice: number; // Precio promedio de entrada ponderado
+  entryDate: string; // Fecha de la primera compra o última actualización
+  capitalAllocated: number; // Capital total invertido en la posición acumulada
+  totalShares?: number; // Total acumulado de acciones o unidades
   stopLoss: number | null; // null = el usuario decidió no poner SL
   takeProfit: number | null; // null = el usuario decidió no poner TP
   status: 'OPEN' | 'CLOSED';
@@ -33,6 +43,7 @@ export interface RealPosition {
   closeReason?: 'STOP_LOSS' | 'TAKE_PROFIT' | 'MANUAL'; // cómo se cerró
   realizedPnl?: number; // solo cuando status === 'CLOSED'
   realizedPnlPct?: number;
+  purchases?: PositionPurchaseLot[]; // Historial detallado de compras / lotes que componen el ponderado
   sourceSuggestion?: { // los valores originales que sugería la app al momento de aplicar, para referencia/comparación
     suggestedEntryPrice: number;
     suggestedStopLoss: number;

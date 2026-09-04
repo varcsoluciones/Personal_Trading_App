@@ -6,6 +6,7 @@ import { RealPosition } from '@/lib/types/portfolio';
 import { useSettings } from '@/lib/context/settings-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import { AssetDropdownSelect } from '@/components/shared/asset-dropdown-select';
+import { calculateWeightedAveragePosition, previewAddPurchase } from '@/lib/utils/weighted-average';
 import {
   X,
   Wallet,
@@ -20,6 +21,9 @@ import {
   AlertTriangle,
   Info,
   Calculator,
+  Sparkles,
+  History,
+  ArrowRight,
 } from 'lucide-react';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import { calculatePriceCorrelation } from '@/lib/utils/correlation';
@@ -43,6 +47,7 @@ export function ApplyPositionModal({
   const isDark = settings.theme === 'dark';
   const {
     openPosition,
+    addPurchaseToPosition,
     updatePosition,
     positions,
     totalCapital,
@@ -50,6 +55,7 @@ export function ApplyPositionModal({
     wallets,
     getWalletAvailableCapital,
     openWalletModal,
+    openHistoryModal,
   } = usePortfolioContext();
 
   const isEditing = Boolean(existingPosition);
@@ -79,6 +85,35 @@ export function ApplyPositionModal({
     }
     return assets.find((a) => a.id === selectedAssetId) || asset || assets[0] || null;
   }, [assets, selectedAssetId, existingPosition, asset]);
+
+  // Check if an OPEN position already exists for this asset in the selected portfolio
+  const matchingOpenPosition = useMemo(() => {
+    if (isEditing || !activeAsset) return null;
+    return (
+      positions.find(
+        (p) =>
+          p.status === 'OPEN' &&
+          (p.portfolioId === selectedPortfolioId || (!p.portfolioId && selectedPortfolioId === 'wallet_main')) &&
+          (p.assetId === activeAsset.id ||
+            p.symbol === activeAsset.symbol ||
+            p.symbol.replace('/', '').replace('-', '').toUpperCase() ===
+              activeAsset.symbol.replace('/', '').replace('-', '').toUpperCase())
+      ) || null
+    );
+  }, [isEditing, activeAsset, positions, selectedPortfolioId]);
+
+  // Mode for averaging/accumulating into existing open position (DCA)
+  const [isAccumulateMode, setIsAccumulateMode] = useState<boolean>(false);
+  const [purchaseNote, setPurchaseNote] = useState<string>('');
+
+  // Auto-set accumulate mode if matching open position exists
+  useEffect(() => {
+    if (matchingOpenPosition) {
+      setIsAccumulateMode(true);
+    } else {
+      setIsAccumulateMode(false);
+    }
+  }, [matchingOpenPosition]);
 
   // Form states
   const [entryPrice, setEntryPrice] = useState<string>('');
@@ -120,7 +155,7 @@ export function ApplyPositionModal({
     return getWalletAvailableCapital(selectedPortfolioId);
   }, [getWalletAvailableCapital, selectedPortfolioId]);
 
-  // Effective Available Capital (for existing open positions in the same wallet, adds back their own allocated capital)
+  // Effective Available Capital (for existing open positions in the same wallet being edited, adds back their own allocated capital)
   const effectiveAvailableCapital = useMemo(() => {
     if (isEditing && existingPosition && existingPosition.status === 'OPEN') {
       const posWalletId = existingPosition.portfolioId || 'wallet_main';
@@ -137,6 +172,30 @@ export function ApplyPositionModal({
   const isNoAvailableCapital = effectiveAvailableCapital <= 0;
   const isExceedingAvailableCapital = !isCapInvalidNumber && capNum > effectiveAvailableCapital;
   const isCapitalDisallowed = isCapInvalidNumber || isExceedingAvailableCapital || isNoAvailableCapital;
+
+  // Real-time Weighted Average Preview when in Accumulate / DCA mode
+  const preview = useMemo(() => {
+    const targetPos = matchingOpenPosition;
+    if (!isAccumulateMode || !targetPos) return null;
+    const pPrice = parseFloat(entryPrice) || 0;
+    const pCap = parseFloat(capitalAllocated) || 0;
+    if (pPrice <= 0 || pCap <= 0) return null;
+
+    return previewAddPurchase(
+      targetPos.purchases,
+      {
+        price: targetPos.entryPrice,
+        capitalAllocated: targetPos.capitalAllocated,
+        date: targetPos.entryDate,
+      },
+      {
+        price: pPrice,
+        capitalAllocated: pCap,
+        date: entryDate,
+        note: purchaseNote,
+      }
+    );
+  }, [isAccumulateMode, matchingOpenPosition, entryPrice, capitalAllocated, entryDate, purchaseNote]);
 
   // Position Size calculation by Risk formula
   const epNum = parseFloat(entryPrice);
@@ -281,7 +340,19 @@ export function ApplyPositionModal({
     if (isNaN(ep) || ep <= 0 || isNaN(cap) || cap <= 0) return;
     if (cap > effectiveAvailableCapital || effectiveAvailableCapital <= 0) return;
 
-    if (isEditing && existingPosition) {
+    if (isAccumulateMode && matchingOpenPosition) {
+      addPurchaseToPosition(
+        matchingOpenPosition.id,
+        {
+          price: ep,
+          capitalAllocated: cap,
+          date: entryDate,
+          note: purchaseNote || 'Compra ponderada DCA',
+        },
+        sl,
+        tp
+      );
+    } else if (isEditing && existingPosition) {
       const changes: Partial<RealPosition> = {
         portfolioId: selectedPortfolioId,
         entryPrice: ep,
@@ -313,7 +384,8 @@ export function ApplyPositionModal({
             }
           : undefined,
         entryDate,
-        selectedPortfolioId
+        selectedPortfolioId,
+        purchaseNote || 'Compra inicial'
       );
     }
 
@@ -364,12 +436,19 @@ export function ApplyPositionModal({
                     Cerrada
                   </span>
                 )}
+                {isAccumulateMode && (
+                  <span className="rounded-md bg-blue-500/20 border border-blue-500/30 px-1.5 py-0.2 text-[9px] font-bold text-blue-400 uppercase">
+                    Ponderación DCA
+                  </span>
+                )}
               </div>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 {isEditing
                   ? isClosed
                     ? 'Editar Operación Cerrada'
                     : 'Editar Posición Abierta'
+                  : isAccumulateMode
+                  ? 'Ponderar Compra en Posición Existente'
                   : 'Aplicar Operación en Mi Cartera'}
               </p>
             </div>
@@ -393,7 +472,153 @@ export function ApplyPositionModal({
           {savedSuccess && (
             <div className="rounded-2xl bg-emerald-500/15 border border-emerald-500/30 p-3 flex items-center gap-2 text-emerald-400 text-xs font-bold animate-in fade-in duration-150">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{isEditing ? '¡Cambios guardados con éxito!' : '¡Posición registrada en Mi Cartera!'}</span>
+              <span>
+                {isAccumulateMode
+                  ? '¡Compra ponderada agregada a la posición con éxito!'
+                  : isEditing
+                  ? '¡Cambios guardados con éxito!'
+                  : '¡Posición registrada en Mi Cartera!'}
+              </span>
+            </div>
+          )}
+
+          {/* Existing Open Position Detected Banner (Toggle between DCA Accumulate & Standalone) */}
+          {matchingOpenPosition && !isEditing && (
+            <div
+              className={`rounded-2xl border p-4 space-y-3 transition-all ${
+                isDark
+                  ? 'border-blue-500/30 bg-blue-950/20 text-blue-200'
+                  : 'border-blue-200 bg-blue-50/80 text-blue-900'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-blue-400 shrink-0" />
+                  <span className="text-xs font-bold">
+                    Posición Abierta Existente en {matchingOpenPosition.symbol}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openHistoryModal(matchingOpenPosition)}
+                  className="text-[11px] font-bold text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  <History className="h-3.5 w-3.5" />
+                  Ver Historial ({matchingOpenPosition.purchases?.length || 1})
+                </button>
+              </div>
+
+              <p className={`text-[11px] leading-relaxed opacity-90 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Ya tienes una posición abierta de <strong>{formatCurrency(matchingOpenPosition.capitalAllocated)}</strong> a un precio promedio de <strong>{formatCurrency(matchingOpenPosition.entryPrice)}</strong> en esta cartera.
+              </p>
+
+              {/* Mode Selection Options */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAccumulateMode(true)}
+                  className={`flex flex-col text-left p-2.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                    isAccumulateMode
+                      ? isDark
+                        ? 'bg-blue-500/20 border-blue-500 text-white font-bold shadow-xs'
+                        : 'bg-blue-100/90 border-blue-500 text-blue-900 font-bold shadow-xs'
+                      : isDark
+                      ? 'bg-[#1c1c1e] border-slate-800 text-slate-400 hover:bg-[#2c2c2e]'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <TrendingUp className="h-3.5 w-3.5 text-blue-400" />
+                    Ponderar Posición (DCA)
+                  </span>
+                  <span className="text-[10px] opacity-75 mt-0.5">
+                    Suma el capital y recalcula el precio promedio
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAccumulateMode(false)}
+                  className={`flex flex-col text-left p-2.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                    !isAccumulateMode
+                      ? isDark
+                        ? 'bg-purple-500/20 border-purple-500 text-white font-bold shadow-xs'
+                        : 'bg-purple-100/90 border-purple-500 text-purple-900 font-bold shadow-xs'
+                      : isDark
+                      ? 'bg-[#1c1c1e] border-slate-800 text-slate-400 hover:bg-[#2c2c2e]'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <Layers className="h-3.5 w-3.5 text-purple-400" />
+                    Operación Separada
+                  </span>
+                  <span className="text-[10px] opacity-75 mt-0.5">
+                    Crea una posición independiente en paralelo
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Live DCA Weighted Average Preview Card */}
+          {isAccumulateMode && preview && (
+            <div
+              className={`rounded-2xl border p-4 space-y-3 transition-all animate-fade-in ${
+                isDark
+                  ? 'bg-gradient-to-br from-indigo-950/30 to-[#242428] border-indigo-500/30'
+                  : 'bg-gradient-to-br from-blue-50 to-indigo-50/80 border-indigo-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Calculator className="h-4 w-4 text-blue-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                    Previsualización del Ponderado
+                  </span>
+                </div>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    preview.priceDeltaPct <= 0
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                  }`}
+                >
+                  {preview.priceDeltaPct <= 0 ? 'Mejora Promedio: ' : 'Nuevo Promedio: '}
+                  {preview.priceDeltaPct > 0 ? `+${preview.priceDeltaPct}%` : `${preview.priceDeltaPct}%`}
+                </span>
+              </div>
+
+              {/* 3 Columns Comparison */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-black/30 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">Posición Actual</span>
+                  <span className="font-mono font-bold text-slate-200">${preview.currentPrice.toFixed(2)}</span>
+                  <span className="text-[10px] text-slate-400 block font-mono mt-0.5">
+                    ${preview.currentCapital.toFixed(0)} • {preview.currentShares.toFixed(2)} uds
+                  </span>
+                </div>
+
+                <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-black/30 border-slate-800' : 'bg-white border-slate-200'}`}>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">Nueva Compra</span>
+                  <span className="font-mono font-bold text-blue-400">
+                    ${parseFloat(entryPrice) > 0 ? parseFloat(entryPrice).toFixed(2) : '0.00'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-mono mt-0.5">
+                    ${parseFloat(capitalAllocated) > 0 ? parseFloat(capitalAllocated).toFixed(0) : '0'} • {parseFloat(entryPrice) > 0 ? (parseFloat(capitalAllocated) / parseFloat(entryPrice)).toFixed(2) : '0'} uds
+                  </span>
+                </div>
+
+                <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-blue-900/30 border-blue-500/40' : 'bg-blue-100 border-blue-300'}`}>
+                  <span className="text-[10px] text-blue-400 block mb-0.5 font-bold">Nuevo Promedio</span>
+                  <span className="font-mono font-bold text-sm text-emerald-400">
+                    ${preview.newWeightedPrice.toFixed(4)}
+                  </span>
+                  <span className="text-[10px] opacity-80 block font-mono mt-0.5">
+                    Total: ${preview.newTotalCapital.toFixed(0)} • {preview.newTotalShares.toFixed(2)} uds
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -870,11 +1095,37 @@ export function ApplyPositionModal({
             </div>
           )}
 
+          {/* Row 4: Purchase Note / Objective */}
+          <div
+            className={`rounded-2xl border p-3.5 space-y-1.5 transition-colors ${
+              isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+            }`}
+          >
+            <label className={`block text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              {isAccumulateMode ? 'Nota del Aporte / Compra (Opcional):' : 'Nota u Objetivo de la Operación (Opcional):'}
+            </label>
+            <input
+              type="text"
+              placeholder={
+                isAccumulateMode
+                  ? 'ej. Aporte mensual DCA, Compra en soporte, Rebalanceo...'
+                  : 'ej. Swing trade, Inversión largo plazo...'
+              }
+              value={purchaseNote}
+              onChange={(e) => setPurchaseNote(e.target.value)}
+              className={`w-full rounded-xl border px-3 py-2 text-xs transition-colors ${
+                isDark
+                  ? 'border-slate-800 bg-[#2c2c2e] text-white focus:border-blue-500 focus:outline-none'
+                  : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500 focus:outline-none'
+              }`}
+            />
+          </div>
+
           {/* Submit Button with Dynamic Disabled State */}
           <button
             type="submit"
             disabled={isSubmitDisabled}
-            className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold transition-all shadow-md ${
+            className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold transition-all shadow-md cursor-pointer ${
               isSubmitDisabled
                 ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400 border border-slate-600/50'
                 : `${accent.bgClass} text-white hover:opacity-90 active:scale-[0.99]`
@@ -888,6 +1139,8 @@ export function ApplyPositionModal({
                 ? 'Capital Supera Saldo Disponible'
                 : isEpInvalid || isCapInvalidNumber
                 ? 'Completar Datos Válidos'
+                : isAccumulateMode
+                ? `Ponderar y Acumular en Posición (${matchingOpenPosition?.symbol})`
                 : isEditing
                 ? 'Guardar Cambios'
                 : 'Registrar Operación en Mi Cartera'}

@@ -44,8 +44,21 @@ interface PortfolioContextType {
       suggestedTakeProfit: number;
     },
     entryDate?: string,
-    portfolioId?: string
+    portfolioId?: string,
+    initialNote?: string
   ) => RealPosition;
+  addPurchaseToPosition: (
+    positionId: string,
+    purchase: { price: number; capitalAllocated: number; date?: string; note?: string },
+    newStopLoss?: number | null,
+    newTakeProfit?: number | null
+  ) => RealPosition | null;
+  removePurchaseFromPosition: (positionId: string, lotId: string) => RealPosition | null;
+  updatePurchaseLot: (
+    positionId: string,
+    lotId: string,
+    changes: { price?: number; capitalAllocated?: number; date?: string; note?: string }
+  ) => RealPosition | null;
   updatePosition: (id: string, changes: Partial<RealPosition>) => void;
   closePosition: (
     id: string,
@@ -74,6 +87,9 @@ interface PortfolioContextType {
   applyModalPosition: RealPosition | null;
   openApplyModal: (asset?: Asset | null, existingPosition?: RealPosition | null) => void;
   closeApplyModal: () => void;
+  historyModalPosition: RealPosition | null;
+  openHistoryModal: (position: RealPosition) => void;
+  closeHistoryModal: () => void;
   isMovementModalOpen: boolean;
   editingMovement: CapitalMovement | null;
   openMovementModal: (movementToEdit?: CapitalMovement | null) => void;
@@ -89,6 +105,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const portfolioHook = usePortfolio();
   const [applyModalAsset, setApplyModalAsset] = useState<Asset | null>(null);
   const [applyModalPosition, setApplyModalPosition] = useState<RealPosition | null>(null);
+  const [historyModalPosition, setHistoryModalPosition] = useState<RealPosition | null>(null);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<CapitalMovement | null>(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -101,6 +118,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const closeApplyModal = () => {
     setApplyModalAsset(null);
     setApplyModalPosition(null);
+  };
+
+  const openHistoryModal = (position: RealPosition) => {
+    setHistoryModalPosition(position);
+  };
+
+  const closeHistoryModal = () => {
+    setHistoryModalPosition(null);
   };
 
   const openMovementModal = (movementToEdit?: CapitalMovement | null) => {
@@ -124,6 +149,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         applyModalPosition,
         openApplyModal,
         closeApplyModal,
+        historyModalPosition,
+        openHistoryModal,
+        closeHistoryModal,
         isMovementModalOpen,
         editingMovement,
         openMovementModal,

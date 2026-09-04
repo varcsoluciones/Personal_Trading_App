@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { CapitalMovement, RealPosition, PortfolioWallet, WalletMetrics } from '../types/portfolio';
+import { CapitalMovement, RealPosition, PortfolioWallet, WalletMetrics, PositionPurchaseLot } from '../types/portfolio';
+import { calculateWeightedAveragePosition } from '../utils/weighted-average';
 
 const PORTFOLIO_STORAGE_KEY = 'quantpulse_portfolio_v1';
 
@@ -216,7 +217,7 @@ export function usePortfolio() {
     setCapitalMovements((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
-  // 6. Open Position with Portfolio support
+  // 6. Open Position with Portfolio and Purchase Lots support
   const openPosition = useCallback(
     (
       asset: { id: string; symbol: string },
@@ -230,18 +231,34 @@ export function usePortfolio() {
         suggestedTakeProfit: number;
       },
       entryDate?: string,
-      portfolioId?: string
+      portfolioId?: string,
+      initialNote?: string
     ): RealPosition => {
       const activePortId = portfolioId || 'wallet_main';
+      const ep = Number(entryPrice);
+      const cap = Number(capitalAllocated);
+      const eDate = entryDate || new Date().toISOString().split('T')[0];
+      const shares = ep > 0 ? cap / ep : 0;
+
+      const initialLot: PositionPurchaseLot = {
+        id: `lot_${Date.now()}_init`,
+        date: eDate,
+        price: ep,
+        capitalAllocated: cap,
+        shares,
+        note: initialNote?.trim() || 'Compra inicial',
+      };
 
       const newPos: RealPosition = {
         id: `pos_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         portfolioId: activePortId,
         assetId: asset.id,
         symbol: asset.symbol,
-        entryPrice: Number(entryPrice),
-        entryDate: entryDate || new Date().toISOString().split('T')[0],
-        capitalAllocated: Number(capitalAllocated),
+        entryPrice: ep,
+        entryDate: eDate,
+        capitalAllocated: cap,
+        totalShares: shares,
+        purchases: [initialLot],
         stopLoss: stopLoss !== null && !isNaN(Number(stopLoss)) ? Number(stopLoss) : null,
         takeProfit: takeProfit !== null && !isNaN(Number(takeProfit)) ? Number(takeProfit) : null,
         status: 'OPEN',
@@ -250,6 +267,179 @@ export function usePortfolio() {
 
       setPositions((prev) => [newPos, ...prev]);
       return newPos;
+    },
+    []
+  );
+
+  // 6b. Add a new purchase lot to an existing position (Dollar Cost Averaging / Ponderación)
+  const addPurchaseToPosition = useCallback(
+    (
+      positionId: string,
+      purchase: { price: number; capitalAllocated: number; date?: string; note?: string },
+      newStopLoss?: number | null,
+      newTakeProfit?: number | null
+    ): RealPosition | null => {
+      let resultPos: RealPosition | null = null;
+
+      setPositions((prev) =>
+        prev.map((pos) => {
+          if (pos.id !== positionId) return pos;
+
+          // Build existing lots array with backward-compatibility
+          let existingLots: PositionPurchaseLot[] = [];
+          if (pos.purchases && pos.purchases.length > 0) {
+            existingLots = [...pos.purchases];
+          } else {
+            const initialEp = Number(pos.entryPrice);
+            const initialCap = Number(pos.capitalAllocated);
+            existingLots = [
+              {
+                id: `lot_${pos.id}_init`,
+                date: pos.entryDate,
+                price: initialEp,
+                capitalAllocated: initialCap,
+                shares: initialEp > 0 ? initialCap / initialEp : 0,
+                note: 'Compra inicial',
+              },
+            ];
+          }
+
+          const newLotPrice = Number(purchase.price);
+          const newLotCap = Number(purchase.capitalAllocated);
+          const newLotShares = newLotPrice > 0 ? newLotCap / newLotPrice : 0;
+
+          const newLot: PositionPurchaseLot = {
+            id: `lot_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            date: purchase.date || new Date().toISOString().split('T')[0],
+            price: newLotPrice,
+            capitalAllocated: newLotCap,
+            shares: newLotShares,
+            note: purchase.note?.trim() || 'Aporte / Compra ponderada',
+          };
+
+          const allLots = [...existingLots, newLot];
+          const { totalCapital, totalShares, weightedAveragePrice } = calculateWeightedAveragePosition(allLots);
+
+          const updated: RealPosition = {
+            ...pos,
+            capitalAllocated: totalCapital,
+            totalShares,
+            entryPrice: weightedAveragePrice,
+            purchases: allLots,
+            stopLoss:
+              newStopLoss !== undefined
+                ? newStopLoss !== null && !isNaN(Number(newStopLoss))
+                  ? Number(newStopLoss)
+                  : null
+                : pos.stopLoss,
+            takeProfit:
+              newTakeProfit !== undefined
+                ? newTakeProfit !== null && !isNaN(Number(newTakeProfit))
+                  ? Number(newTakeProfit)
+                  : null
+                : pos.takeProfit,
+          };
+
+          resultPos = updated;
+          return updated;
+        })
+      );
+
+      return resultPos;
+    },
+    []
+  );
+
+  // 6c. Remove a purchase lot from a position and recalculate weighted average
+  const removePurchaseFromPosition = useCallback(
+    (positionId: string, lotId: string): RealPosition | null => {
+      let resultPos: RealPosition | null = null;
+
+      setPositions((prev) =>
+        prev.map((pos) => {
+          if (pos.id !== positionId) return pos;
+
+          const existingLots = pos.purchases && pos.purchases.length > 0 ? pos.purchases : [];
+          if (existingLots.length <= 1) {
+            alert('Una posición debe conservar al menos un registro de compra.');
+            return pos;
+          }
+
+          const remainingLots = existingLots.filter((l) => l.id !== lotId);
+          if (remainingLots.length === 0) return pos;
+
+          const { totalCapital, totalShares, weightedAveragePrice } =
+            calculateWeightedAveragePosition(remainingLots);
+
+          const updated: RealPosition = {
+            ...pos,
+            capitalAllocated: totalCapital,
+            totalShares,
+            entryPrice: weightedAveragePrice,
+            purchases: remainingLots,
+          };
+
+          resultPos = updated;
+          return updated;
+        })
+      );
+
+      return resultPos;
+    },
+    []
+  );
+
+  // 6d. Update an individual purchase lot and recalculate weighted average
+  const updatePurchaseLot = useCallback(
+    (
+      positionId: string,
+      lotId: string,
+      changes: { price?: number; capitalAllocated?: number; date?: string; note?: string }
+    ): RealPosition | null => {
+      let resultPos: RealPosition | null = null;
+
+      setPositions((prev) =>
+        prev.map((pos) => {
+          if (pos.id !== positionId) return pos;
+
+          const existingLots = pos.purchases && pos.purchases.length > 0 ? [...pos.purchases] : [];
+          if (existingLots.length === 0) return pos;
+
+          const updatedLots = existingLots.map((l) => {
+            if (l.id !== lotId) return l;
+            const newPrice = changes.price !== undefined ? Number(changes.price) : l.price;
+            const newCap =
+              changes.capitalAllocated !== undefined
+                ? Number(changes.capitalAllocated)
+                : l.capitalAllocated;
+            const newShares = newPrice > 0 ? newCap / newPrice : 0;
+            return {
+              ...l,
+              price: newPrice,
+              capitalAllocated: newCap,
+              shares: newShares,
+              date: changes.date !== undefined ? changes.date : l.date,
+              note: changes.note !== undefined ? changes.note : l.note,
+            };
+          });
+
+          const { totalCapital, totalShares, weightedAveragePrice } =
+            calculateWeightedAveragePosition(updatedLots);
+
+          const updated: RealPosition = {
+            ...pos,
+            capitalAllocated: totalCapital,
+            totalShares,
+            entryPrice: weightedAveragePrice,
+            purchases: updatedLots,
+          };
+
+          resultPos = updated;
+          return updated;
+        })
+      );
+
+      return resultPos;
     },
     []
   );
@@ -558,6 +748,9 @@ export function usePortfolio() {
     transferBetweenWallets,
     removeCapitalMovement,
     openPosition,
+    addPurchaseToPosition,
+    removePurchaseFromPosition,
+    updatePurchaseLot,
     updatePosition,
     closePosition,
     deletePosition,

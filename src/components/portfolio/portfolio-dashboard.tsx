@@ -30,6 +30,7 @@ import {
   ChevronUp,
   ArrowRightLeft,
   Building2,
+  History,
 } from 'lucide-react';
 
 interface PortfolioDashboardProps {
@@ -61,6 +62,7 @@ export function PortfolioDashboard({
     getWalletMetrics,
     getWalletAvailableCapital,
     openApplyModal,
+    openHistoryModal,
     openMovementModal,
     openWalletModal,
   } = usePortfolioContext();
@@ -783,6 +785,17 @@ export function PortfolioDashboard({
                             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: posWallet.color || '#3b82f6' }} />
                             {posWallet.name}
                           </span>
+
+                          {/* Purchase Lots Count Badge */}
+                          <button
+                            type="button"
+                            onClick={() => openHistoryModal(pos)}
+                            className="inline-flex items-center gap-1 rounded-md bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 text-[10px] font-bold text-blue-400 hover:bg-blue-500/25 transition-colors cursor-pointer"
+                            title="Ver Historial de Compras y Ponderación"
+                          >
+                            <History className="h-2.5 w-2.5" />
+                            <span>{pos.purchases?.length || 1} {(pos.purchases?.length || 1) === 1 ? 'compra' : 'compras DCA'}</span>
+                          </button>
                         </div>
                         <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'} font-sans block mt-0.5`}>
                           Entrada: <span className={`font-mono font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{pos.entryDate}</span>
@@ -802,8 +815,8 @@ export function PortfolioDashboard({
                         <span className={`font-mono font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{formatCurrency(pos.capitalAllocated)}</span>
                       </div>
                       <div className="text-right">
-                        <span className={`text-[11px] font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'} block`}>Precio Entrada:</span>
-                        <span className={`font-mono font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>${pos.entryPrice}</span>
+                        <span className={`text-[11px] font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'} block`}>Precio Promedio:</span>
+                        <span className={`font-mono font-bold text-sm text-blue-400`}>${pos.entryPrice}</span>
                       </div>
                     </div>
 
@@ -844,7 +857,7 @@ export function PortfolioDashboard({
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between gap-2 text-xs">
+                  <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between gap-1.5 text-xs">
                     <button
                       type="button"
                       onClick={() => handleQuickClose(pos)}
@@ -855,9 +868,36 @@ export function PortfolioDashboard({
 
                     <button
                       type="button"
+                      onClick={() => {
+                        const matchingAsset = assets.find(
+                          (a) =>
+                            a.id === pos.assetId ||
+                            a.symbol === pos.symbol ||
+                            a.symbol.replace('/', '').replace('-', '').toUpperCase() ===
+                              pos.symbol.replace('/', '').replace('-', '').toUpperCase()
+                        );
+                        openApplyModal(matchingAsset || null);
+                      }}
+                      className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-2 text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                      title="Ponderar / Comprar más (DCA)"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => openHistoryModal(pos)}
+                      className="rounded-xl border border-slate-700/80 p-2 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      title="Ver Historial de Compras y Cálculo Ponderado"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => openApplyModal(null, pos)}
                       className="rounded-xl border border-slate-700/80 p-2 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                      title="Editar Posición"
+                      title="Editar Parámetros de la Posición"
                     >
                       <Edit2 className="h-3.5 w-3.5" />
                     </button>
