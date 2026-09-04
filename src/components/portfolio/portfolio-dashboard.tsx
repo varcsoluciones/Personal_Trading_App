@@ -558,70 +558,59 @@ export function PortfolioDashboard({
 
       {/* 4. Portfolio Filter Tabs & Compact 1-Line Subtle Summary Header */}
       <div className="space-y-3 pt-1">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          {/* Wallet Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 max-w-full">
-            <button
-              type="button"
-              onClick={() => setSelectedWalletId('ALL')}
-              className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer whitespace-nowrap ${
-                selectedWalletId === 'ALL'
-                  ? `${accent.bgClass} text-white shadow-xs`
-                  : isDark
-                  ? 'bg-[#2c2c2e]/70 text-slate-400 hover:text-white hover:bg-[#2c2c2e]'
-                  : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-              }`}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              <span>Todas las Carteras</span>
-              <span className="rounded-md bg-black/25 px-1.5 py-0.2 text-[10px] font-mono">
-                {positions.length}
-              </span>
-            </button>
-
-            {wallets.map((w) => {
-              const wPositionsCount = positions.filter((p) => (p.portfolioId || 'wallet_main') === w.id).length;
-              const isSelected = selectedWalletId === w.id;
-
-              return (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => setSelectedWalletId(w.id)}
-                  className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer whitespace-nowrap ${
-                    isSelected
-                      ? `${accent.bgClass} text-white shadow-xs`
-                      : isDark
-                      ? 'bg-[#2c2c2e]/70 text-slate-400 hover:text-white hover:bg-[#2c2c2e]'
-                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                  }`}
-                >
-                  <span
-                    className="h-2 w-2 rounded-full shrink-0"
-                    style={{ backgroundColor: w.color || '#3b82f6' }}
-                  />
-                  <span>{w.name}</span>
-                  {w.brokerOrExchange && (
-                    <span className="text-[10px] opacity-75 font-normal">
-                      ({w.brokerOrExchange})
-                    </span>
-                  )}
-                  <span className="rounded-md bg-black/25 px-1.5 py-0.2 text-[10px] font-mono">
-                    {wPositionsCount}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
+        {/* Wallet Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 max-w-full">
           <button
             type="button"
-            onClick={openWalletModal}
-            className="text-xs font-semibold font-sans text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer py-1"
+            onClick={() => setSelectedWalletId('ALL')}
+            className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer whitespace-nowrap ${
+              selectedWalletId === 'ALL'
+                ? `${accent.bgClass} text-white shadow-xs`
+                : isDark
+                ? 'bg-[#2c2c2e]/70 text-slate-400 hover:text-white hover:bg-[#2c2c2e]'
+                : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+            }`}
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Gestionar Carteras</span>
+            <Layers className="h-3.5 w-3.5" />
+            <span>Todas las Carteras</span>
+            <span className="rounded-md bg-black/25 px-1.5 py-0.2 text-[10px] font-mono">
+              {positions.length}
+            </span>
           </button>
+
+          {wallets.map((w) => {
+            const wPositionsCount = positions.filter((p) => (p.portfolioId || 'wallet_main') === w.id).length;
+            const isSelected = selectedWalletId === w.id;
+
+            return (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => setSelectedWalletId(w.id)}
+                className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer whitespace-nowrap ${
+                  isSelected
+                    ? `${accent.bgClass} text-white shadow-xs`
+                    : isDark
+                    ? 'bg-[#2c2c2e]/70 text-slate-400 hover:text-white hover:bg-[#2c2c2e]'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: w.color || '#3b82f6' }}
+                />
+                <span>{w.name}</span>
+                {w.brokerOrExchange && (
+                  <span className="text-[10px] opacity-75 font-normal">
+                    ({w.brokerOrExchange})
+                  </span>
+                )}
+                <span className="rounded-md bg-black/25 px-1.5 py-0.2 text-[10px] font-mono">
+                  {wPositionsCount}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* 1-Line Subtle Summary Header Bar per Portfolio / Selection */}
