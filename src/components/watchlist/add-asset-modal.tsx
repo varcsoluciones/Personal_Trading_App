@@ -5,6 +5,7 @@ import { AssetType } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
 import { normalizeCryptoSymbol } from '@/lib/utils/symbol-normalizer';
+import { POPULAR_ASSETS_CATALOG, AssetDefinition } from '@/lib/api/default-data';
 import {
   X,
   Search,
@@ -14,9 +15,10 @@ import {
   Coins,
   Layers,
   Sparkles,
-  AlertCircle,
   Globe,
   Loader2,
+  PlusCircle,
+  Lightbulb,
 } from 'lucide-react';
 
 interface CatalogAsset {
@@ -27,46 +29,34 @@ interface CatalogAsset {
   isBinanceLive?: boolean;
 }
 
-// Curated Popular Assets Catalog
-const POPULAR_ASSETS_CATALOG: CatalogAsset[] = [
-  // Crypto
-  { id: 'BTCUSDT', symbol: 'BTC/USDT', name: 'Bitcoin', type: 'crypto' },
-  { id: 'ETHUSDT', symbol: 'ETH/USDT', name: 'Ethereum', type: 'crypto' },
-  { id: 'SOLUSDT', symbol: 'SOL/USDT', name: 'Solana', type: 'crypto' },
-  { id: 'BNBUSDT', symbol: 'BNB/USDT', name: 'BNB Binance Coin', type: 'crypto' },
-  { id: 'XRPUSDT', symbol: 'XRP/USDT', name: 'Ripple XRP', type: 'crypto' },
-  { id: 'ADAUSDT', symbol: 'ADA/USDT', name: 'Cardano ADA', type: 'crypto' },
-  { id: 'DOGEUSDT', symbol: 'DOGE/USDT', name: 'Dogecoin', type: 'crypto' },
-  { id: 'AVAXUSDT', symbol: 'AVAX/USDT', name: 'Avalanche AVAX', type: 'crypto' },
-  { id: 'LINKUSDT', symbol: 'LINK/USDT', name: 'Chainlink', type: 'crypto' },
-  { id: 'SUIUSDT', symbol: 'SUI/USDT', name: 'Sui Network', type: 'crypto' },
-  { id: 'NEARUSDT', symbol: 'NEAR/USDT', name: 'NEAR Protocol', type: 'crypto' },
-  { id: 'DOTUSDT', symbol: 'DOT/USDT', name: 'Polkadot', type: 'crypto' },
-
-  // Stocks
-  { id: 'NVDA', symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'stock' },
-  { id: 'AAPL', symbol: 'AAPL', name: 'Apple Inc.', type: 'stock' },
-  { id: 'TSLA', symbol: 'TSLA', name: 'Tesla Inc.', type: 'stock' },
-  { id: 'MSFT', symbol: 'MSFT', name: 'Microsoft Corporation', type: 'stock' },
-  { id: 'AMZN', symbol: 'AMZN', name: 'Amazon.com Inc.', type: 'stock' },
-  { id: 'GOOGL', symbol: 'GOOGL', name: 'Alphabet Inc. (Google)', type: 'stock' },
-  { id: 'META', symbol: 'META', name: 'Meta Platforms Inc.', type: 'stock' },
-  { id: 'AMD', symbol: 'AMD', name: 'Advanced Micro Devices', type: 'stock' },
-  { id: 'PLTR', symbol: 'PLTR', name: 'Palantir Technologies', type: 'stock' },
-  { id: 'COIN', symbol: 'COIN', name: 'Coinbase Global Inc.', type: 'stock' },
-
-  // ETFs
-  { id: 'VOO', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'etf' },
-  { id: 'QQQ', symbol: 'QQQ', name: 'Invesco QQQ Trust (Nasdaq 100)', type: 'etf' },
-  { id: 'SCHD', symbol: 'SCHD', name: 'Schwab US Dividend Equity ETF', type: 'etf' },
-  { id: 'SPY', symbol: 'SPY', name: 'SPDR S&P 500 ETF Trust', type: 'etf' },
-  { id: 'IWM', symbol: 'IWM', name: 'iShares Russell 2000 ETF', type: 'etf' },
-  { id: 'VTI', symbol: 'VTI', name: 'Vanguard Total Stock Market ETF', type: 'etf' },
-  { id: 'IBIT', symbol: 'IBIT', name: 'iShares Bitcoin Trust ETF', type: 'etf' },
-  { id: 'ETHA', symbol: 'ETHA', name: 'iShares Ethereum Trust ETF', type: 'etf' },
-  { id: 'GLD', symbol: 'GLD', name: 'SPDR Gold Shares', type: 'etf' },
-  { id: 'TLT', symbol: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', type: 'etf' },
-];
+// Common aliases and typo mappings
+const SEARCH_ALIASES: Record<string, { ticker: string; nameHint: string }> = {
+  IBRK: { ticker: 'IBKR', nameHint: 'Interactive Brokers Group Inc.' },
+  IB: { ticker: 'IBKR', nameHint: 'Interactive Brokers Group Inc.' },
+  INTERACTIVE: { ticker: 'IBKR', nameHint: 'Interactive Brokers Group Inc.' },
+  'INTERACTIVE BROKERS': { ticker: 'IBKR', nameHint: 'Interactive Brokers Group Inc.' },
+  COCA: { ticker: 'KO', nameHint: 'The Coca-Cola Company' },
+  COKE: { ticker: 'KO', nameHint: 'The Coca-Cola Company' },
+  'COCA COLA': { ticker: 'KO', nameHint: 'The Coca-Cola Company' },
+  'COCA-COLA': { ticker: 'KO', nameHint: 'The Coca-Cola Company' },
+  GOOGLE: { ticker: 'GOOGL', nameHint: 'Alphabet Inc. (Google)' },
+  ALPHABET: { ticker: 'GOOGL', nameHint: 'Alphabet Inc. (Google)' },
+  FACEBOOK: { ticker: 'META', nameHint: 'Meta Platforms Inc.' },
+  DISNEY: { ticker: 'DIS', nameHint: 'The Walt Disney Company' },
+  MCDONALDS: { ticker: 'MCD', nameHint: "McDonald's Corporation" },
+  MCDONALD: { ticker: 'MCD', nameHint: "McDonald's Corporation" },
+  PEPSI: { ticker: 'PEP', nameHint: 'PepsiCo Inc.' },
+  PEPSICO: { ticker: 'PEP', nameHint: 'PepsiCo Inc.' },
+  WALMART: { ticker: 'WMT', nameHint: 'Walmart Inc.' },
+  COSTCO: { ticker: 'COST', nameHint: 'Costco Wholesale Corporation' },
+  BERKSHIRE: { ticker: 'BRK-B', nameHint: 'Berkshire Hathaway Inc.' },
+  PALANTIR: { ticker: 'PLTR', nameHint: 'Palantir Technologies' },
+  MICROSOFT: { ticker: 'MSFT', nameHint: 'Microsoft Corporation' },
+  AMAZON: { ticker: 'AMZN', nameHint: 'Amazon.com Inc.' },
+  APPLE: { ticker: 'AAPL', nameHint: 'Apple Inc.' },
+  TESLA: { ticker: 'TSLA', nameHint: 'Tesla Inc.' },
+  NVIDIA: { ticker: 'NVDA', nameHint: 'NVIDIA Corporation' },
+};
 
 interface AddAssetModalProps {
   isOpen: boolean;
@@ -120,14 +110,22 @@ export function AddAssetModal({
     return () => clearTimeout(timeoutId);
   }, [query, selectedTypeFilter]);
 
-  // Combined matches: Curated Catalog + Real-time Binance pairs
+  // Check for alias suggestion
+  const aliasSuggestion = useMemo(() => {
+    const cleanQ = query.trim().toUpperCase();
+    if (!cleanQ) return null;
+    return SEARCH_ALIASES[cleanQ] || null;
+  }, [query]);
+
+  // Combined matches: Curated Catalog + Alias matches + Real-time Binance pairs
   const matches = useMemo(() => {
     const q = query.trim().toUpperCase();
     const cleanQ = q.replace(/[\/\-\s_]/g, '');
     const normCryptoQ = normalizeCryptoSymbol(q);
+    const aliasTicker = aliasSuggestion?.ticker?.toUpperCase();
 
     // 1. Filter curated catalog
-    let catalogFiltered = POPULAR_ASSETS_CATALOG.filter((item) => {
+    const catalogFiltered = POPULAR_ASSETS_CATALOG.filter((item) => {
       if (selectedTypeFilter !== 'all' && item.type !== selectedTypeFilter) {
         return false;
       }
@@ -136,7 +134,11 @@ export function AddAssetModal({
       const itemClean = item.symbol.toUpperCase().replace(/[\/\-\s_]/g, '');
       const itemNorm = item.type === 'crypto' ? normalizeCryptoSymbol(item.symbol) : itemClean;
 
+      // Direct match or alias match
+      const matchesAlias = aliasTicker ? itemClean === aliasTicker || item.symbol.toUpperCase() === aliasTicker : false;
+
       return (
+        matchesAlias ||
         item.symbol.toUpperCase().includes(q) ||
         item.name.toUpperCase().includes(q) ||
         itemClean.includes(cleanQ) ||
@@ -166,7 +168,7 @@ export function AddAssetModal({
     }
 
     return catalogFiltered;
-  }, [query, selectedTypeFilter, binanceResults]);
+  }, [query, selectedTypeFilter, binanceResults, aliasSuggestion]);
 
   if (!isOpen) return null;
 
@@ -185,7 +187,7 @@ export function AddAssetModal({
     });
   };
 
-  const handleSelectAsset = (item: CatalogAsset) => {
+  const handleSelectAsset = (item: { symbol: string; name: string; type: AssetType }) => {
     let symbolToAdd = item.symbol;
     if (item.type === 'crypto') {
       symbolToAdd = normalizeCryptoSymbol(item.symbol);
@@ -194,6 +196,31 @@ export function AddAssetModal({
     onAdd(symbolToAdd, item.name, item.type);
     setJustAdded((prev) => new Set(prev).add(symbolToAdd));
   };
+
+  // Custom ticker addition handler
+  const handleAddCustom = (customType: AssetType) => {
+    const raw = query.trim().toUpperCase();
+    if (!raw) return;
+
+    let symbolToAdd = raw;
+    let nameToAdd = raw;
+
+    if (customType === 'crypto') {
+      symbolToAdd = normalizeCryptoSymbol(raw);
+      nameToAdd = `${raw.replace(/USDT$/, '')} / USDT`;
+    } else {
+      symbolToAdd = raw.replace(/[\/\s]/g, '');
+      nameToAdd = `${symbolToAdd} (${customType.toUpperCase()})`;
+    }
+
+    onAdd(symbolToAdd, nameToAdd, customType);
+    setJustAdded((prev) => new Set(prev).add(symbolToAdd));
+  };
+
+  const cleanQuery = query.trim().toUpperCase().replace(/[\/\s_]/g, '');
+  const hasExactCatalogMatch = matches.some(
+    (m) => m.symbol.toUpperCase().replace(/[\/\s_]/g, '') === cleanQuery
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
@@ -226,7 +253,7 @@ export function AddAssetModal({
             <input
               type="text"
               autoFocus
-              placeholder="Escribe ticker o nombre (ej. ETH, BTC, SOL, VOO, NVDA)..."
+              placeholder="Escribe ticker o nombre (ej. KO, IBKR, NVDA, VOO, BTC)..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className={`w-full rounded-2xl border py-2.5 pl-10 pr-9 text-xs font-medium focus:outline-none focus:ring-2 transition-all ${
@@ -244,6 +271,18 @@ export function AddAssetModal({
               </button>
             )}
           </div>
+
+          {/* Alias Suggestion Banner if applicable */}
+          {aliasSuggestion && (
+            <div className={`mt-2.5 flex items-center gap-2 p-2 rounded-xl text-xs ${
+              isDark ? 'bg-blue-500/10 border border-blue-500/20 text-blue-300' : 'bg-blue-50 border border-blue-200 text-blue-800'
+            }`}>
+              <Lightbulb className="h-4 w-4 text-blue-500 shrink-0" />
+              <span>
+                Sugerencia para <strong>&ldquo;{query.trim()}&rdquo;</strong>: <strong>{aliasSuggestion.ticker}</strong> ({aliasSuggestion.nameHint})
+              </span>
+            </div>
+          )}
 
           {/* Type Filter Pills */}
           <div className="flex items-center gap-1.5 mt-3">
@@ -278,7 +317,7 @@ export function AddAssetModal({
         </div>
 
         {/* Live Dropdown / Search Results List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 max-h-80 custom-horizontal-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 space-y-1.5 max-h-80 custom-horizontal-scrollbar">
           {matches.length > 0 ? (
             matches.map((item) => {
               const added = isSymbolAdded(item.symbol, item.type);
@@ -319,7 +358,7 @@ export function AddAssetModal({
                         <span className={`rounded-md border px-1.5 py-0.2 text-[9px] font-bold uppercase ${typeBadge}`}>
                           {item.type}
                         </span>
-                        {item.isBinanceLive && (
+                        {'isBinanceLive' in item && item.isBinanceLive && (
                           <span className="flex items-center gap-1 rounded-md bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 text-[9px] font-bold text-amber-400 font-mono">
                             <Globe className="h-2.5 w-2.5" />
                             Binance Live
@@ -356,18 +395,67 @@ export function AddAssetModal({
                 </div>
               );
             })
-          ) : query.trim() ? (
-            /* No verified matches found message (No arbitrary unvalidated custom add) */
-            <div className="py-10 px-4 text-center">
-              <AlertCircle className="h-8 w-8 mx-auto mb-2.5 text-amber-500" />
-              <h4 className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                No encontramos ese activo
-              </h4>
-              <p className={`text-xs mt-1 max-w-xs mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Verifica el símbolo o ticker e intenta de nuevo. Solo se permiten pares y activos reales verificados.
+          ) : null}
+
+          {/* Direct Custom Ticker Addition Card (if user typed something not matching or to allow custom ticker addition) */}
+          {cleanQuery && cleanQuery.length >= 1 && (
+            <div
+              className={`mt-3 p-3.5 rounded-2xl border ${
+                isDark
+                  ? 'bg-[#242426] border-slate-700/80'
+                  : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <PlusCircle className="h-4 w-4 text-blue-500" />
+                <span className="text-xs font-bold">
+                  {hasExactCatalogMatch
+                    ? `¿Deseas agregar "${cleanQuery}" con otro tipo de activo?`
+                    : `Agregar ticker personalizado: "${cleanQuery}"`}
+                </span>
+              </div>
+              <p className={`text-[11px] mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Puedes agregar cualquier acción de Wall Street, ETF de EE.UU. o par cripto de Binance.
               </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => handleAddCustom('stock')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    isDark
+                      ? 'bg-blue-500/15 border-blue-500/30 text-blue-400 hover:bg-blue-500/25'
+                      : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                  }`}
+                >
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span>+ Acción ({cleanQuery})</span>
+                </button>
+                <button
+                  onClick={() => handleAddCustom('etf')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    isDark
+                      ? 'bg-purple-500/15 border-purple-500/30 text-purple-400 hover:bg-purple-500/25'
+                      : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
+                  }`}
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  <span>+ ETF ({cleanQuery})</span>
+                </button>
+                <button
+                  onClick={() => handleAddCustom('crypto')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    isDark
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
+                      : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                  }`}
+                >
+                  <Coins className="h-3.5 w-3.5" />
+                  <span>+ Cripto ({cleanQuery}USDT)</span>
+                </button>
+              </div>
             </div>
-          ) : (
+          )}
+
+          {matches.length === 0 && !cleanQuery && (
             <div className={`py-10 text-center text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
               Escribe el ticker o nombre para buscar en tiempo real.
             </div>
@@ -386,7 +474,7 @@ export function AddAssetModal({
           <button
             onClick={onClose}
             style={{ backgroundColor: accent.hex }}
-            className="rounded-2xl px-5 py-2 text-xs font-bold text-white shadow-xs hover:opacity-90 transition-all"
+            className="rounded-2xl px-5 py-2 text-xs font-bold text-white shadow-xs hover:opacity-90 transition-all cursor-pointer"
           >
             Listo / Cerrar
           </button>
@@ -395,3 +483,4 @@ export function AddAssetModal({
     </div>
   );
 }
+
