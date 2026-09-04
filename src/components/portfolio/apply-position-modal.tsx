@@ -936,22 +936,26 @@ export function ApplyPositionModal({
                 </span>
               </div>
 
-              {/* Risk % per trade input */}
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Riesgo:</span>
-                <div className="flex items-center gap-0.5 bg-[#1c1c1e] border border-slate-700/80 rounded-lg px-2 py-0.5">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="100"
-                    value={riskPct}
-                    onChange={(e) => handleRiskChange(e.target.value)}
-                    className="w-9 bg-transparent text-right font-mono font-bold text-xs text-blue-400 focus:outline-none"
-                  />
-                  <span className="text-slate-400 font-mono text-xs">%</span>
+                {/* Risk % per trade input */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Riesgo:</span>
+                  <div className={`flex items-center gap-0.5 rounded-lg px-2 py-0.5 border transition-colors ${
+                    isDark ? 'bg-[#1c1c1e] border-slate-700/80' : 'bg-slate-100 border-slate-300'
+                  }`}>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="100"
+                      value={riskPct}
+                      onChange={(e) => handleRiskChange(e.target.value)}
+                      className={`w-9 bg-transparent text-right font-mono font-bold text-xs focus:outline-none ${
+                        isDark ? 'text-blue-400' : 'text-blue-600'
+                      }`}
+                    />
+                    <span className={`font-mono text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>%</span>
+                  </div>
                 </div>
-              </div>
             </div>
 
             {suggestedCapital !== null ? (

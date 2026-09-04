@@ -2,4 +2,4 @@
  * Application Version Constant
  * Centralized version identifier updated with each release & improvement.
  */
-export const APP_VERSION = 'v2.8.0';
+export const APP_VERSION = 'v2.8.1';

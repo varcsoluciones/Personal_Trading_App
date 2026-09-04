@@ -83,6 +83,9 @@ export function PositionHistoryModal({
     return calculateWeightedAveragePosition(lots);
   }, [lots]);
 
+  // State to toggle the mathematical formula popup/tooltip
+  const [showFormulaInfo, setShowFormulaInfo] = useState(false);
+
   if (!isOpen || !position) return null;
 
   const handleAddLotSubmit = (e: React.FormEvent) => {
@@ -172,13 +175,67 @@ export function PositionHistoryModal({
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-horizontal-scrollbar">
-          {/* Key Metrics Cards */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-horizontal-scrollbar">
+          {/* Key Metrics Cards with Formula Corner Button */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className={`p-3.5 rounded-2xl border ${isDark ? 'bg-[#242426] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-              <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Precio Promedio Ponderado
-              </span>
+            {/* Card 1: Precio Promedio Ponderado + Info Icon */}
+            <div className={`p-3.5 rounded-2xl border relative ${isDark ? 'bg-[#242426] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Precio Promedio Ponderado
+                </span>
+                {/* Informative Icon Button for Formula Explanation */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormulaInfo(!showFormulaInfo)}
+                    className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                      showFormulaInfo
+                        ? 'bg-blue-500 text-white'
+                        : isDark
+                        ? 'text-slate-400 hover:text-blue-400 hover:bg-[#2c2c2e]'
+                        : 'text-slate-400 hover:text-blue-600 hover:bg-slate-200'
+                    }`}
+                    title="Ver cómo se calculó la fórmula de ponderado"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+
+                  {/* Formula Popover Dropdown */}
+                  {showFormulaInfo && (
+                    <div className={`absolute right-0 top-full mt-2 w-72 p-3.5 rounded-2xl border shadow-xl z-30 animate-fade-in text-xs ${
+                      isDark ? 'bg-[#1e1e22] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800 shadow-slate-200/50'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-xs text-blue-500 flex items-center gap-1.5">
+                          <Calculator className="h-3.5 w-3.5" />
+                          Fórmula de Ponderación (DCA)
+                        </span>
+                        <button
+                          onClick={() => setShowFormulaInfo(false)}
+                          className="text-slate-400 hover:text-slate-200 text-[10px]"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className={`p-2.5 rounded-xl font-mono text-[11px] border mb-2 ${
+                        isDark ? 'bg-black/40 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}>
+                        <div className="text-blue-400 font-bold text-center mb-0.5">
+                          Capital Total ÷ Total Unidades
+                        </div>
+                        <div className="text-[10px] text-center text-slate-400">
+                          ${calculation.totalCapital.toFixed(2)} ÷ {calculation.totalShares.toFixed(4)} = <strong className="text-emerald-400">${calculation.weightedAveragePrice.toFixed(4)}</strong>
+                        </div>
+                      </div>
+                      <p className={`text-[10px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Cada compra aporta unidades calculadas como <code>(Capital ÷ Precio)</code>. El promedio pondera el capital real aportado en cada momento.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-baseline gap-1 mt-1">
                 <span className="text-xl font-bold font-mono tracking-tight text-blue-500">
                   ${calculation.weightedAveragePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
@@ -190,6 +247,7 @@ export function PositionHistoryModal({
               </span>
             </div>
 
+            {/* Card 2: Capital Total Invertido */}
             <div className={`p-3.5 rounded-2xl border ${isDark ? 'bg-[#242426] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
               <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Capital Total Invertido
@@ -205,6 +263,7 @@ export function PositionHistoryModal({
               </span>
             </div>
 
+            {/* Card 3: Total Acciones / Unidades */}
             <div className={`p-3.5 rounded-2xl border ${isDark ? 'bg-[#242426] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
               <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Total Acciones / Unidades
@@ -221,38 +280,13 @@ export function PositionHistoryModal({
             </div>
           </div>
 
-          {/* Mathematical Formula Explanation Card */}
-          <div className={`p-4 rounded-2xl border ${
-            isDark ? 'bg-gradient-to-br from-blue-950/30 to-indigo-950/20 border-blue-900/40' : 'bg-blue-50/70 border-blue-200'
-          }`}>
-            <div className="flex items-center gap-2 mb-2">
-              <Calculator className="h-4 w-4 text-blue-500" />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-400">
-                Fórmula del Precio Promedio Ponderado (DCA)
-              </h4>
-            </div>
-            <div className={`p-3 rounded-xl font-mono text-xs border ${
-              isDark ? 'bg-black/40 border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'
-            }`}>
-              <div className="text-center font-bold text-[13px] text-blue-400 mb-1">
-                Precio Ponderado = Capital Total ÷ Total Unidades
-              </div>
-              <div className="text-[11px] text-center text-slate-400">
-                ${calculation.totalCapital.toFixed(2)} USD ÷ {calculation.totalShares.toFixed(4)} uds = <strong className="text-emerald-400">${calculation.weightedAveragePrice.toFixed(4)} USD</strong>
-              </div>
-            </div>
-            <p className={`text-[11px] mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Cada compra aporta unidades calculadas como <code>(Capital ÷ Precio)</code>. El promedio no es un promedio simple de precios, sino un promedio ponderado por el capital real invertido en cada momento.
-            </p>
-          </div>
-
-          {/* Purchases History Table / List */}
+          {/* Purchases History Table / List - Main Focus */}
           <div>
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-slate-400" />
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Desglose de Compras ({lots.length})
+                  Histórico de Compras ({lots.length})
                 </h4>
               </div>
               {position.status === 'OPEN' && !isAddingLot && (
