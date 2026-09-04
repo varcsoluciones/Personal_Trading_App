@@ -31,6 +31,7 @@ export interface AppSettings {
   refreshInterval: number; // in seconds
   confettiCelebration?: boolean;
   defaultRiskReward: number;
+  portfolioRiskPerTradePct?: number;
   defaultView: 'grid' | 'table';
 
   // Persisted Tab Navigation & Filters
@@ -168,6 +169,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   refreshInterval: 60,
   confettiCelebration: true,
   defaultRiskReward: 2.2,
+  portfolioRiskPerTradePct: 1,
   defaultView: 'table',
   screenerViewMode: 'grid',
   screenerAdvancedFiltersOpen: false,

@@ -225,6 +225,19 @@ export function usePortfolio() {
       .reduce((acc, p) => acc + (p.realizedPnl || 0), 0);
   }, [positions]);
 
+  // Total Capital (Net Contributions + Realized PnL)
+  const totalCapital = useMemo(() => {
+    return netContributions + realizedPnl;
+  }, [netContributions, realizedPnl]);
+
+  // Available Capital = totalCapital - Sum of capitalAllocated of all positions with status === 'OPEN'
+  const availableCapital = useMemo(() => {
+    const openCapitalAllocated = positions
+      .filter((p) => p.status === 'OPEN')
+      .reduce((acc, p) => acc + (p.capitalAllocated || 0), 0);
+    return Math.max(0, totalCapital - openCapitalAllocated);
+  }, [totalCapital, positions]);
+
   // Helper to compute live unrealized PnL from current price dictionary
   const getLivePositionMetrics = useCallback(
     (pos: RealPosition, currentPrices: Record<string, number>) => {
@@ -348,6 +361,8 @@ export function usePortfolio() {
     deletePosition,
     netContributions,
     realizedPnl,
+    totalCapital,
+    availableCapital,
     getLivePositionMetrics,
     checkAutoClose,
   };

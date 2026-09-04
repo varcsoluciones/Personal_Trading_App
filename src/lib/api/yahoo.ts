@@ -215,11 +215,17 @@ export function generateDeterministicCandles(symbol: string, days = 380, interva
     if (!isCrypto && (dayOfWeek === 0 || dayOfWeek === 6) && !isIntraday) {
       continue;
     }
-
     const timeVal = isIntraday ? Math.floor(d.getTime() / 1000) : d.toISOString().split('T')[0];
 
+    const daySeed = Math.floor(d.getTime() / (24 * 3600 * 1000));
+    const marketMacro = Math.sin(daySeed * 0.18) * 0.020 + Math.cos(daySeed * 0.08) * 0.012;
+    const macroWeight = isCrypto ? 0.75 : 0.55;
+
     const r1 = seededRandom() - 0.48;
-    const dailyReturn = assetConfig.drift + r1 * assetConfig.vol * (isIntraday ? 0.6 : 2.5);
+    const dailyReturn =
+      assetConfig.drift +
+      marketMacro * macroWeight +
+      r1 * assetConfig.vol * (1 - macroWeight) * (isIntraday ? 0.6 : 2.5);
     const open = currentPrice;
     const close = Math.max(0.01, open * (1 + dailyReturn));
 

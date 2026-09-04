@@ -29,6 +29,8 @@ interface PortfolioContextType {
   deletePosition: (id: string) => void;
   netContributions: number;
   realizedPnl: number;
+  totalCapital: number;
+  availableCapital: number;
   getLivePositionMetrics: (pos: RealPosition, currentPrices: Record<string, number>) => {
     currentPrice: number;
     unrealizedPnlUSD: number;

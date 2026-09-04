@@ -19,8 +19,10 @@ import {
   Layers,
   AlertTriangle,
   Info,
+  Calculator,
 } from 'lucide-react';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { calculatePriceCorrelation } from '@/lib/utils/correlation';
 
 interface ApplyPositionModalProps {
   assets: Asset[];
@@ -37,9 +39,9 @@ export function ApplyPositionModal({
   isOpen,
   onClose,
 }: ApplyPositionModalProps) {
-  const { settings, accent, formatCurrency } = useSettings();
+  const { settings, accent, updateSettings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
-  const { openPosition, updatePosition } = usePortfolioContext();
+  const { openPosition, updatePosition, positions, totalCapital, availableCapital } = usePortfolioContext();
 
   const isEditing = Boolean(existingPosition);
   const isClosed = existingPosition?.status === 'CLOSED';
@@ -73,12 +75,92 @@ export function ApplyPositionModal({
   const [takeProfit, setTakeProfit] = useState<string>('');
   const [entryDate, setEntryDate] = useState<string>('');
 
+  // Risk % per trade state (persisted in settings)
+  const [riskPct, setRiskPct] = useState<string>(
+    (settings.portfolioRiskPerTradePct ?? 1).toString()
+  );
+
+  useEffect(() => {
+    if (settings.portfolioRiskPerTradePct !== undefined) {
+      setRiskPct(settings.portfolioRiskPerTradePct.toString());
+    }
+  }, [settings.portfolioRiskPerTradePct]);
+
+  const handleRiskChange = (val: string) => {
+    setRiskPct(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 0) {
+      updateSettings({ portfolioRiskPerTradePct: num });
+    }
+  };
+
   // Closed position edit fields
   const [exitPrice, setExitPrice] = useState<string>('');
   const [exitDate, setExitDate] = useState<string>('');
   const [closeReason, setCloseReason] = useState<'STOP_LOSS' | 'TAKE_PROFIT' | 'MANUAL'>('MANUAL');
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Position Size calculation by Risk formula
+  const epNum = parseFloat(entryPrice);
+  const slNum = useStopLoss && stopLoss ? parseFloat(stopLoss) : null;
+  const currentRiskNum = parseFloat(riskPct) || 1;
+  const riskInMoney = availableCapital * (currentRiskNum / 100);
+
+  const suggestedCapital = useMemo(() => {
+    if (!epNum || epNum <= 0 || slNum === null || slNum <= 0 || epNum <= slNum) return null;
+    const capital = (riskInMoney * epNum) / (epNum - slNum);
+    return Number(capital.toFixed(2));
+  }, [epNum, slNum, riskInMoney]);
+
+  // Correlation evaluation against currently open positions
+  const correlatedPositions = useMemo(() => {
+    if (isClosed || !activeAsset?.candles || activeAsset.candles.length < 5) return [];
+
+    const openPos = positions.filter(
+      (p) => p.status === 'OPEN' && p.assetId !== activeAsset.id && p.symbol !== activeAsset.symbol
+    );
+    const results: { pos: RealPosition; symbol: string; corr: number; capitalAllocated: number }[] = [];
+
+    for (const p of openPos) {
+      const matchAsset = assets.find(
+        (a) =>
+          a.id === p.assetId ||
+          a.symbol === p.symbol ||
+          a.symbol.replace('/', '').replace('-', '').toUpperCase() ===
+            p.symbol.replace('/', '').replace('-', '').toUpperCase()
+      );
+
+      if (matchAsset?.candles && matchAsset.candles.length >= 5) {
+        const corr = calculatePriceCorrelation(activeAsset.candles, matchAsset.candles, 60);
+        if (corr >= 0.7) {
+          results.push({
+            pos: p,
+            symbol: p.symbol,
+            corr,
+            capitalAllocated: p.capitalAllocated,
+          });
+        }
+      }
+    }
+
+    return results;
+  }, [positions, activeAsset, assets, isClosed]);
+
+  const correlationWarningData = useMemo(() => {
+    if (correlatedPositions.length === 0) return null;
+
+    const symbolsList = correlatedPositions.map((c) => `${c.symbol} (${c.corr.toFixed(2)})`).join(', ');
+    const sumCorrelatedCap = correlatedPositions.reduce((acc, c) => acc + c.capitalAllocated, 0);
+    const currentCap = parseFloat(capitalAllocated) || 0;
+    const totalCorrelatedCap = sumCorrelatedCap + currentCap;
+    const concentrationPct = totalCapital > 0 ? (totalCorrelatedCap / totalCapital) * 100 : 0;
+
+    return {
+      symbolsList,
+      concentrationPct: Number(concentrationPct.toFixed(1)),
+    };
+  }, [correlatedPositions, capitalAllocated, totalCapital]);
 
   // Helper to apply suggested values for a specific asset
   const applySuggestedValuesForAsset = (targetAsset: Asset) => {
@@ -306,6 +388,27 @@ export function ApplyPositionModal({
             </div>
           )}
 
+          {/* Correlation Risk Warning Banner (if high correlation with open positions) */}
+          {correlationWarningData && (
+            <div
+              className={`rounded-2xl border p-3.5 flex items-start gap-2.5 text-xs transition-colors ${
+                isDark
+                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                  : 'border-amber-300 bg-amber-50 text-amber-900'
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold">Aviso de Correlación de Cartera</p>
+                <p className="opacity-90 leading-relaxed text-[11px]">
+                  Ya tienes una posición abierta en <strong>{correlationWarningData.symbolsList}</strong> con
+                  correlación histórica alta con este activo. Estarías concentrando riesgo similar en
+                  aproximadamente <strong>{correlationWarningData.concentrationPct}%</strong> de tu capital total.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Row 1: Entry Price & Capital Allocated */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
@@ -422,6 +525,66 @@ export function ApplyPositionModal({
                 }`}
               />
             </div>
+          </div>
+
+          {/* Section: Tamaño de Posición Sugerido por Riesgo */}
+          <div
+            className={`rounded-2xl border p-3.5 space-y-2.5 transition-colors ${
+              isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-bold text-xs">
+                <Calculator className="h-3.5 w-3.5 text-blue-400" />
+                <span className={isDark ? 'text-white' : 'text-slate-900'}>
+                  Tamaño de Posición Sugerido
+                </span>
+              </div>
+
+              {/* Risk % per trade input */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Riesgo:</span>
+                <div className="flex items-center gap-0.5 bg-[#1c1c1e] border border-slate-700/80 rounded-lg px-2 py-0.5">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="100"
+                    value={riskPct}
+                    onChange={(e) => handleRiskChange(e.target.value)}
+                    className="w-9 bg-transparent text-right font-mono font-bold text-xs text-blue-400 focus:outline-none"
+                  />
+                  <span className="text-slate-400 font-mono text-xs">%</span>
+                </div>
+              </div>
+            </div>
+
+            {suggestedCapital !== null ? (
+              <div className="space-y-2 pt-1 border-t border-slate-700/30">
+                <p className={`text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'} leading-relaxed`}>
+                  Con tu capital disponible (${availableCapital}) y un riesgo del {currentRiskNum}%, el tamaño sugerido es{' '}
+                  <strong className="text-emerald-400 font-mono font-bold">{formatCurrency(suggestedCapital)}</strong>.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setCapitalAllocated(suggestedCapital.toString())}
+                  className={`flex items-center justify-center gap-1.5 w-full rounded-xl py-2 px-3 text-xs font-bold transition-all border shadow-xs active:scale-95 cursor-pointer ${
+                    isDark
+                      ? 'border-blue-500/40 bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
+                      : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                  }`}
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>Usar este monto</span>
+                </button>
+              </div>
+            ) : (
+              <div className="pt-1 border-t border-slate-700/30">
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Define un Stop Loss para calcular el tamaño de posición sugerido por riesgo.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Row 3: Entry Date */}
