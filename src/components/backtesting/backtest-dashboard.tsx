@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -30,6 +30,14 @@ interface BacktestDashboardProps {
 export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
   const { settings, accent, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
+
+  const underwaterData = useMemo(() => {
+    if (!result?.equityCurve) return [];
+    return result.equityCurve.map((point) => ({
+      ...point,
+      negativeDrawdownPct: -Math.abs(point.drawdownPct),
+    }));
+  }, [result?.equityCurve]);
 
   if (!result || result.totalTrades === 0) {
     return (
@@ -333,14 +341,15 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
 
         <div className="h-32 sm:h-40 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={result.equityCurve} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+            <AreaChart data={underwaterData} margin={{ top: 8, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#2c2c2e' : '#f1f5f9'} />
               <XAxis dataKey="date" stroke={isDark ? '#64748b' : '#94a3b8'} fontSize={9} tickLine={false} />
               <YAxis
                 stroke={isDark ? '#64748b' : '#94a3b8'}
                 fontSize={9}
                 tickLine={false}
-                tickFormatter={(val) => `-${val}%`}
+                domain={[(dataMin: number) => Math.min(-1, Math.floor(dataMin * 1.15)), 0]}
+                tickFormatter={(val) => `${val}%`}
               />
               <Tooltip
                 contentStyle={{
@@ -349,9 +358,17 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
                   borderRadius: '0.75rem',
                   fontSize: '11px',
                 }}
-                formatter={(val: any) => [`-${Number(val).toFixed(2)}%`, 'Drawdown']}
+                formatter={(val: any) => [`${Number(val).toFixed(2)}%`, 'Retroceso (Drawdown)']}
               />
-              <Area type="monotone" dataKey="drawdownPct" stroke="#ff3b30" strokeWidth={1.5} fill="#ff3b30" fillOpacity={0.2} />
+              <Area
+                type="monotone"
+                dataKey="negativeDrawdownPct"
+                stroke="#ff3b30"
+                strokeWidth={1.8}
+                fill="#ff3b30"
+                fillOpacity={0.25}
+                baseValue={0}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
