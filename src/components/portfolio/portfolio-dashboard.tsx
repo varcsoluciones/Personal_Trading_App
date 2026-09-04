@@ -293,10 +293,10 @@ export function PortfolioDashboard({
       </div>
 
       {/* 2. Consolidated Capital Summary: 4 Large KPI Cards (Global Consolidated Total) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* KPI 1: Aporte Propio Neto */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
@@ -305,13 +305,13 @@ export function PortfolioDashboard({
               <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
                 1. Aporte Propio Neto
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 font-sans">
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 font-sans">
                 <DollarSign className="h-3 w-3" />
                 <span>Depósitos - Retiros</span>
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline">
-              <span className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {formatCurrency(netContributions)}
               </span>
             </div>
@@ -331,7 +331,7 @@ export function PortfolioDashboard({
 
         {/* KPI 2: Ganancia / Pérdida en Operaciones */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
@@ -341,7 +341,7 @@ export function PortfolioDashboard({
                 2. Rendimiento en Operaciones
               </span>
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
+                className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
                   totalTradingPnl >= 0
                     ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                     : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
@@ -353,7 +353,7 @@ export function PortfolioDashboard({
             </div>
             <div className="mt-2.5 flex items-baseline">
               <span
-                className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${
+                className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${
                   totalTradingPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
               >
@@ -369,7 +369,7 @@ export function PortfolioDashboard({
 
         {/* KPI 3: Valor Total de la Cartera (Patrimonio Total) */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
             isDark
               ? 'border-slate-800/80 bg-[#1c1c1e]'
               : 'border-slate-200/80 bg-white shadow-xs'
@@ -381,7 +381,7 @@ export function PortfolioDashboard({
                 3. Valor Total de la Cartera
               </span>
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
+                className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
                   isDark
                     ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                     : 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -392,7 +392,7 @@ export function PortfolioDashboard({
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline">
-              <span className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {formatCurrency(totalPortfolioValue)}
               </span>
             </div>
@@ -405,7 +405,7 @@ export function PortfolioDashboard({
 
         {/* KPI 4: Capital Utilizado & Saldo Disponible en Efectivo */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
@@ -415,7 +415,7 @@ export function PortfolioDashboard({
                 4. Saldo Disponible en Efectivo
               </span>
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
+                className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
                   availableCash > 0
                     ? isDark
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
@@ -429,7 +429,7 @@ export function PortfolioDashboard({
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline">
-              <span className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+              <span className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
                 {formatCurrency(availableCash)}
               </span>
             </div>
