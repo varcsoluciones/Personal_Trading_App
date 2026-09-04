@@ -12,14 +12,9 @@ import {
   Plus,
   Trash2,
   Calendar,
-  DollarSign,
-  TrendingUp,
-  Coins,
-  Layers,
+  Pencil,
   Sparkles,
   Info,
-  CheckCircle2,
-  Percent,
 } from 'lucide-react';
 
 interface PositionHistoryModalProps {
@@ -36,12 +31,19 @@ export function PositionHistoryModal({
   const { settings, accent, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
   const {
+    positions,
     wallets,
     addPurchaseToPosition,
     removePurchaseFromPosition,
+    updatePurchaseLot,
     getWalletAvailableCapital,
-    openApplyModal,
   } = usePortfolioContext();
+
+  // Find the live updated position from context so changes reflect immediately
+  const livePosition = useMemo(() => {
+    if (!position) return null;
+    return positions.find((p) => p.id === position.id) || position;
+  }, [positions, position]);
 
   // Local state for inline quick add tranche
   const [isAddingLot, setIsAddingLot] = useState(false);
@@ -50,10 +52,17 @@ export function PositionHistoryModal({
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newNote, setNewNote] = useState('');
 
+  // Local state for editing an individual lot
+  const [editingLotId, setEditingLotId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState('');
+  const [editCapital, setEditCapital] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editNote, setEditNote] = useState('');
+
   const wallet = useMemo(() => {
-    if (!position) return null;
-    return wallets.find((w) => w.id === position.portfolioId) || wallets[0];
-  }, [wallets, position]);
+    if (!livePosition) return null;
+    return wallets.find((w) => w.id === livePosition.portfolioId) || wallets[0];
+  }, [wallets, livePosition]);
 
   const availableCapitalInWallet = useMemo(() => {
     if (!wallet) return 0;
@@ -62,22 +71,22 @@ export function PositionHistoryModal({
 
   // Compute detailed lots and weighted calculation
   const lots: PositionPurchaseLot[] = useMemo(() => {
-    if (!position) return [];
-    if (position.purchases && position.purchases.length > 0) {
-      return position.purchases;
+    if (!livePosition) return [];
+    if (livePosition.purchases && livePosition.purchases.length > 0) {
+      return livePosition.purchases;
     }
     // Fallback for single purchase positions
     return [
       {
-        id: `lot_${position.id}_init`,
-        date: position.entryDate,
-        price: position.entryPrice,
-        capitalAllocated: position.capitalAllocated,
-        shares: position.entryPrice > 0 ? position.capitalAllocated / position.entryPrice : 0,
+        id: `lot_${livePosition.id}_init`,
+        date: livePosition.entryDate,
+        price: livePosition.entryPrice,
+        capitalAllocated: livePosition.capitalAllocated,
+        shares: livePosition.entryPrice > 0 ? livePosition.capitalAllocated / livePosition.entryPrice : 0,
         note: 'Compra inicial',
       },
     ];
-  }, [position]);
+  }, [livePosition]);
 
   const calculation = useMemo(() => {
     return calculateWeightedAveragePosition(lots);
@@ -86,7 +95,7 @@ export function PositionHistoryModal({
   // State to toggle the mathematical formula popup/tooltip
   const [showFormulaInfo, setShowFormulaInfo] = useState(false);
 
-  if (!isOpen || !position) return null;
+  if (!isOpen || !livePosition) return null;
 
   const handleAddLotSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +113,7 @@ export function PositionHistoryModal({
     }
 
     addPurchaseToPosition(
-      position.id,
+      livePosition.id,
       {
         price: priceNum,
         capitalAllocated: capNum,
@@ -119,13 +128,63 @@ export function PositionHistoryModal({
     setNewNote('');
   };
 
-  const handleRemoveLot = (lotId: string) => {
-    if (lots.length <= 1) {
-      alert('Una posición debe conservar al menos un registro de compra.');
+  const startEditingLot = (lot: PositionPurchaseLot) => {
+    setIsAddingLot(false);
+    setEditingLotId(lot.id);
+    setEditPrice(lot.price.toString());
+    setEditCapital(lot.capitalAllocated.toString());
+    setEditDate(lot.date);
+    setEditNote(lot.note || '');
+  };
+
+  const cancelEditingLot = () => {
+    setEditingLotId(null);
+    setEditPrice('');
+    setEditCapital('');
+    setEditDate('');
+    setEditNote('');
+  };
+
+  const handleSaveEditLot = (lotId: string) => {
+    const priceNum = parseFloat(editPrice);
+    const capNum = parseFloat(editCapital);
+
+    if (isNaN(priceNum) || priceNum <= 0 || isNaN(capNum) || capNum <= 0) {
+      alert('Por favor ingresa un precio y monto válidos.');
       return;
     }
-    if (confirm('¿Deseas eliminar este lote de compra? El precio promedio ponderado se recalculará automáticamente.')) {
-      removePurchaseFromPosition(position.id, lotId);
+
+    const currentLot = lots.find((l) => l.id === lotId);
+    const currentCap = currentLot ? currentLot.capitalAllocated : 0;
+    const deltaCap = capNum - currentCap;
+
+    if (deltaCap > 0 && deltaCap > availableCapitalInWallet) {
+      alert(
+        `El incremento de capital ($${deltaCap.toFixed(2)}) supera el saldo disponible en la cartera ($${availableCapitalInWallet.toFixed(2)}).`
+      );
+      return;
+    }
+
+    updatePurchaseLot(livePosition.id, lotId, {
+      price: priceNum,
+      capitalAllocated: capNum,
+      date: editDate,
+      note: editNote.trim() || undefined,
+    });
+
+    cancelEditingLot();
+  };
+
+  const handleRemoveLot = (lotId: string) => {
+    if (lots.length <= 1) {
+      alert('Una posición debe conservar al menos un registro de compra. Para eliminar la operación por completo usa la opción de eliminar posición.');
+      return;
+    }
+    if (confirm('¿Deseas eliminar este lote de compra? El precio promedio ponderado se recalculará automáticamente con las compras restantes.')) {
+      if (editingLotId === lotId) {
+        cancelEditingLot();
+      }
+      removePurchaseFromPosition(livePosition.id, lotId);
     }
   };
 
@@ -151,21 +210,21 @@ export function PositionHistoryModal({
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-base tracking-tight">Historial de Compras & Ponderación</h3>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                    position.status === 'OPEN'
+                    livePosition.status === 'OPEN'
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                       : 'bg-slate-500/15 text-slate-400 border border-slate-500/30'
                   }`}>
-                    {position.status === 'OPEN' ? 'Posición Abierta' : 'Cerrada'}
+                    {livePosition.status === 'OPEN' ? 'Posición Abierta' : 'Cerrada'}
                   </span>
                 </div>
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Activo: <strong className={isDark ? 'text-white' : 'text-slate-900'}>{position.symbol}</strong> • Cartera: <span className="font-semibold">{wallet?.name || 'Cartera 1'}</span>
+                  Activo: <strong className={isDark ? 'text-white' : 'text-slate-900'}>{livePosition.symbol}</strong> • Cartera: <span className="font-semibold">{wallet?.name || 'Cartera 1'}</span>
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className={`rounded-full p-2 transition-colors ${
+              className={`rounded-full p-2 transition-colors cursor-pointer ${
                 isDark ? 'text-slate-400 hover:bg-[#2c2c2e] hover:text-white' : 'text-slate-500 hover:bg-slate-100'
               }`}
             >
@@ -213,7 +272,7 @@ export function PositionHistoryModal({
                         </span>
                         <button
                           onClick={() => setShowFormulaInfo(false)}
-                          className="text-slate-400 hover:text-slate-200 text-[10px]"
+                          className="text-slate-400 hover:text-slate-200 text-[10px] cursor-pointer"
                         >
                           ✕
                         </button>
@@ -289,11 +348,12 @@ export function PositionHistoryModal({
                   Histórico de Compras ({lots.length})
                 </h4>
               </div>
-              {position.status === 'OPEN' && !isAddingLot && (
+              {livePosition.status === 'OPEN' && !isAddingLot && (
                 <button
                   onClick={() => {
+                    cancelEditingLot();
                     setIsAddingLot(true);
-                    setNewPrice(position.entryPrice.toString());
+                    setNewPrice(livePosition.entryPrice.toString());
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all hover:opacity-90 cursor-pointer"
                   style={{ backgroundColor: accent.hex }}
@@ -315,12 +375,12 @@ export function PositionHistoryModal({
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold text-blue-500 flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Registrar Nueva Compra en {position.symbol}
+                    Registrar Nueva Compra en {livePosition.symbol}
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsAddingLot(false)}
-                    className="text-slate-400 hover:text-slate-200 text-xs font-medium"
+                    className="text-slate-400 hover:text-slate-200 text-xs font-medium cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -396,7 +456,7 @@ export function PositionHistoryModal({
                   <button
                     type="button"
                     onClick={() => setIsAddingLot(false)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer ${
                       isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                     }`}
                   >
@@ -404,7 +464,7 @@ export function PositionHistoryModal({
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm hover:opacity-90"
+                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm hover:opacity-90 cursor-pointer"
                     style={{ backgroundColor: accent.hex }}
                   >
                     Guardar y Recalcular Ponderado
@@ -415,65 +475,209 @@ export function PositionHistoryModal({
 
             {/* List of Lots */}
             <div className="space-y-2">
-              {calculation.lots.map((lot, idx) => (
-                <div
-                  key={lot.id}
-                  className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-                    isDark ? 'bg-[#242426] border-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-xl font-bold text-xs font-mono ${
-                      isDark ? 'bg-[#2c2c2e] text-blue-400 border border-slate-700' : 'bg-blue-100 text-blue-700 border border-blue-200'
-                    }`}>
-                      #{idx + 1}
+              {calculation.lots.map((lot, idx) => {
+                const isEditing = editingLotId === lot.id;
+
+                if (isEditing) {
+                  return (
+                    <div
+                      key={lot.id}
+                      className={`p-4 rounded-2xl border transition-all animate-fade-in ${
+                        isDark
+                          ? 'bg-[#242426] border-blue-500/50 shadow-lg shadow-blue-500/5'
+                          : 'bg-blue-50/60 border-blue-300 shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`flex h-6 w-6 items-center justify-center rounded-lg font-bold text-xs font-mono ${
+                            isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-200 text-blue-800'
+                          }`}>
+                            #{idx + 1}
+                          </div>
+                          <span className="text-xs font-bold text-blue-500 flex items-center gap-1.5">
+                            <Pencil className="h-3.5 w-3.5" />
+                            Editar Registro de Compra #{idx + 1}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={cancelEditingLot}
+                          className="text-slate-400 hover:text-slate-200 text-xs font-medium cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Precio de Compra (USD)
+                          </label>
+                          <input
+                            type="number"
+                            step="any"
+                            required
+                            value={editPrice}
+                            onChange={(e) => setEditPrice(e.target.value)}
+                            className={`w-full rounded-xl border p-2 text-xs font-mono font-bold focus:outline-none focus:ring-2 ${
+                              isDark
+                                ? 'border-slate-700 bg-[#1c1c1e] text-white focus:border-blue-500'
+                                : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Monto Invertido (USD)
+                          </label>
+                          <input
+                            type="number"
+                            step="any"
+                            required
+                            value={editCapital}
+                            onChange={(e) => setEditCapital(e.target.value)}
+                            className={`w-full rounded-xl border p-2 text-xs font-mono font-bold focus:outline-none focus:ring-2 ${
+                              isDark
+                                ? 'border-slate-700 bg-[#1c1c1e] text-white focus:border-blue-500'
+                                : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={`block text-[10px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Fecha de Compra
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={editDate}
+                            onChange={(e) => setEditDate(e.target.value)}
+                            className={`w-full rounded-xl border p-2 text-xs font-medium focus:outline-none focus:ring-2 ${
+                              isDark
+                                ? 'border-slate-700 bg-[#1c1c1e] text-white focus:border-blue-500'
+                                : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-2.5">
+                        <label className={`block text-[10px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Nota u Objetivo (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="ej. Aporte DCA, Compra en soporte, Rebalanceo..."
+                          value={editNote}
+                          onChange={(e) => setEditNote(e.target.value)}
+                          className={`w-full rounded-xl border p-2 text-xs focus:outline-none focus:ring-2 ${
+                            isDark
+                              ? 'border-slate-700 bg-[#1c1c1e] text-white focus:border-blue-500'
+                              : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={cancelEditingLot}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer ${
+                            isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                          }`}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditLot(lot.id)}
+                          className="px-4 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm hover:opacity-90 cursor-pointer"
+                          style={{ backgroundColor: accent.hex }}
+                        >
+                          Guardar Cambios
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm font-mono">
-                          ${lot.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">/ acción</span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
-                          isDark ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {lot.weightPct.toFixed(1)}% del capital
-                        </span>
+                  );
+                }
+
+                return (
+                  <div
+                    key={lot.id}
+                    className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+                      isDark ? 'bg-[#242426] border-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-xl font-bold text-xs font-mono ${
+                        isDark ? 'bg-[#2c2c2e] text-blue-400 border border-slate-700' : 'bg-blue-100 text-blue-700 border border-blue-200'
+                      }`}>
+                        #{idx + 1}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {lot.date}
-                        </span>
-                        {lot.note && <span>• {lot.note}</span>}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm font-mono">
+                            ${lot.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">/ acción</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                            isDark ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {lot.weightPct.toFixed(1)}% del capital
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {lot.date}
+                          </span>
+                          {lot.note && <span>• {lot.note}</span>}
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3">
+                      <div className="text-right">
+                        <div className="font-bold text-xs font-mono">
+                          ${lot.capitalAllocated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {lot.shares.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} uds
+                        </div>
+                      </div>
+
+                      {livePosition.status === 'OPEN' && (
+                        <div className="flex items-center gap-1 pl-2 border-l border-slate-700/30">
+                          <button
+                            onClick={() => startEditingLot(lot)}
+                            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                              isDark ? 'text-slate-400 hover:text-blue-400 hover:bg-blue-500/10' : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
+                            }`}
+                            title="Editar esta compra"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+
+                          {calculation.lots.length > 1 && (
+                            <button
+                              onClick={() => handleRemoveLot(lot.id)}
+                              className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                                isDark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+                              }`}
+                              title="Eliminar este lote de compra"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-4">
-                    <div className="text-right">
-                      <div className="font-bold text-xs font-mono">
-                        ${lot.capitalAllocated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
-                        {lot.shares.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} uds
-                      </div>
-                    </div>
-
-                    {position.status === 'OPEN' && calculation.lots.length > 1 && (
-                      <button
-                        onClick={() => handleRemoveLot(lot.id)}
-                        className={`p-2 rounded-xl transition-colors ${
-                          isDark ? 'text-slate-500 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
-                        }`}
-                        title="Eliminar este lote de compra"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -483,7 +687,7 @@ export function PositionHistoryModal({
           isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-100 bg-slate-50'
         }`}>
           <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Posición ID: <code className="font-mono text-[10px]">{position.id}</code>
+            Posición ID: <code className="font-mono text-[10px]">{livePosition.id}</code>
           </span>
           <button
             onClick={onClose}
