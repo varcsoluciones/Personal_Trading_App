@@ -28,6 +28,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trophy,
+  Filter,
 } from 'lucide-react';
 import { analyzeAsset } from '@/lib/quant/trend-analyzer';
 import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
@@ -184,36 +185,31 @@ export function OpportunityScreener({
       .slice(0, 3);
   }, [dynamicAssets]);
 
-  // Categories Definition
-  const categories: { id: AssetCategory | 'all'; label: string; icon: any; count: number }[] = [
+// Categories Definition
+  const categories: { id: AssetCategory | 'all'; label: string; count: number }[] = [
     {
       id: 'all',
       label: 'Todas las Oportunidades',
-      icon: Sparkles,
       count: dynamicAssets.length,
     },
     {
       id: 'trend',
       label: 'Tendencia Fuerte',
-      icon: TrendingUp,
       count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'trend').length,
     },
     {
       id: 'volatile',
       label: 'Alta Volatilidad / Oportunidades',
-      icon: Flame,
       count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'volatile').length,
     },
     {
       id: 'range',
       label: 'Operaciones en Rango',
-      icon: Activity,
       count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'range').length,
     },
     {
       id: 'stable',
       label: 'Más Estable / Conservador',
-      icon: ShieldCheck,
       count: dynamicAssets.filter((a) => a.analysis?.opportunityCategory === 'stable').length,
     },
   ];
@@ -353,35 +349,60 @@ export function OpportunityScreener({
         </div>
       </div>
 
-      {/* 2. CATEGORY PILLS & STREAMLINED CONTROLS HEADER */}
+      {/* 2. CATEGORY SELECTOR & STREAMLINED CONTROLS HEADER */}
       <div
         className={`rounded-3xl border p-5 shadow-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
-        {/* ROW 1: Title, Ranking Mode & View Mode Switcher */}
+        {/* ROW 1: Title, Category Dropdown, Ranking Mode & View Mode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
-              <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <h3 className={`text-base font-bold font-sans ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {rankingMode === 'historical'
                   ? 'Activos con Comportamiento Histórico Más Consistente'
                   : 'Radar de Oportunidades & Estrategias'}
               </h3>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${accent.tintBgClass} ${accent.textClass}`}>
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold font-mono ${accent.tintBgClass} ${accent.textClass}`}>
                 {filteredAssets.length} encontrados
               </span>
             </div>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs font-sans mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               {rankingMode === 'historical'
                 ? 'Basado en desempeño histórico simulado fuera de muestra (Walk-Forward). No garantiza resultados futuros.'
                 : 'Filtra por estilo de mercado y umbral de calidad cuantitativa'}
             </p>
           </div>
 
-          {/* Ranking Mode, View Mode & Advanced Filters Toggle */}
+          {/* Unified Controls Line */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* 1. Ranking Mode Switcher with Tooltip for Historical Mode */}
+            {/* 1. Category Dropdown Selector */}
+            <div
+              className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 transition-colors ${
+                isDark ? 'border-slate-800 bg-[#2c2c2e]/70' : 'border-slate-200 bg-slate-100'
+              }`}
+            >
+              <Filter className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => handleSetCategory(e.target.value as AssetCategory | 'all')}
+                className={`bg-transparent text-xs font-bold font-sans focus:outline-none cursor-pointer pr-1 ${
+                  isDark
+                    ? 'text-white [&>option]:bg-[#1c1c1e] [&>option]:text-white'
+                    : 'text-slate-800 [&>option]:bg-white [&>option]:text-slate-900'
+                }`}
+                title="Filtrar por categoría de oportunidad"
+              >
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label} ({cat.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2. Ranking Mode Switcher with Tooltip for Historical Mode */}
             <div
               className={`flex items-center gap-1 rounded-2xl border p-1 ${
                 isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
@@ -390,7 +411,7 @@ export function OpportunityScreener({
               <button
                 type="button"
                 onClick={() => handleSetRankingMode('opportunity')}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer ${
                   rankingMode === 'opportunity'
                     ? isDark
                       ? 'bg-[#1c1c1e] text-white shadow-xs'
@@ -407,7 +428,7 @@ export function OpportunityScreener({
               <button
                 type="button"
                 onClick={() => handleSetRankingMode('historical')}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer ${
                   rankingMode === 'historical'
                     ? isDark
                       ? 'bg-[#1c1c1e] text-white shadow-xs'
@@ -428,7 +449,7 @@ export function OpportunityScreener({
               </button>
             </div>
 
-            {/* 2. Grid vs Table View Switcher */}
+            {/* 3. Grid vs Table View Switcher */}
             <div
               className={`flex items-center gap-1 rounded-2xl border p-1 ${
                 isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'
@@ -437,7 +458,7 @@ export function OpportunityScreener({
               <button
                 type="button"
                 onClick={() => handleToggleViewMode('grid')}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer ${
                   viewMode === 'grid'
                     ? isDark
                       ? 'bg-[#1c1c1e] text-white shadow-xs'
@@ -454,7 +475,7 @@ export function OpportunityScreener({
               <button
                 type="button"
                 onClick={() => handleToggleViewMode('table')}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer ${
                   viewMode === 'table'
                     ? isDark
                       ? 'bg-[#1c1c1e] text-white shadow-xs'
@@ -470,11 +491,11 @@ export function OpportunityScreener({
               </button>
             </div>
 
-            {/* 3. Advanced Filters Toggle Button (same visual language as strategy-controls.tsx) */}
+            {/* 4. Advanced Filters Toggle Button */}
             <button
               type="button"
               onClick={() => updateSettings({ screenerAdvancedFiltersOpen: !isAdvancedFiltersOpen })}
-              className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer ${
                 isAdvancedFiltersOpen
                   ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
                   : isDark
@@ -489,50 +510,12 @@ export function OpportunityScreener({
           </div>
         </div>
 
-        {/* ROW 2: Categories Bar */}
-        <div className="mt-5 flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1.5">
-          {categories.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => handleSetCategory(cat.id)}
-                className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all ${
-                  isSelected
-                    ? isDark
-                      ? 'border-blue-500 bg-[#2c2c2e] text-white shadow-xs ring-1 ring-blue-500'
-                      : 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs ring-1 ring-blue-500'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:text-slate-900'
-                }`}
-              >
-                <Icon className={`h-3.5 w-3.5 ${isSelected ? 'text-blue-500' : ''}`} />
-                <span>{cat.label}</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                    isSelected
-                      ? 'bg-blue-500 text-white'
-                      : isDark
-                      ? 'bg-slate-800 text-slate-400'
-                      : 'bg-slate-200 text-slate-600'
-                  }`}
-                >
-                  {cat.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ROW 3: Collapsible Advanced Filters (Score Threshold Filter) */}
+        {/* Collapsible Advanced Filters (Score Threshold Filter) */}
         {isAdvancedFiltersOpen && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800/40 text-xs animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-2">
               <Sliders className="h-3.5 w-3.5 text-blue-500" />
-              <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <span className={`font-semibold font-sans ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 Filtro de Score Técnico Mínimo:
               </span>
             </div>
@@ -546,7 +529,7 @@ export function OpportunityScreener({
                   key={item.val}
                   type="button"
                   onClick={() => handleSetMinScore(item.val)}
-                  className={`rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
+                  className={`rounded-xl border px-3 py-1 text-xs font-semibold font-sans transition-all cursor-pointer ${
                     minScore === item.val
                       ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} font-bold`
                       : isDark
