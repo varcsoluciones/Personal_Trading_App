@@ -69,12 +69,12 @@ export function InfoTooltip({
           }`}
         >
           {title && (
-            <div className="flex items-center gap-1.5 mb-1 text-blue-500 font-bold text-xs">
+            <div className="flex items-center gap-1.5 mb-1.5 text-blue-500 font-bold text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
               <span>{title}</span>
             </div>
           )}
-          <p className="text-xs leading-relaxed opacity-90 font-medium">
+          <p className="text-xs leading-relaxed opacity-90 font-medium whitespace-pre-line">
             {text}
           </p>
         </div>

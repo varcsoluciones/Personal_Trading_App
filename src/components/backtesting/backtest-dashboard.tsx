@@ -253,8 +253,14 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
       >
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div>
-            <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Curva de Capital (Equity Curve) vs. Buy & Hold
+            <h4 className={`text-sm font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <span>Curva de Capital (Equity Curve) vs. Buy & Hold</span>
+              <InfoTooltip
+                title="Cómo interpretar la Curva de Capital"
+                text={`• Línea de Color (Estrategia Quant): Muestra el crecimiento real de tu balance ejecutando entradas y salidas automáticas con Stop Loss, Take Profit y deducción de comisiones de Interactive Brokers.\n• Línea Gris Punteada (Buy & Hold): Muestra el resultado de comprar el activo el primer día y mantenerlo sin vender.\n• Objetivo: Superar o igualar la curva gris con menor volatilidad y protegiendo el capital en caídas.`}
+                align="left"
+                position="bottom"
+              />
             </h4>
             <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Evolución del balance con capital inicial y comisiones de Interactive Brokers
@@ -331,8 +337,14 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
         }`}
       >
         <div className="mb-3">
-          <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-            Perfil de Riesgo: Caídas Submarinas (Drawdown %)
+          <h4 className={`text-sm font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <span>Perfil de Riesgo: Caídas Submarinas (Drawdown %)</span>
+            <InfoTooltip
+              title="Cómo interpretar el Perfil de Riesgo (Drawdown)"
+              text={`• Línea 0% (Superficie): Representa el récord histórico máximo de capital de tu cuenta (All-Time High).\n• Valles Rojos hacia abajo: Indican el porcentaje de retroceso temporal del balance desde su mejor momento hasta recuperarse.\n• Qué buscar: Valles poco profundos (-3% a -7%) y recuperaciones rápidas a la superficie (0%), demostrando que el Stop Loss protege tu dinero de caídas severas del mercado.`}
+              align="left"
+              position="bottom"
+            />
           </h4>
           <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             Porcentaje de retroceso desde el máximo histórico del balance en cada momento
