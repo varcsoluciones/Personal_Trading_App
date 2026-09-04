@@ -296,50 +296,50 @@ export function PortfolioDashboard({
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* KPI 1: Aporte Propio Neto */}
         <div
-          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
           <div>
-            <div className="flex items-center justify-between gap-2 min-h-[24px]">
-              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <p className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 1. Aporte Propio Neto
-              </span>
+              </p>
               <span className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 font-sans">
                 <DollarSign className="h-3 w-3" />
                 <span>Depósitos - Retiros</span>
               </span>
             </div>
-            <div className="mt-2.5 flex items-baseline">
-              <span className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className="mt-2 sm:mt-2.5 flex items-baseline">
+              <span className={`font-mono text-base sm:text-3xl font-bold sm:font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {formatCurrency(netContributions)}
               </span>
             </div>
           </div>
-          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Movimientos: <strong className="font-mono font-bold text-slate-200">{capitalMovements.length}</strong></span>
+          <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Mov: <strong className="font-mono font-bold text-slate-200">{capitalMovements.length}</strong></span>
             <button
               type="button"
               onClick={() => setIsMovementsExpanded(!isMovementsExpanded)}
-              className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5 text-xs font-bold cursor-pointer font-sans"
+              className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5 text-[10px] sm:text-xs font-bold cursor-pointer font-sans"
             >
-              <span>{isMovementsExpanded ? 'Ocultar historial' : 'Ver movimientos'}</span>
-              {isMovementsExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              <span>{isMovementsExpanded ? 'Ocultar' : 'Historial'}</span>
+              {isMovementsExpanded ? <ChevronUp className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> : <ChevronDown className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
             </button>
           </div>
         </div>
 
         {/* KPI 2: Ganancia / Pérdida en Operaciones */}
         <div
-          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
           <div>
-            <div className="flex items-center justify-between gap-2 min-h-[24px]">
-              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
-                2. Rendimiento en Operaciones
-              </span>
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <p className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                2. Rendimiento
+              </p>
               <span
                 className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
                   totalTradingPnl >= 0
@@ -351,9 +351,9 @@ export function PortfolioDashboard({
                 <span>{totalTradingPnl >= 0 ? '+' : ''}{returnOnCapitalPct.toFixed(2)}% retorno</span>
               </span>
             </div>
-            <div className="mt-2.5 flex items-baseline">
+            <div className="mt-2 sm:mt-2.5 flex items-baseline">
               <span
-                className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${
+                className={`font-mono text-base sm:text-3xl font-bold sm:font-black tracking-tight ${
                   totalTradingPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}
               >
@@ -361,25 +361,25 @@ export function PortfolioDashboard({
               </span>
             </div>
           </div>
-          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Realizado: <strong className={`font-mono font-bold ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl)}</strong></span>
-            <span>Flotante: <strong className={`font-mono font-bold ${unrealizedPnlTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
+          <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Realiz: <strong className={`font-mono font-bold ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl)}</strong></span>
+            <span>Flot: <strong className={`font-mono font-bold ${unrealizedPnlTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
           </div>
         </div>
 
         {/* KPI 3: Valor Total de la Cartera (Patrimonio Total) */}
         <div
-          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark
               ? 'border-slate-800/80 bg-[#1c1c1e]'
               : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
           <div>
-            <div className="flex items-center justify-between gap-2 min-h-[24px]">
-              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
-                3. Valor Total de la Cartera
-              </span>
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <p className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                3. Valor Cartera
+              </p>
               <span
                 className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
                   isDark
@@ -391,29 +391,29 @@ export function PortfolioDashboard({
                 <span>Patrimonio Total</span>
               </span>
             </div>
-            <div className="mt-2.5 flex items-baseline">
-              <span className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className="mt-2 sm:mt-2.5 flex items-baseline">
+              <span className={`font-mono text-base sm:text-3xl font-bold sm:font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {formatCurrency(totalPortfolioValue)}
               </span>
             </div>
           </div>
-          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Efectivo: <strong className="font-mono font-bold text-emerald-400">{formatCurrency(availableCash)}</strong></span>
-            <span>En activos: <strong className={`font-mono font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{formatCurrency(openPositionsMarketValue)}</strong></span>
+          <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Cash: <strong className="font-mono font-bold text-emerald-400">{formatCurrency(availableCash)}</strong></span>
+            <span>Activos: <strong className={`font-mono font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{formatCurrency(openPositionsMarketValue)}</strong></span>
           </div>
         </div>
 
         {/* KPI 4: Capital Utilizado & Saldo Disponible en Efectivo */}
         <div
-          className={`relative rounded-3xl border p-3 sm:p-5 flex flex-col justify-between transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
           <div>
-            <div className="flex items-center justify-between gap-2 min-h-[24px]">
-              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
-                4. Saldo Disponible en Efectivo
-              </span>
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <p className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                4. Saldo Efectivo
+              </p>
               <span
                 className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
                   availableCash > 0
@@ -428,14 +428,14 @@ export function PortfolioDashboard({
                 <span>{availableCashPct.toFixed(0)}% libre</span>
               </span>
             </div>
-            <div className="mt-2.5 flex items-baseline">
-              <span className={`font-mono text-lg sm:text-3xl font-black tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+            <div className="mt-2 sm:mt-2.5 flex items-baseline">
+              <span className={`font-mono text-base sm:text-3xl font-bold sm:font-black tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
                 {formatCurrency(availableCash)}
               </span>
             </div>
           </div>
-          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>En órdenes: <strong className="font-mono font-bold text-amber-400">{formatCurrency(usedCapital)}</strong></span>
+          <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Órdenes: <strong className="font-mono font-bold text-amber-400">{formatCurrency(usedCapital)}</strong></span>
             <span>Flotante: <strong className={`font-mono font-bold ${unrealizedPnlTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
           </div>
         </div>

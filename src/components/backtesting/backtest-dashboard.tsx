@@ -119,127 +119,135 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
       </div>
 
       {/* 4 TOP PERFORMANCE METRICS (RESPONSIVE GRID - RISK FIRST) */}
-      <div className="relative z-20 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="relative z-20 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* KPI 1: Max Drawdown (Riesgo Controlado) */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              1. Caída Máxima (DD)
-            </span>
-            <InfoTooltip
-              text="Pérdida máxima porcentual desde el punto más alto del balance en toda la simulación."
-              title="Max Drawdown"
-            />
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                1. Caída Máxima
+              </span>
+              <InfoTooltip
+                text="Pérdida máxima porcentual desde el punto más alto del balance en toda la simulación."
+                title="Max Drawdown"
+              />
+            </div>
+            <div className="mt-2 sm:mt-2.5 flex items-baseline gap-1.5">
+              <span className="font-mono text-base sm:text-3xl font-bold sm:font-black text-rose-500">
+                -{result.maxDrawdown.toFixed(2)}%
+              </span>
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="font-mono text-xl sm:text-3xl font-black text-rose-500">
-              -{result.maxDrawdown.toFixed(2)}%
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Drawdown $: <strong className="font-mono">-{formatCurrency(result.maxDrawdownUSD)}</strong></span>
+          <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>DD $: <strong className="font-mono font-bold text-slate-200">-{formatCurrency(result.maxDrawdownUSD)}</strong></span>
           </div>
         </div>
 
         {/* KPI 2: Win Rate */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              2. Tasa de Acierto
-            </span>
-            <InfoTooltip
-              text="Porcentaje de operaciones cerradas con ganancia neta positiva."
-              title="Win Rate"
-            />
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                2. Tasa Acierto
+              </span>
+              <InfoTooltip
+                text="Porcentaje de operaciones cerradas con ganancia neta positiva."
+                title="Win Rate"
+              />
+            </div>
+            <div className="mt-2 sm:mt-2.5 flex items-baseline gap-1.5">
+              <span
+                className={`font-mono text-base sm:text-3xl font-bold sm:font-black ${
+                  result.winRate >= 50 ? 'text-emerald-500' : 'text-amber-500'
+                }`}
+              >
+                {result.winRate.toFixed(1)}%
+              </span>
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span
-              className={`font-mono text-xl sm:text-3xl font-black ${
-                result.winRate >= 50 ? 'text-emerald-500' : 'text-amber-500'
-              }`}
-            >
-              {result.winRate.toFixed(1)}%
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Trades: <strong className="font-mono">{result.totalTrades}</strong></span>
-            <span className="text-emerald-500 font-semibold">{result.winningTrades}W / {result.losingTrades}L</span>
+          <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Trades: <strong className="font-mono font-bold">{result.totalTrades}</strong></span>
+            <span className="text-emerald-500 font-bold">{result.winningTrades}W/{result.losingTrades}L</span>
           </div>
         </div>
 
         {/* KPI 3: Retorno Total Neto de Estrategia */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              3. Retorno Estrategia
-            </span>
-            <InfoTooltip
-              text="Rendimiento porcentual neto obtenido tras descontar todas las comisiones de compra/venta."
-              title="Net Profit %"
-            />
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                3. Retorno Neto
+              </span>
+              <InfoTooltip
+                text="Rendimiento porcentual neto obtenido tras descontar todas las comisiones de compra/venta."
+                title="Net Profit %"
+              />
+            </div>
+            <div className="mt-2 sm:mt-2.5 flex flex-wrap items-baseline gap-1.5">
+              <span
+                className={`font-mono text-base sm:text-3xl font-bold sm:font-black ${
+                  isNetProfitPositive ? 'text-emerald-500' : 'text-rose-500'
+                }`}
+              >
+                {isNetProfitPositive ? '+' : ''}{result.totalNetProfitPct.toFixed(2)}%
+              </span>
+              <span className={`text-[10px] sm:text-[11px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                ({isNetProfitPositive ? '+' : ''}{formatCurrency(result.totalNetProfit)})
+              </span>
+            </div>
           </div>
-          <div className="mt-2 flex flex-wrap items-baseline gap-1.5">
-            <span
-              className={`font-mono text-xl sm:text-3xl font-black ${
-                isNetProfitPositive ? 'text-emerald-500' : 'text-rose-500'
-              }`}
-            >
-              {isNetProfitPositive ? '+' : ''}{result.totalNetProfitPct.toFixed(2)}%
-            </span>
-            <span className={`text-[11px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              ({isNetProfitPositive ? '+' : ''}{formatCurrency(result.totalNetProfit)})
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] sm:text-xs">
+          <div className="mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs">
             <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
               B&H: {result.buyAndHoldProfitPct.toFixed(1)}%
             </span>
             <span
-              className={`rounded-full px-1.5 py-0.2 text-[9px] font-bold ${
+              className={`rounded-full px-1.5 py-0.2 text-[8px] sm:text-[9px] font-bold ${
                 isStrategyWinner
                   ? 'bg-emerald-500/15 text-emerald-500'
                   : isDark ? 'bg-[#2c2c2e] text-slate-400' : 'bg-slate-100 text-slate-600'
               }`}
             >
-              {isStrategyWinner ? '¡Supera B&H!' : 'Defensiva'}
+              {isStrategyWinner ? 'Supera B&H' : 'Defensiva'}
             </span>
           </div>
         </div>
 
         {/* KPI 4: Factor de Beneficio */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-2xl sm:rounded-3xl border p-2.5 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              4. Factor de Beneficio
-            </span>
-            <InfoTooltip
-              text="Ganancias brutas divididas entre pérdidas brutas (> 1.5 es un excelente sistema cuantitativo)."
-              title="Profit Factor"
-            />
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[20px] sm:min-h-[24px]">
+              <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                4. Profit Factor
+              </span>
+              <InfoTooltip
+                text="Ganancias brutas divididas entre pérdidas brutas (> 1.5 es un excelente sistema cuantitativo)."
+                title="Profit Factor"
+              />
+            </div>
+            <div className="mt-2 sm:mt-2.5 flex items-baseline gap-1.5">
+              <span className={`font-mono text-base sm:text-3xl font-bold sm:font-black ${accent.textClass}`}>
+                {result.profitFactor.toFixed(2)}x
+              </span>
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className={`font-mono text-xl sm:text-3xl font-black ${accent.textClass}`}>
-              {result.profitFactor.toFixed(2)}x
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Comisiones: <strong className="font-mono">-{formatCurrency(result.totalFeesPaid)}</strong></span>
+          <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Comis: <strong className="font-mono">-{formatCurrency(result.totalFeesPaid)}</strong></span>
             <span className="text-emerald-500 font-bold">R:B 1:{result.riskRewardRatio.toFixed(1)}</span>
           </div>
         </div>
