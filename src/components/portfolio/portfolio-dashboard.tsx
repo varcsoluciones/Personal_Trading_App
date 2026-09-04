@@ -96,6 +96,18 @@ export function PortfolioDashboard({
   // Total Current Capital
   const totalCapital = netContributions + totalTradingPnl;
 
+  // Capital currently utilized in OPEN positions
+  const usedCapital = useMemo(() => {
+    return openPositions.reduce((acc, pos) => acc + (pos.capitalAllocated || 0), 0);
+  }, [openPositions]);
+
+  // Available Capital for new trades
+  const availableCapital = Math.max(0, totalCapital - usedCapital);
+
+  // Capital utilization percentages
+  const usedCapitalPct = totalCapital > 0 ? (usedCapital / totalCapital) * 100 : 0;
+  const availableCapitalPct = totalCapital > 0 ? (availableCapital / totalCapital) * 100 : 0;
+
   // Trading Return % on Net Contributions
   const returnOnCapitalPct =
     netContributions > 0 ? (totalTradingPnl / netContributions) * 100 : 0;
@@ -174,8 +186,8 @@ export function PortfolioDashboard({
         </div>
       </div>
 
-      {/* 2. Capital Summary 3 KPIs (Same style as Backtest KPIs) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
+      {/* 2. Capital Summary 4 KPIs (4 Viñetas de Resumen Financiero) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         {/* KPI 1: Aporte Propio Neto */}
         <div
           className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
@@ -269,6 +281,44 @@ export function PortfolioDashboard({
           <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <span>Posiciones activas: <strong className="font-mono text-blue-500">{openPositions.length}</strong></span>
             <span>Cerradas: <strong className="font-mono">{closedPositions.length}</strong></span>
+          </div>
+        </div>
+
+        {/* KPI 4: Capital Utilizado & Saldo Disponible */}
+        <div
+          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              4. Utilizado vs Disponible
+            </span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                availableCapital > 0
+                  ? isDark
+                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : isDark
+                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }`}
+            >
+              {availableCapitalPct.toFixed(0)}% libre
+            </span>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className={`font-mono text-2xl sm:text-3xl font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+              {formatCurrency(availableCapital)}
+            </span>
+            <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              disponible
+            </span>
+          </div>
+          <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>En órdenes: <strong className="font-mono text-amber-500">{formatCurrency(usedCapital)}</strong></span>
+            <span>Uso: <strong className="font-mono">{usedCapitalPct.toFixed(1)}%</strong></span>
           </div>
         </div>
       </div>
