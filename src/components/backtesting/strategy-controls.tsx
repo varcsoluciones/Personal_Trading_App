@@ -247,28 +247,41 @@ export function StrategyControls({
       {/* ADVANCED CUSTOM CONTROLS DRAWER */}
       {isAdvanced && (
         <div
-          className={`mt-5 rounded-2xl border p-4 sm:p-5 transition-all animate-fade-in ${
-            isDark ? 'border-slate-700/80 bg-[#252528]' : 'border-slate-200 bg-slate-50/90 shadow-inner'
+          className={`mt-5 rounded-3xl border p-4 sm:p-5 transition-all animate-fade-in ${
+            isDark ? 'border-slate-800 bg-[#252528]/80' : 'border-slate-200 bg-slate-50/80 shadow-inner'
           }`}
         >
-          <div className="flex items-center justify-between border-b pb-3 mb-4 border-slate-700/40">
-            <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Parámetros Cuantitativos Manuales
-            </h4>
-            <span className="text-[11px] text-slate-400 font-mono">
-              Los cambios recalculan instantáneamente la simulación
+          <div className="flex items-center justify-between border-b pb-3 mb-4 border-slate-700/30">
+            <div>
+              <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                Parámetros Cuantitativos Manuales
+              </h4>
+              <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Ajusta las variables de entrada y salida para calibrar la estrategia
+              </p>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+              Recálculo instantáneo
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
             {/* 1. RSI Period */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Periodo RSI:</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Periodo RSI
+                  </span>
                   <InfoTooltip text="Número de velas usadas para calcular el Relative Strength Index." title="Periodo RSI" />
                 </div>
-                <span className="font-mono font-bold text-purple-500">{config.rsiPeriod} velas</span>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg border bg-blue-500/15 text-blue-400 border-blue-500/30">
+                  {config.rsiPeriod} velas
+                </span>
               </div>
               <input
                 type="range"
@@ -277,23 +290,31 @@ export function StrategyControls({
                 step={1}
                 value={config.rsiPeriod}
                 onChange={(e) => onChange({ rsiPeriod: Number(e.target.value) })}
-                className="w-full accent-purple-500 cursor-pointer"
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
               />
-              <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className={`flex justify-between text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>7 (Rápido)</span>
-                <span>14 (Estándar)</span>
+                <span className="text-blue-500/80 font-bold">14 (Estándar)</span>
                 <span>21 (Lento)</span>
               </div>
             </div>
 
             {/* 2. RSI Oversold */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Umbral Sobrevenda (Compra):</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Sobrevenda (Compra)
+                  </span>
                   <InfoTooltip text="Nivel de RSI por debajo del cual se considera una oportunidad de rebote alcista." title="Umbral Sobrevenda" />
                 </div>
-                <span className="font-mono font-bold text-emerald-500">&lt; {config.rsiOversold}</span>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg border bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                  &lt; {config.rsiOversold}
+                </span>
               </div>
               <input
                 type="range"
@@ -302,23 +323,31 @@ export function StrategyControls({
                 step={1}
                 value={config.rsiOversold}
                 onChange={(e) => onChange({ rsiOversold: Number(e.target.value) })}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-emerald-500"
               />
-              <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className={`flex justify-between text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>20 (Extremo)</span>
-                <span>38 (Recomendado)</span>
+                <span className="text-emerald-500/80 font-bold">38 (Recomendado)</span>
                 <span>45 (Flexible)</span>
               </div>
             </div>
 
             {/* 3. RSI Overbought */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Umbral Sobrecompra (Cierre):</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Sobrecompra (Cierre)
+                  </span>
                   <InfoTooltip text="Nivel de RSI a partir del cual el activo se considera agotado y se toma ganancia." title="Umbral Sobrecompra" />
                 </div>
-                <span className="font-mono font-bold text-rose-500">&gt; {config.rsiOverbought}</span>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg border bg-rose-500/15 text-rose-400 border-rose-500/30">
+                  &gt; {config.rsiOverbought}
+                </span>
               </div>
               <input
                 type="range"
@@ -327,23 +356,31 @@ export function StrategyControls({
                 step={1}
                 value={config.rsiOverbought}
                 onChange={(e) => onChange({ rsiOverbought: Number(e.target.value) })}
-                className="w-full accent-rose-500 cursor-pointer"
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
               />
-              <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className={`flex justify-between text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>60 (Pronto)</span>
-                <span>70 (Estándar)</span>
+                <span className="text-rose-500/80 font-bold">70 (Estándar)</span>
                 <span>85 (Extremo)</span>
               </div>
             </div>
 
             {/* 4. Fast EMA */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>EMA Rápida (Gatillo Entrada):</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    EMA Rápida (Entrada)
+                  </span>
                   <InfoTooltip text="Media móvil exponencial de reacción rápida (suele ser 20 periodos)." title="EMA Rápida" />
                 </div>
-                <span className={`font-mono font-bold ${accent.textClass}`}>EMA {config.emaFastPeriod}</span>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg border bg-blue-500/15 text-blue-400 border-blue-500/30">
+                  EMA {config.emaFastPeriod}
+                </span>
               </div>
               <input
                 type="range"
@@ -352,23 +389,31 @@ export function StrategyControls({
                 step={1}
                 value={config.emaFastPeriod}
                 onChange={(e) => onChange({ emaFastPeriod: Number(e.target.value) })}
-                className="w-full cursor-pointer"
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-500"
               />
-              <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className={`flex justify-between text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>9</span>
-                <span>20 (Defecto)</span>
+                <span className="text-blue-500/80 font-bold">20 (Defecto)</span>
                 <span>30</span>
               </div>
             </div>
 
             {/* 5. Slow EMA */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>EMA Lenta (Filtro Tendencia):</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    EMA Lenta (Tendencia)
+                  </span>
                   <InfoTooltip text="Media móvil de tendencia base (suele ser 50 periodos). Filtra operaciones contra-tendencia." title="EMA Lenta" />
                 </div>
-                <span className="font-mono font-bold text-orange-500">EMA {config.emaSlowPeriod}</span>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg border bg-amber-500/15 text-amber-400 border-amber-500/30">
+                  EMA {config.emaSlowPeriod}
+                </span>
               </div>
               <input
                 type="range"
@@ -377,23 +422,31 @@ export function StrategyControls({
                 step={5}
                 value={config.emaSlowPeriod}
                 onChange={(e) => onChange({ emaSlowPeriod: Number(e.target.value) })}
-                className="w-full accent-orange-500 cursor-pointer"
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-amber-500"
               />
-              <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className={`flex justify-between text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>30</span>
-                <span>50 (Defecto)</span>
+                <span className="text-amber-500/80 font-bold">50 (Defecto)</span>
                 <span>100</span>
               </div>
             </div>
 
             {/* 6. Stop Loss % */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Stop Loss %:</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Stop Loss %
+                  </span>
                   <InfoTooltip text="Porcentaje máximo de pérdida tolerada por operación para cortar pérdidas." title="Stop Loss" />
                 </div>
-                <span className="font-mono font-bold text-rose-500">-{config.stopLossPct}%</span>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg border bg-rose-500/15 text-rose-400 border-rose-500/30">
+                  -{config.stopLossPct}%
+                </span>
               </div>
               <input
                 type="range"
@@ -402,23 +455,31 @@ export function StrategyControls({
                 step={0.5}
                 value={config.stopLossPct}
                 onChange={(e) => onChange({ stopLossPct: Number(e.target.value) })}
-                className="w-full accent-rose-500 cursor-pointer"
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-rose-500"
               />
-              <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className={`flex justify-between text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>-1.0% (Ceñido)</span>
-                <span>-3.5% (Equilibrado)</span>
+                <span className="text-rose-500/80 font-bold">-3.5% (Equilibrado)</span>
                 <span>-10.0% (Amplio)</span>
               </div>
             </div>
 
             {/* 7. Take Profit Ratio */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1">
-                  <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Multiplicador Take Profit (R:R):</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Ratio Take Profit (R:R)
+                  </span>
                   <InfoTooltip text="Ratio matemática de ganancia respecto al riesgo (1:2.2 significa ganar $2.20 por cada $1 arriesgado)." title="Multiplicador Take Profit" />
                 </div>
-                <span className="font-mono font-bold text-emerald-500">1 : {config.takeProfitRatio}x</span>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg border bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                  1 : {config.takeProfitRatio}x
+                </span>
               </div>
               <input
                 type="range"
@@ -427,28 +488,38 @@ export function StrategyControls({
                 step={0.1}
                 value={config.takeProfitRatio}
                 onChange={(e) => onChange({ takeProfitRatio: Number(e.target.value) })}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-emerald-500"
               />
-              <div className={`flex justify-between text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className={`flex justify-between text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 <span>1:1.5</span>
-                <span>1:2.2 (Recomendado)</span>
+                <span className="text-emerald-500/80 font-bold">1:2.2 (Recomendado)</span>
                 <span>1:4.0</span>
               </div>
             </div>
 
             {/* 8. Initial Capital */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Capital Inicial Simulado:</span>
-                <span className={`font-mono font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(config.initialCapital, 0)}</span>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/90 bg-white shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Capital Inicial Simulado
+                </span>
+                <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-lg border ${
+                  isDark ? 'bg-slate-800 text-white border-slate-700' : 'bg-slate-100 text-slate-900 border-slate-300'
+                }`}>
+                  {formatCurrency(config.initialCapital, 0)}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 pt-0.5">
                 {[500, 1000, 5000, 10000].map((cap) => (
                   <button
                     key={cap}
                     type="button"
                     onClick={() => onChange({ initialCapital: cap })}
-                    className={`flex-1 rounded-2xl border py-1.5 text-xs font-mono font-bold transition-all ${
+                    className={`flex-1 rounded-xl border py-1.5 text-xs font-mono font-bold transition-all cursor-pointer ${
                       config.initialCapital === cap
                         ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass} shadow-xs`
                         : isDark
@@ -460,52 +531,55 @@ export function StrategyControls({
                   </button>
                 ))}
               </div>
+              <div className={`text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                Base para cálculo de curva de capital
+              </div>
             </div>
 
             {/* 9. Broker Cost Model (Interactive Brokers) */}
             <div
-              className={`flex flex-col justify-center rounded-3xl border p-3.5 ${
-                isDark ? 'border-indigo-500/20 bg-indigo-950/20' : 'border-indigo-200 bg-indigo-50/70'
+              className={`rounded-2xl border p-3.5 space-y-2.5 transition-all ${
+                isDark ? 'border-indigo-500/20 bg-[#1c1c1e]' : 'border-indigo-200/90 bg-white shadow-xs'
               }`}
             >
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-indigo-500">
                   <ShieldCheck className="h-4 w-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider">Costos Interactive Brokers</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">Costos Broker (IBKR)</span>
                 </div>
-                <span className="rounded-lg bg-indigo-500/15 border border-indigo-500/30 px-1.5 py-0.2 text-[9px] font-bold text-indigo-400">
-                  IBKR SmartRouting
+                <span className="rounded-lg bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 text-[9px] font-bold text-indigo-400">
+                  SmartRouting
                 </span>
               </div>
               
-              <div className="flex items-center gap-1.5 mb-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => onChange({ brokerPreset: 'IBKR_TIERED', commissionRate: 0.0005, slippageRate: 0.0002 })}
-                  className={`flex-1 rounded-xl py-1 text-[10px] font-bold transition-all ${
+                  className={`flex-1 rounded-xl py-1 text-[11px] font-bold transition-all cursor-pointer ${
                     config.commissionRate === 0.0005
                       ? 'bg-indigo-500 text-white shadow-xs'
-                      : isDark ? 'bg-[#2c2c2e] text-slate-400' : 'bg-slate-200/70 text-slate-700'
+                      : isDark ? 'bg-[#2c2c2e] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  IBKR Tiered (~0.05%)
+                  Tiered (0.05%)
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange({ brokerPreset: 'IBKR_FIXED', commissionRate: 0.001, slippageRate: 0.0005 })}
-                  className={`flex-1 rounded-xl py-1 text-[10px] font-bold transition-all ${
+                  className={`flex-1 rounded-xl py-1 text-[11px] font-bold transition-all cursor-pointer ${
                     config.commissionRate === 0.001
                       ? 'bg-indigo-500 text-white shadow-xs'
-                      : isDark ? 'bg-[#2c2c2e] text-slate-400' : 'bg-slate-200/70 text-slate-700'
+                      : isDark ? 'bg-[#2c2c2e] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Crypto / Fixed (0.10%)
+                  Fixed (0.10%)
                 </button>
               </div>
 
-              <div className={`text-[11px] space-y-0.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                <div>• Comisión IBKR: <span className="font-mono font-bold text-indigo-400">{(config.commissionRate * 100).toFixed(2)}%</span> ($0.0035/acción)</div>
-                <div>• Deslizamiento: <span className="font-mono font-bold text-indigo-400">{(config.slippageRate * 100).toFixed(2)}%</span> (SmartRouting)</div>
+              <div className={`text-[10px] space-y-0.5 font-mono ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                <div>• Comisión: <span className="font-bold text-indigo-400">{(config.commissionRate * 100).toFixed(2)}%</span> ($0.0035/ud)</div>
+                <div>• Deslizamiento: <span className="font-bold text-indigo-400">{(config.slippageRate * 100).toFixed(2)}%</span> (IBKR)</div>
               </div>
             </div>
           </div>
