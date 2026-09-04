@@ -179,7 +179,7 @@ export function StrategyControls({
       </div>
 
       {/* 3 PRESETS GRID - Exact same design as Opportunity Screener */}
-      <div className="flex sm:grid sm:grid-cols-3 gap-2.5 sm:gap-3.5 overflow-x-auto custom-horizontal-scrollbar pb-1 sm:pb-0">
+      <div className="flex sm:grid sm:grid-cols-3 gap-2.5 sm:gap-3.5 overflow-x-auto custom-horizontal-scrollbar p-0.5 pb-1 sm:pb-0.5">
         {STRATEGY_PRESETS.map((preset) => {
           const isSelected = activePresetId === preset.id;
           const Icon = preset.icon;
@@ -189,14 +189,14 @@ export function StrategyControls({
               key={preset.id}
               type="button"
               onClick={() => handleSelectPreset(preset)}
-              className={`min-w-[240px] sm:min-w-0 flex-1 shrink-0 sm:shrink flex flex-col justify-between rounded-xl sm:rounded-2xl border p-3 sm:p-4 text-left transition-all ${
+              className={`min-w-[240px] sm:min-w-0 flex-1 shrink-0 sm:shrink flex flex-col justify-between rounded-xl sm:rounded-2xl border-2 p-3 sm:p-4 text-left transition-all ${
                 isSelected
                   ? isDark
-                    ? 'border-blue-500 bg-[#2c2c2e] shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
-                    : 'border-blue-500 bg-blue-50/70 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
+                    ? 'border-blue-500 bg-[#2c2c2e] shadow-md shadow-blue-500/20'
+                    : 'border-blue-500 bg-blue-50/70 shadow-md shadow-blue-500/20'
                   : isDark
-                  ? 'border-slate-800 bg-[#2c2c2e]/40 hover:border-slate-700 hover:bg-[#2c2c2e]/70'
-                  : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-slate-100/70'
+                  ? 'border-slate-800/80 bg-[#2c2c2e]/40 hover:border-slate-700 hover:bg-[#2c2c2e]/70'
+                  : 'border-slate-200/80 bg-slate-50/80 hover:border-slate-300 hover:bg-slate-100/70'
               }`}
             >
               <div>
