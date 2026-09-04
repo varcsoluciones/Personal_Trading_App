@@ -854,13 +854,13 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
           </div>
 
           {/* Timeframes & Indicators Control Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/40">
-            {/* Timeframes Selector */}
-            <div className="flex items-center gap-1.5 overflow-x-auto custom-horizontal-scrollbar pb-1">
-              <span className={`text-[11px] font-bold mr-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2.5 sm:gap-3 pt-3 border-t border-slate-800/40">
+            {/* Row 1: Timeframes Selector */}
+            <div className="w-full sm:w-auto flex items-center gap-1.5 overflow-x-auto custom-horizontal-scrollbar pb-0.5 sm:pb-0">
+              <span className={`text-[11px] font-bold mr-1 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Temporalidad:
               </span>
-              <div className={`flex items-center p-0.5 rounded-2xl border ${isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'}`}>
+              <div className={`flex items-center p-0.5 rounded-2xl border shrink-0 ${isDark ? 'border-slate-800 bg-[#2c2c2e]/60' : 'border-slate-200 bg-slate-100'}`}>
                 {TIMEFRAMES.map((tf) => {
                   const isSelected = selectedInterval === tf.id;
                   return (
@@ -869,7 +869,7 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
                       type="button"
                       disabled={isLoadingInterval}
                       onClick={() => setSelectedInterval(tf.id)}
-                      className={`relative px-2.5 py-1 text-xs font-bold rounded-xl transition-all ${
+                      className={`relative px-2.5 py-1 text-xs font-bold rounded-xl transition-all shrink-0 ${
                         isSelected
                           ? isDark
                             ? 'bg-[#1c1c1e] text-white shadow-xs'
@@ -886,155 +886,161 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
               </div>
 
               {isLoadingInterval && (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500 ml-1" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500 ml-1 shrink-0" />
               )}
             </div>
 
-            {/* Indicators & Subchart Toggles */}
-            <div className="flex items-center gap-1.5 flex-wrap overflow-x-auto custom-horizontal-scrollbar pb-1">
-              <span className={`text-[11px] font-bold mr-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Indicadores:
-              </span>
+            {/* Row 2 & Row 3 Container (stacked on mobile, inline on desktop) */}
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-1.5">
+              {/* Row 2: Overlay Indicators */}
+              <div className="w-full sm:w-auto flex items-center gap-1.5 overflow-x-auto custom-horizontal-scrollbar pb-0.5 sm:pb-0">
+                <span className={`text-[11px] font-bold mr-1 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Indicadores:
+                </span>
 
-              {/* EMA 20 */}
-              <button
-                type="button"
-                onClick={toggleEma20}
-                className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showEma20
-                    ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                EMA 20
-              </button>
+                {/* EMA 20 */}
+                <button
+                  type="button"
+                  onClick={toggleEma20}
+                  className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showEma20
+                      ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  EMA 20
+                </button>
 
-              {/* EMA 50 */}
-              <button
-                type="button"
-                onClick={toggleEma50}
-                className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showEma50
-                    ? 'border-orange-500/40 bg-orange-500/15 text-orange-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                EMA 50
-              </button>
+                {/* EMA 50 */}
+                <button
+                  type="button"
+                  onClick={toggleEma50}
+                  className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showEma50
+                      ? 'border-orange-500/40 bg-orange-500/15 text-orange-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  EMA 50
+                </button>
 
-              {/* EMA 200 */}
-              <button
-                type="button"
-                onClick={toggleEma200}
-                className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showEma200
-                    ? 'border-indigo-500/40 bg-indigo-500/15 text-indigo-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                EMA 200
-              </button>
+                {/* EMA 200 */}
+                <button
+                  type="button"
+                  onClick={toggleEma200}
+                  className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showEma200
+                      ? 'border-indigo-500/40 bg-indigo-500/15 text-indigo-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  EMA 200
+                </button>
 
-              {/* BOLLINGER BANDS (20, 2) */}
-              <button
-                type="button"
-                onClick={toggleBollinger}
-                className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showBollinger
-                    ? 'border-sky-500/40 bg-sky-500/15 text-sky-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                BOLL (20, 2)
-              </button>
+                {/* BOLLINGER BANDS (20, 2) */}
+                <button
+                  type="button"
+                  onClick={toggleBollinger}
+                  className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showBollinger
+                      ? 'border-sky-500/40 bg-sky-500/15 text-sky-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  BOLL (20, 2)
+                </button>
 
-              {/* Signals */}
-              <button
-                type="button"
-                onClick={toggleMarkers}
-                className={`rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showMarkers
-                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                Señales
-              </button>
+                {/* Signals */}
+                <button
+                  type="button"
+                  onClick={toggleMarkers}
+                  className={`shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showMarkers
+                      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  Señales
+                </button>
+              </div>
 
-              {/* Subcharts Divider */}
-              <div className={`h-4 w-[1px] mx-1 ${isDark ? 'bg-slate-800' : 'bg-slate-300'}`} />
+              {/* Subcharts Divider (desktop only) */}
+              <div className={`hidden sm:block h-4 w-[1px] mx-1 shrink-0 ${isDark ? 'bg-slate-800' : 'bg-slate-300'}`} />
 
-              {/* Volume Toggle */}
-              <button
-                type="button"
-                onClick={toggleVolume}
-                className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showVolume
-                    ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <BarChart2 className="h-3 w-3" />
-                <span>Volumen</span>
-              </button>
+              {/* Row 3: Gráficos de Indicadores (Subcharts) */}
+              <div className="w-full sm:w-auto flex items-center gap-1.5 overflow-x-auto custom-horizontal-scrollbar pb-0.5 sm:pb-0">
+                {/* Volume Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleVolume}
+                  className={`shrink-0 flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showVolume
+                      ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <BarChart2 className="h-3 w-3" />
+                  <span>Volumen</span>
+                </button>
 
-              {/* MACD Toggle */}
-              <button
-                type="button"
-                onClick={toggleMacd}
-                className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showMacd
-                    ? 'border-blue-500/40 bg-blue-500/15 text-blue-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <Activity className="h-3 w-3" />
-                <span>MACD</span>
-              </button>
+                {/* MACD Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleMacd}
+                  className={`shrink-0 flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showMacd
+                      ? 'border-blue-500/40 bg-blue-500/15 text-blue-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <Activity className="h-3 w-3" />
+                  <span>MACD</span>
+                </button>
 
-              {/* RSI Toggle */}
-              <button
-                type="button"
-                onClick={toggleRsi}
-                className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showRsi
-                    ? 'border-purple-500/40 bg-purple-500/15 text-purple-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <span>RSI</span>
-              </button>
+                {/* RSI Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleRsi}
+                  className={`shrink-0 flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showRsi
+                      ? 'border-purple-500/40 bg-purple-500/15 text-purple-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <span>RSI</span>
+                </button>
 
-              {/* ADX Toggle */}
-              <button
-                type="button"
-                onClick={toggleAdx}
-                className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                  showAdx
-                    ? 'border-amber-500/40 bg-amber-500/15 text-amber-400'
-                    : isDark
-                    ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <span>ADX</span>
-              </button>
+                {/* ADX Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleAdx}
+                  className={`shrink-0 flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                    showAdx
+                      ? 'border-amber-500/40 bg-amber-500/15 text-amber-400'
+                      : isDark
+                      ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  <span>ADX</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
