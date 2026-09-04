@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Asset } from '@/lib/types/market';
-import { RealPosition, CapitalMovement } from '@/lib/types/portfolio';
+import { RealPosition, CapitalMovement, PortfolioWallet } from '@/lib/types/portfolio';
 import { useSettings } from '@/lib/context/settings-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
@@ -28,6 +28,8 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  ArrowRightLeft,
+  Building2,
 } from 'lucide-react';
 
 interface PortfolioDashboardProps {
@@ -45,6 +47,9 @@ export function PortfolioDashboard({
   const isDark = settings.theme === 'dark';
 
   const {
+    wallets,
+    selectedWalletId,
+    setSelectedWalletId,
     capitalMovements,
     positions,
     removeCapitalMovement,
@@ -53,13 +58,14 @@ export function PortfolioDashboard({
     netContributions,
     realizedPnl,
     getLivePositionMetrics,
+    getWalletMetrics,
+    getWalletAvailableCapital,
     openApplyModal,
     openMovementModal,
+    openWalletModal,
   } = usePortfolioContext();
 
   const [isMovementsExpanded, setIsMovementsExpanded] = useState(false);
-  const [closingPosId, setClosingPosId] = useState<string | null>(null);
-  const [manualExitPrice, setManualExitPrice] = useState<string>('');
 
   // Map of current live asset prices
   const currentPrices = useMemo(() => {
@@ -73,7 +79,26 @@ export function PortfolioDashboard({
     return map;
   }, [assets]);
 
-  // Open & Closed positions list
+  // Wallet dictionary for fast lookups
+  const walletMap = useMemo(() => {
+    const map: Record<string, PortfolioWallet> = {};
+    wallets.forEach((w) => {
+      map[w.id] = w;
+    });
+    return map;
+  }, [wallets]);
+
+  const getWalletForPosition = (pos: RealPosition) => {
+    const id = pos.portfolioId || 'wallet_main';
+    return walletMap[id] || wallets[0] || { id, name: 'Cartera Principal', color: '#3b82f6' };
+  };
+
+  const getWalletById = (walletId?: string) => {
+    const id = walletId || 'wallet_main';
+    return walletMap[id] || wallets[0] || { id, name: 'Cartera Principal', color: '#3b82f6' };
+  };
+
+  // Open & Closed positions lists
   const openPositions = useMemo(() => {
     return positions.filter((p) => p.status === 'OPEN');
   }, [positions]);
@@ -82,7 +107,7 @@ export function PortfolioDashboard({
     return positions.filter((p) => p.status === 'CLOSED');
   }, [positions]);
 
-  // Total Unrealized PnL from live open positions (Flotante en operaciones abiertas)
+  // Total Unrealized PnL from live open positions (Flotante en operaciones abiertas global)
   const unrealizedPnlTotal = useMemo(() => {
     return openPositions.reduce((acc, pos) => {
       const metrics = getLivePositionMetrics(pos, currentPrices);
@@ -90,34 +115,89 @@ export function PortfolioDashboard({
     }, 0);
   }, [openPositions, currentPrices, getLivePositionMetrics]);
 
-  // Total Trading PnL (Realized + Unrealized)
+  // Total Trading PnL (Realized + Unrealized) global
   const totalTradingPnl = realizedPnl + unrealizedPnlTotal;
 
-  // Capital Liquidado / Balance Contable Cerrado (Aportes Netos + PnL Realizado)
+  // Capital Liquidado / Balance Contable Cerrado (Aportes Netos + PnL Realizado) global
   const settledCapital = netContributions + realizedPnl;
 
-  // Capital currently utilized in OPEN positions
+  // Capital currently utilized in OPEN positions global
   const usedCapital = useMemo(() => {
     return openPositions.reduce((acc, pos) => acc + (pos.capitalAllocated || 0), 0);
   }, [openPositions]);
 
-  // Saldo Disponible en Efectivo para Nuevas Operaciones (Liquid Cash para operar)
-  // Coincide exactamente con el límite disponible del modal de operaciones
+  // Saldo Disponible en Efectivo para Nuevas Operaciones global
   const availableCash = Math.max(0, settledCapital - usedCapital);
 
-  // Valor Actual de las Posiciones Abiertas (Capital invertido + ganancia/pérdida flotante)
+  // Valor Actual de las Posiciones Abiertas global
   const openPositionsMarketValue = usedCapital + unrealizedPnlTotal;
 
-  // Valor Total de la Cartera / Patrimonio Total (Efectivo disponible + Valor de posiciones abiertas)
+  // Valor Total de la Cartera / Patrimonio Total global
   const totalPortfolioValue = settledCapital + unrealizedPnlTotal;
 
-  // Capital utilization & liquidity percentages
-  const usedCapitalPct = settledCapital > 0 ? (usedCapital / settledCapital) * 100 : 0;
+  // Available cash percentage global
   const availableCashPct = settledCapital > 0 ? (availableCash / settledCapital) * 100 : 0;
 
-  // Trading Return % on Net Contributions
+  // Trading Return % on Net Contributions global
   const returnOnCapitalPct =
     netContributions > 0 ? (totalTradingPnl / netContributions) * 100 : 0;
+
+  // Filtered positions based on selected portfolio tab
+  const displayedOpenPositions = useMemo(() => {
+    if (selectedWalletId === 'ALL') return openPositions;
+    return openPositions.filter((p) => (p.portfolioId || 'wallet_main') === selectedWalletId);
+  }, [openPositions, selectedWalletId]);
+
+  const displayedClosedPositions = useMemo(() => {
+    if (selectedWalletId === 'ALL') return closedPositions;
+    return closedPositions.filter((p) => (p.portfolioId || 'wallet_main') === selectedWalletId);
+  }, [closedPositions, selectedWalletId]);
+
+  // Metrics for the active selected portfolio in the subtle 1-line summary header
+  const currentSummaryMetrics = useMemo(() => {
+    if (selectedWalletId === 'ALL') {
+      return {
+        name: 'Todas las Carteras (Consolidado)',
+        netContributions,
+        totalTradingPnl,
+        returnOnCapitalPct,
+        totalPortfolioValue,
+        availableCash,
+        openCount: openPositions.length,
+        closedCount: closedPositions.length,
+      };
+    }
+
+    const wm = getWalletMetrics(selectedWalletId, currentPrices);
+    const w = walletMap[selectedWalletId] || wallets[0];
+    const wRetPct = wm.netContributions > 0 ? (wm.totalTradingPnl / wm.netContributions) * 100 : 0;
+
+    return {
+      name: w?.name || 'Cartera Seleccionada',
+      netContributions: wm.netContributions,
+      totalTradingPnl: wm.totalTradingPnl,
+      returnOnCapitalPct: wRetPct,
+      totalPortfolioValue: wm.totalPortfolioValue,
+      availableCash: wm.availableCash,
+      openCount: displayedOpenPositions.length,
+      closedCount: displayedClosedPositions.length,
+    };
+  }, [
+    selectedWalletId,
+    netContributions,
+    totalTradingPnl,
+    returnOnCapitalPct,
+    totalPortfolioValue,
+    availableCash,
+    openPositions.length,
+    closedPositions.length,
+    displayedOpenPositions.length,
+    displayedClosedPositions.length,
+    getWalletMetrics,
+    currentPrices,
+    walletMap,
+    wallets,
+  ]);
 
   // Helper for quick closing position
   const handleQuickClose = (pos: RealPosition) => {
@@ -132,13 +212,13 @@ export function PortfolioDashboard({
 
   return (
     <div className="space-y-6">
-      {/* 1. Header with Actions */}
+      {/* 1. Header with 3 Action Buttons */}
       <div
         className={`rounded-3xl border p-5 sm:p-6 shadow-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
@@ -151,25 +231,41 @@ export function PortfolioDashboard({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className={`text-lg sm:text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <h2 className={`text-lg sm:text-xl font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   Mi Cartera & Operaciones Reales
                 </h2>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${accent.tintBgClass} ${accent.textClass}`}>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold font-sans uppercase tracking-wider ${accent.tintBgClass} ${accent.textClass}`}>
                   En Vivo
                 </span>
               </div>
-              <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Seguimiento de capital real, control de posiciones ejecutadas y balance general
+              <p className={`text-xs mt-0.5 font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Seguimiento de capital real, control de posiciones por broker y balance general
               </p>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* 3 Action Buttons in Main Header */}
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Button 1: Mis Carteras */}
+            <button
+              type="button"
+              onClick={openWalletModal}
+              className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-bold font-sans transition-all shadow-xs cursor-pointer ${
+                isDark
+                  ? 'border-slate-700/80 bg-[#2c2c2e] text-white hover:bg-[#3a3a3c]'
+                  : 'border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200'
+              }`}
+              title="Gestionar subcuentas y carteras (Binance, IBKR, etc.)"
+            >
+              <Layers className="h-4 w-4 text-purple-400" />
+              <span>Mis Carteras ({wallets.length})</span>
+            </button>
+
+            {/* Button 2: Registrar Movimiento */}
             <button
               type="button"
               onClick={openMovementModal}
-              className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all shadow-xs ${
+              className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-bold font-sans transition-all shadow-xs cursor-pointer ${
                 isDark
                   ? 'border-slate-700/80 bg-[#2c2c2e] text-white hover:bg-[#3a3a3c]'
                   : 'border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200'
@@ -179,10 +275,11 @@ export function PortfolioDashboard({
               <span>+ Registrar Movimiento</span>
             </button>
 
+            {/* Button 3: Nueva Operación */}
             <button
               type="button"
               onClick={() => openApplyModal(assets[0] || null)}
-              className={`flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold text-white transition-all shadow-md ${
+              className={`flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold font-sans text-white transition-all shadow-md cursor-pointer ${
                 accent.bgClass
               } hover:opacity-95 active:scale-[0.99]`}
             >
@@ -193,7 +290,7 @@ export function PortfolioDashboard({
         </div>
       </div>
 
-      {/* 2. Capital Summary 4 KPIs (4 Viñetas de Resumen Financiero) */}
+      {/* 2. Consolidated Capital Summary: 4 Large KPI Cards (Global Consolidated Total) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         {/* KPI 1: Aporte Propio Neto */}
         <div
@@ -222,7 +319,7 @@ export function PortfolioDashboard({
             <button
               type="button"
               onClick={() => setIsMovementsExpanded(!isMovementsExpanded)}
-              className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5 text-xs font-bold cursor-pointer"
+              className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5 text-xs font-bold cursor-pointer font-sans"
             >
               <span>{isMovementsExpanded ? 'Ocultar historial' : 'Ver movimientos'}</span>
               {isMovementsExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -344,9 +441,12 @@ export function PortfolioDashboard({
           }`}
         >
           <div className="flex items-center justify-between border-b pb-3 border-slate-800/40">
-            <h3 className={`text-sm font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Historial de Movimientos de Capital
-            </h3>
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-blue-400" />
+              <h3 className={`text-sm font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Historial de Movimientos de Capital
+              </h3>
+            </div>
             <button
               type="button"
               onClick={openMovementModal}
@@ -368,6 +468,7 @@ export function PortfolioDashboard({
                     isDark ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
                   }`}>
                     <th className="py-2.5 px-3">Fecha</th>
+                    <th className="py-2.5 px-3">Cartera / Destino</th>
                     <th className="py-2.5 px-3">Tipo</th>
                     <th className="py-2.5 px-3 text-right">Monto</th>
                     <th className="py-2.5 px-3">Nota</th>
@@ -375,44 +476,69 @@ export function PortfolioDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/20">
-                  {capitalMovements.map((mov) => (
-                    <tr key={mov.id} className={isDark ? 'hover:bg-[#2c2c2e]/30' : 'hover:bg-slate-50'}>
-                      <td className="py-2.5 px-3 text-slate-400 font-mono text-xs">{mov.date}</td>
-                      <td className="py-2.5 px-3 font-sans">
-                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase font-sans ${
-                          mov.type === 'DEPOSIT'
-                            ? isDark ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700'
-                            : mov.type === 'WITHDRAWAL'
-                            ? isDark ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-700'
-                            : isDark ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-700'
+                  {capitalMovements.map((mov) => {
+                    const sourceW = getWalletById(mov.portfolioId);
+                    const targetW = mov.targetPortfolioId ? getWalletById(mov.targetPortfolioId) : null;
+
+                    return (
+                      <tr key={mov.id} className={isDark ? 'hover:bg-[#2c2c2e]/30' : 'hover:bg-slate-50'}>
+                        <td className="py-2.5 px-3 text-slate-400 font-mono text-xs">{mov.date}</td>
+                        <td className="py-2.5 px-3 font-sans">
+                          {mov.type === 'TRANSFER' && targetW ? (
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <span className="font-bold text-slate-300">{sourceW.name}</span>
+                              <ArrowRightLeft className="h-3 w-3 text-purple-400 shrink-0" />
+                              <span className="font-bold text-purple-300">{targetW.name}</span>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-300">
+                              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: sourceW.color || '#3b82f6' }} />
+                              {sourceW.name}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 font-sans">
+                          <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase font-sans ${
+                            mov.type === 'DEPOSIT'
+                              ? isDark ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700'
+                              : mov.type === 'WITHDRAWAL'
+                              ? isDark ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-700'
+                              : mov.type === 'TRANSFER'
+                              ? isDark ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' : 'bg-purple-50 text-purple-700'
+                              : isDark ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-700'
+                          }`}>
+                            {mov.type === 'DEPOSIT' ? 'Depósito' : mov.type === 'WITHDRAWAL' ? 'Retiro' : mov.type === 'TRANSFER' ? 'Transferencia' : 'Ajuste'}
+                          </span>
+                        </td>
+                        <td className={`py-2.5 px-3 text-right font-mono font-bold text-xs ${
+                          mov.type === 'TRANSFER'
+                            ? 'text-purple-400'
+                            : mov.amount >= 0
+                            ? 'text-emerald-400'
+                            : 'text-rose-400'
                         }`}>
-                          {mov.type === 'DEPOSIT' ? 'Depósito' : mov.type === 'WITHDRAWAL' ? 'Retiro' : 'Ajuste'}
-                        </span>
-                      </td>
-                      <td className={`py-2.5 px-3 text-right font-mono font-bold text-xs ${
-                        mov.amount >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}>
-                        {mov.amount >= 0 ? '+' : ''}{formatCurrency(mov.amount)}
-                      </td>
-                      <td className="py-2.5 px-3 font-sans text-slate-400 text-xs truncate max-w-xs">
-                        {mov.note || '-'}
-                      </td>
-                      <td className="py-2.5 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm('¿Eliminar este movimiento de capital?')) {
-                              removeCapitalMovement(mov.id);
-                            }
-                          }}
-                          className="text-slate-500 hover:text-rose-400 p-1 transition-colors cursor-pointer"
-                          title="Eliminar Movimiento"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          {mov.type === 'TRANSFER' ? '↔ ' : mov.amount >= 0 ? '+' : ''}{formatCurrency(mov.amount)}
+                        </td>
+                        <td className="py-2.5 px-3 font-sans text-slate-400 text-xs truncate max-w-xs">
+                          {mov.note || '-'}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm('¿Eliminar este movimiento de capital?')) {
+                                removeCapitalMovement(mov.id);
+                              }
+                            }}
+                            className="text-slate-500 hover:text-rose-400 p-1 transition-colors cursor-pointer"
+                            title="Eliminar Movimiento"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -420,7 +546,149 @@ export function PortfolioDashboard({
         </div>
       )}
 
-      {/* 4. POSICIONES ABIERTAS */}
+      {/* 4. Portfolio Filter Tabs & Compact 1-Line Subtle Summary Header */}
+      <div className="space-y-3 pt-1">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          {/* Wallet Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 max-w-full">
+            <button
+              type="button"
+              onClick={() => setSelectedWalletId('ALL')}
+              className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer whitespace-nowrap ${
+                selectedWalletId === 'ALL'
+                  ? `${accent.bgClass} text-white shadow-xs`
+                  : isDark
+                  ? 'bg-[#2c2c2e]/70 text-slate-400 hover:text-white hover:bg-[#2c2c2e]'
+                  : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span>Todas las Carteras</span>
+              <span className="rounded-md bg-black/25 px-1.5 py-0.2 text-[10px] font-mono">
+                {positions.length}
+              </span>
+            </button>
+
+            {wallets.map((w) => {
+              const wPositionsCount = positions.filter((p) => (p.portfolioId || 'wallet_main') === w.id).length;
+              const isSelected = selectedWalletId === w.id;
+
+              return (
+                <button
+                  key={w.id}
+                  type="button"
+                  onClick={() => setSelectedWalletId(w.id)}
+                  className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-1.5 text-xs font-bold font-sans transition-all cursor-pointer whitespace-nowrap ${
+                    isSelected
+                      ? `${accent.bgClass} text-white shadow-xs`
+                      : isDark
+                      ? 'bg-[#2c2c2e]/70 text-slate-400 hover:text-white hover:bg-[#2c2c2e]'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                  }`}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ backgroundColor: w.color || '#3b82f6' }}
+                  />
+                  <span>{w.name}</span>
+                  {w.brokerOrExchange && (
+                    <span className="text-[10px] opacity-75 font-normal">
+                      ({w.brokerOrExchange})
+                    </span>
+                  )}
+                  <span className="rounded-md bg-black/25 px-1.5 py-0.2 text-[10px] font-mono">
+                    {wPositionsCount}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={openWalletModal}
+            className="text-xs font-semibold font-sans text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer py-1"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Gestionar Carteras</span>
+          </button>
+        </div>
+
+        {/* 1-Line Subtle Summary Header Bar per Portfolio / Selection */}
+        <div
+          className={`rounded-2xl border px-4 py-2.5 flex items-center justify-between flex-wrap gap-x-5 gap-y-2 text-xs transition-colors ${
+            isDark
+              ? 'border-slate-800/90 bg-[#232326] text-slate-300'
+              : 'border-slate-200 bg-slate-50 text-slate-700'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-sans">
+              {currentSummaryMetrics.name}:
+            </span>
+          </div>
+
+          <div className="flex items-center flex-wrap gap-x-5 gap-y-1 text-xs">
+            <div>
+              <span className="text-slate-400 font-sans">Aportes: </span>
+              <strong className="font-mono font-bold text-slate-200">
+                {formatCurrency(currentSummaryMetrics.netContributions)}
+              </strong>
+            </div>
+
+            <div className="hidden sm:inline text-slate-600">•</div>
+
+            <div>
+              <span className="text-slate-400 font-sans">Rendimiento: </span>
+              <strong
+                className={`font-mono font-bold ${
+                  currentSummaryMetrics.totalTradingPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {currentSummaryMetrics.totalTradingPnl >= 0 ? '+' : ''}
+                {formatCurrency(currentSummaryMetrics.totalTradingPnl)}
+                {' '}({currentSummaryMetrics.totalTradingPnl >= 0 ? '+' : ''}
+                {currentSummaryMetrics.returnOnCapitalPct.toFixed(1)}%)
+              </strong>
+            </div>
+
+            <div className="hidden sm:inline text-slate-600">•</div>
+
+            <div>
+              <span className="text-slate-400 font-sans">Patrimonio: </span>
+              <strong className="font-mono font-bold text-blue-400">
+                {formatCurrency(currentSummaryMetrics.totalPortfolioValue)}
+              </strong>
+            </div>
+
+            <div className="hidden sm:inline text-slate-600">•</div>
+
+            <div>
+              <span className="text-slate-400 font-sans">Saldo Disponible: </span>
+              <strong className="font-mono font-bold text-emerald-400">
+                {formatCurrency(currentSummaryMetrics.availableCash)}
+              </strong>
+            </div>
+
+            <div className="hidden sm:inline text-slate-600">•</div>
+
+            <div>
+              <span className="text-slate-400 font-sans">Posiciones: </span>
+              <strong className="font-mono font-bold text-slate-200">
+                {currentSummaryMetrics.openCount}
+              </strong>
+              <span className="text-slate-400 font-sans text-[11px]"> abiertas</span>
+              <span className="text-slate-500 font-sans"> / </span>
+              <span className="font-mono text-slate-400">
+                {currentSummaryMetrics.closedCount}
+              </span>
+              <span className="text-slate-500 font-sans text-[11px]"> cerradas</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. POSICIONES ABIERTAS */}
       <div
         className={`rounded-3xl border p-5 sm:p-6 shadow-xs transition-colors space-y-4 ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
@@ -430,7 +698,7 @@ export function PortfolioDashboard({
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-emerald-500" />
             <h3 className={`text-base font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Posiciones Abiertas ({openPositions.length})
+              Posiciones Abiertas ({displayedOpenPositions.length})
             </h3>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans">
@@ -439,30 +707,46 @@ export function PortfolioDashboard({
           </span>
         </div>
 
-        {openPositions.length === 0 ? (
+        {displayedOpenPositions.length === 0 ? (
           <div className="py-10 text-center space-y-2">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500">
               <Layers className="h-6 w-6" />
             </div>
             <h4 className={`text-sm font-bold font-sans ${isDark ? 'text-white' : 'text-slate-800'}`}>
-              No tienes posiciones abiertas
+              {selectedWalletId === 'ALL'
+                ? 'No tienes posiciones abiertas'
+                : `No hay posiciones abiertas en ${currentSummaryMetrics.name}`}
             </h4>
             <p className={`text-xs max-w-md mx-auto font-sans leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Aplica oportunidades directamente desde el Screener o pulsa el botón &quot;+ Nueva Operación&quot; para registrar tu primera posición.
             </p>
-            <button
-              type="button"
-              onClick={onOpenScreener}
-              className="mt-2 rounded-2xl bg-blue-500 px-4 py-2 text-xs font-bold text-white hover:bg-blue-600 transition-colors shadow-xs font-sans cursor-pointer"
-            >
-              Explorar Oportunidades →
-            </button>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => openApplyModal(assets[0] || null)}
+                className="rounded-2xl bg-blue-500 px-4 py-2 text-xs font-bold text-white hover:bg-blue-600 transition-colors shadow-xs font-sans cursor-pointer"
+              >
+                + Nueva Operación
+              </button>
+              <button
+                type="button"
+                onClick={onOpenScreener}
+                className={`rounded-2xl border px-4 py-2 text-xs font-bold font-sans transition-colors cursor-pointer ${
+                  isDark
+                    ? 'border-slate-700 bg-[#2c2c2e] text-slate-200 hover:bg-[#3a3a3c]'
+                    : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Explorar Screener →
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {openPositions.map((pos) => {
+            {displayedOpenPositions.map((pos) => {
               const live = getLivePositionMetrics(pos, currentPrices);
               const isProfit = live.unrealizedPnlUSD >= 0;
+              const posWallet = getWalletForPosition(pos);
 
               return (
                 <div
@@ -472,13 +756,25 @@ export function PortfolioDashboard({
                   }`}
                 >
                   <div>
-                    {/* Header: Symbol, Entry Date, Live Price */}
+                    {/* Header: Symbol, Wallet Badge, Entry Date, Live Price */}
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-base font-black tracking-tight text-white">{pos.symbol}</span>
                           <span className="rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold uppercase font-sans">
                             Abierta
+                          </span>
+                          {/* Wallet Badge */}
+                          <span
+                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold font-sans border"
+                            style={{
+                              borderColor: `${posWallet.color || '#3b82f6'}40`,
+                              backgroundColor: `${posWallet.color || '#3b82f6'}15`,
+                              color: posWallet.color || '#3b82f6',
+                            }}
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: posWallet.color || '#3b82f6' }} />
+                            {posWallet.name}
                           </span>
                         </div>
                         <span className="text-[11px] text-slate-400 font-sans block mt-0.5">
@@ -579,7 +875,7 @@ export function PortfolioDashboard({
         )}
       </div>
 
-      {/* 5. HISTORIAL DE OPERACIONES CERRADAS */}
+      {/* 6. HISTORIAL DE OPERACIONES CERRADAS */}
       <div
         className={`rounded-3xl border p-5 sm:p-6 shadow-xs transition-colors space-y-4 ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
@@ -589,17 +885,34 @@ export function PortfolioDashboard({
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-blue-500" />
             <h3 className={`text-base font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Historial de Operaciones Cerradas ({closedPositions.length})
+              Historial de Operaciones Cerradas ({displayedClosedPositions.length})
             </h3>
           </div>
           <span className="text-xs font-sans text-slate-400">
-            PnL Realizado Total: <strong className={`font-mono font-bold ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl)}</strong>
+            PnL Realizado ({selectedWalletId === 'ALL' ? 'Total' : currentSummaryMetrics.name}): <strong className={`font-mono font-bold ${
+              (selectedWalletId === 'ALL'
+                ? realizedPnl
+                : displayedClosedPositions.reduce((acc, p) => acc + (p.realizedPnl || 0), 0)) >= 0
+                ? 'text-emerald-400'
+                : 'text-rose-400'
+            }`}>
+              {(selectedWalletId === 'ALL'
+                ? realizedPnl
+                : displayedClosedPositions.reduce((acc, p) => acc + (p.realizedPnl || 0), 0)) >= 0 ? '+' : ''}
+              {formatCurrency(
+                selectedWalletId === 'ALL'
+                  ? realizedPnl
+                  : displayedClosedPositions.reduce((acc, p) => acc + (p.realizedPnl || 0), 0)
+              )}
+            </strong>
           </span>
         </div>
 
-        {closedPositions.length === 0 ? (
+        {displayedClosedPositions.length === 0 ? (
           <p className={`text-xs py-6 text-center font-sans ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-            Aún no tienes operaciones cerradas registradas.
+            {selectedWalletId === 'ALL'
+              ? 'Aún no tienes operaciones cerradas registradas.'
+              : `No hay operaciones cerradas registradas en ${currentSummaryMetrics.name}.`}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -609,6 +922,7 @@ export function PortfolioDashboard({
                   isDark ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
                 }`}>
                   <th className="py-3 px-3">Activo</th>
+                  <th className="py-3 px-3">Cartera</th>
                   <th className="py-3 px-3">Fechas (Entrada / Salida)</th>
                   <th className="py-3 px-3 text-right">Capital</th>
                   <th className="py-3 px-3 text-right">Precios (Entrada → Salida)</th>
@@ -618,15 +932,29 @@ export function PortfolioDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/20">
-                {closedPositions.map((pos) => {
+                {displayedClosedPositions.map((pos) => {
                   const pnl = pos.realizedPnl || 0;
                   const pnlPct = pos.realizedPnlPct || 0;
                   const isProfit = pnl >= 0;
+                  const posWallet = getWalletForPosition(pos);
 
                   return (
                     <tr key={pos.id} className={isDark ? 'hover:bg-[#2c2c2e]/30' : 'hover:bg-slate-50'}>
                       <td className="py-3 px-3 font-bold text-sm font-mono text-white">
                         {pos.symbol}
+                      </td>
+                      <td className="py-3 px-3 font-sans">
+                        <span
+                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold font-sans border"
+                          style={{
+                            borderColor: `${posWallet.color || '#3b82f6'}40`,
+                            backgroundColor: `${posWallet.color || '#3b82f6'}15`,
+                            color: posWallet.color || '#3b82f6',
+                          }}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: posWallet.color || '#3b82f6' }} />
+                          {posWallet.name}
+                        </span>
                       </td>
                       <td className="py-3 px-3 text-slate-400 text-xs font-sans">
                         <div>Entrada: <span className="font-mono text-slate-300">{pos.entryDate}</span></div>
@@ -690,7 +1018,7 @@ export function PortfolioDashboard({
         )}
       </div>
 
-      {/* 6. Empty State if brand new */}
+      {/* 7. Empty State if brand new */}
       {!hasAnyData && (
         <div
           className={`rounded-3xl border p-12 text-center transition-colors ${
@@ -704,7 +1032,7 @@ export function PortfolioDashboard({
             Comienza a llevar el control de tu Cartera Real
           </h3>
           <p className={`text-xs mt-1.5 max-w-md mx-auto font-sans leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Registra tu aporte inicial de capital o aplica operaciones directamente desde las señales generadas por QuantPulse Pro.
+            Registra tu aporte inicial de capital, organiza tus carteras y brokers, o aplica operaciones directamente desde las señales generadas por QuantPulse Pro.
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3 font-sans">
             <button
@@ -716,14 +1044,14 @@ export function PortfolioDashboard({
             </button>
             <button
               type="button"
-              onClick={onOpenScreener}
+              onClick={openWalletModal}
               className={`rounded-2xl border px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${
                 isDark
                   ? 'border-slate-700 bg-[#2c2c2e] text-slate-200 hover:bg-[#3a3a3c]'
                   : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              Ver Oportunidades del Screener →
+              Gestionar Mis Carteras
             </button>
           </div>
         </div>

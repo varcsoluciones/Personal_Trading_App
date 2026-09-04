@@ -1,18 +1,29 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { CapitalMovement, RealPosition } from '../types/portfolio';
+import { CapitalMovement, RealPosition, PortfolioWallet, WalletMetrics } from '../types/portfolio';
 
 const PORTFOLIO_STORAGE_KEY = 'quantpulse_portfolio_v1';
 
+export const DEFAULT_WALLET: PortfolioWallet = {
+  id: 'wallet_main',
+  name: 'Cartera Principal',
+  brokerOrExchange: 'General',
+  isDefault: true,
+  createdAt: '2026-01-01',
+};
+
 interface StoredPortfolio {
+  wallets?: PortfolioWallet[];
   capitalMovements: CapitalMovement[];
   positions: RealPosition[];
 }
 
 export function usePortfolio() {
+  const [wallets, setWallets] = useState<PortfolioWallet[]>([DEFAULT_WALLET]);
   const [capitalMovements, setCapitalMovements] = useState<CapitalMovement[]>([]);
   const [positions, setPositions] = useState<RealPosition[]>([]);
+  const [selectedWalletId, setSelectedWalletId] = useState<string | 'ALL'>('ALL');
   const [isHydrated, setIsHydrated] = useState(false);
 
   // 1. Hydrate portfolio from localStorage on initial client mount
@@ -22,11 +33,28 @@ export function usePortfolio() {
       if (saved) {
         const parsed: StoredPortfolio = JSON.parse(saved);
         if (parsed) {
-          if (Array.isArray(parsed.capitalMovements)) {
-            setCapitalMovements(parsed.capitalMovements);
+          if (Array.isArray(parsed.wallets) && parsed.wallets.length > 0) {
+            setWallets(parsed.wallets);
+          } else {
+            setWallets([DEFAULT_WALLET]);
           }
+
+          if (Array.isArray(parsed.capitalMovements)) {
+            // Backward compatibility: ensure movements have portfolioId
+            const sanitizedMovements = parsed.capitalMovements.map((m) => ({
+              ...m,
+              portfolioId: m.portfolioId || 'wallet_main',
+            }));
+            setCapitalMovements(sanitizedMovements);
+          }
+
           if (Array.isArray(parsed.positions)) {
-            setPositions(parsed.positions);
+            // Backward compatibility: ensure positions have portfolioId
+            const sanitizedPositions = parsed.positions.map((p) => ({
+              ...p,
+              portfolioId: p.portfolioId || 'wallet_main',
+            }));
+            setPositions(sanitizedPositions);
           }
         }
       }
@@ -38,9 +66,10 @@ export function usePortfolio() {
 
   // 2. Persist state helper
   const persistState = useCallback(
-    (newMovements: CapitalMovement[], newPositions: RealPosition[]) => {
+    (newWallets: PortfolioWallet[], newMovements: CapitalMovement[], newPositions: RealPosition[]) => {
       try {
         const payload: StoredPortfolio = {
+          wallets: newWallets,
           capitalMovements: newMovements,
           positions: newPositions,
         };
@@ -52,15 +81,95 @@ export function usePortfolio() {
     []
   );
 
-  // 3. Add Capital Movement
+  // 3. Wallet CRUD
+  const createWallet = useCallback(
+    (name: string, brokerOrExchange?: string, description?: string): PortfolioWallet => {
+      const cleanName = name.trim() || 'Nueva Cartera';
+      const newWallet: PortfolioWallet = {
+        id: `wallet_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: cleanName,
+        brokerOrExchange: brokerOrExchange || 'Otro',
+        description: description?.trim() || undefined,
+        isDefault: false,
+        createdAt: new Date().toISOString().split('T')[0],
+      };
+
+      setWallets((prev) => {
+        const next = [...prev, newWallet];
+        persistState(next, capitalMovements, positions);
+        return next;
+      });
+
+      return newWallet;
+    },
+    [persistState, capitalMovements, positions]
+  );
+
+  const updateWallet = useCallback(
+    (id: string, changes: Partial<PortfolioWallet>) => {
+      setWallets((prev) => {
+        const next = prev.map((w) => (w.id === id ? { ...w, ...changes } : w));
+        persistState(next, capitalMovements, positions);
+        return next;
+      });
+    },
+    [persistState, capitalMovements, positions]
+  );
+
+  const deleteWallet = useCallback(
+    (id: string, reassignToWalletId?: string) => {
+      setWallets((prev) => {
+        if (prev.length <= 1) {
+          alert('No es posible eliminar la única cartera activa.');
+          return prev;
+        }
+
+        const remaining = prev.filter((w) => w.id !== id);
+        const fallbackTargetId = reassignToWalletId || remaining[0]?.id || 'wallet_main';
+
+        // Reassign any positions and movements belonging to the deleted wallet
+        const updatedPositions = positions.map((p) =>
+          p.portfolioId === id ? { ...p, portfolioId: fallbackTargetId } : p
+        );
+
+        const updatedMovements = capitalMovements.map((m) => {
+          let updatedM = { ...m };
+          if (updatedM.portfolioId === id) {
+            updatedM.portfolioId = fallbackTargetId;
+          }
+          if (updatedM.targetPortfolioId === id) {
+            updatedM.targetPortfolioId = fallbackTargetId;
+          }
+          return updatedM;
+        });
+
+        setPositions(updatedPositions);
+        setCapitalMovements(updatedMovements);
+        persistState(remaining, updatedMovements, updatedPositions);
+
+        if (selectedWalletId === id) {
+          setSelectedWalletId('ALL');
+        }
+
+        return remaining;
+      });
+    },
+    [positions, capitalMovements, selectedWalletId, persistState]
+  );
+
+  // 4. Add Capital Movement (supports DEPOSIT, WITHDRAWAL, ADJUSTMENT, TRANSFER)
   const addCapitalMovement = useCallback(
     (
-      type: 'DEPOSIT' | 'WITHDRAWAL' | 'ADJUSTMENT',
+      type: 'DEPOSIT' | 'WITHDRAWAL' | 'ADJUSTMENT' | 'TRANSFER',
       rawAmount: number,
       note?: string,
-      customDate?: string
+      customDate?: string,
+      portfolioId?: string,
+      targetPortfolioId?: string
     ): CapitalMovement => {
+      const activePortId = portfolioId || wallets[0]?.id || 'wallet_main';
       let finalAmount = Math.abs(rawAmount);
+
       if (type === 'WITHDRAWAL') {
         finalAmount = -finalAmount;
       } else if (type === 'ADJUSTMENT') {
@@ -69,6 +178,8 @@ export function usePortfolio() {
 
       const movement: CapitalMovement = {
         id: `mov_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        portfolioId: activePortId,
+        targetPortfolioId: type === 'TRANSFER' ? targetPortfolioId : undefined,
         type,
         amount: finalAmount,
         note: note?.trim() || undefined,
@@ -77,28 +188,49 @@ export function usePortfolio() {
 
       setCapitalMovements((prev) => {
         const next = [movement, ...prev];
-        persistState(next, positions);
+        persistState(wallets, next, positions);
         return next;
       });
 
       return movement;
     },
-    [persistState, positions]
+    [persistState, wallets, positions]
   );
 
-  // 4. Remove Capital Movement
+  // Transfer helper
+  const transferBetweenWallets = useCallback(
+    (
+      fromWalletId: string,
+      toWalletId: string,
+      amount: number,
+      note?: string,
+      customDate?: string
+    ) => {
+      return addCapitalMovement(
+        'TRANSFER',
+        amount,
+        note,
+        customDate,
+        fromWalletId,
+        toWalletId
+      );
+    },
+    [addCapitalMovement]
+  );
+
+  // 5. Remove Capital Movement
   const removeCapitalMovement = useCallback(
     (id: string) => {
       setCapitalMovements((prev) => {
         const next = prev.filter((m) => m.id !== id);
-        persistState(next, positions);
+        persistState(wallets, next, positions);
         return next;
       });
     },
-    [persistState, positions]
+    [persistState, wallets, positions]
   );
 
-  // 5. Open Position
+  // 6. Open Position with Portfolio support
   const openPosition = useCallback(
     (
       asset: { id: string; symbol: string },
@@ -111,10 +243,14 @@ export function usePortfolio() {
         suggestedStopLoss: number;
         suggestedTakeProfit: number;
       },
-      entryDate?: string
+      entryDate?: string,
+      portfolioId?: string
     ): RealPosition => {
+      const activePortId = portfolioId || wallets[0]?.id || 'wallet_main';
+
       const newPos: RealPosition = {
         id: `pos_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        portfolioId: activePortId,
         assetId: asset.id,
         symbol: asset.symbol,
         entryPrice: Number(entryPrice),
@@ -128,16 +264,16 @@ export function usePortfolio() {
 
       setPositions((prev) => {
         const next = [newPos, ...prev];
-        persistState(capitalMovements, next);
+        persistState(wallets, capitalMovements, next);
         return next;
       });
 
       return newPos;
     },
-    [persistState, capitalMovements]
+    [persistState, wallets, capitalMovements]
   );
 
-  // 6. Update Position (allows editing SL/TP/capital for open, or correcting exitPrice for closed)
+  // 7. Update Position
   const updatePosition = useCallback(
     (id: string, changes: Partial<RealPosition>) => {
       setPositions((prev) => {
@@ -157,14 +293,14 @@ export function usePortfolio() {
           return updated;
         });
 
-        persistState(capitalMovements, next);
+        persistState(wallets, capitalMovements, next);
         return next;
       });
     },
-    [persistState, capitalMovements]
+    [persistState, wallets, capitalMovements]
   );
 
-  // 7. Close Position
+  // 8. Close Position
   const closePosition = useCallback(
     (
       id: string,
@@ -193,52 +329,26 @@ export function usePortfolio() {
           return closed;
         });
 
-        persistState(capitalMovements, next);
+        persistState(wallets, capitalMovements, next);
         return next;
       });
     },
-    [persistState, capitalMovements]
+    [persistState, wallets, capitalMovements]
   );
 
-  // 8. Delete Position (removes completely from history & capital)
+  // 9. Delete Position
   const deletePosition = useCallback(
     (id: string) => {
       setPositions((prev) => {
         const next = prev.filter((p) => p.id !== id);
-        persistState(capitalMovements, next);
+        persistState(wallets, capitalMovements, next);
         return next;
       });
     },
-    [persistState, capitalMovements]
+    [persistState, wallets, capitalMovements]
   );
 
-  // 9. Calculated Metrics
-  // Net Contributions (Sum of deposits and adjustments minus withdrawals)
-  const netContributions = useMemo(() => {
-    return capitalMovements.reduce((acc, mov) => acc + (mov.amount || 0), 0);
-  }, [capitalMovements]);
-
-  // Realized PnL (Sum of closed positions realizedPnl)
-  const realizedPnl = useMemo(() => {
-    return positions
-      .filter((p) => p.status === 'CLOSED')
-      .reduce((acc, p) => acc + (p.realizedPnl || 0), 0);
-  }, [positions]);
-
-  // Total Capital (Net Contributions + Realized PnL)
-  const totalCapital = useMemo(() => {
-    return netContributions + realizedPnl;
-  }, [netContributions, realizedPnl]);
-
-  // Available Capital = totalCapital - Sum of capitalAllocated of all positions with status === 'OPEN'
-  const availableCapital = useMemo(() => {
-    const openCapitalAllocated = positions
-      .filter((p) => p.status === 'OPEN')
-      .reduce((acc, p) => acc + (p.capitalAllocated || 0), 0);
-    return Math.max(0, totalCapital - openCapitalAllocated);
-  }, [totalCapital, positions]);
-
-  // Helper to compute live unrealized PnL from current price dictionary
+  // 10. Helper to compute live unrealized PnL for a single position
   const getLivePositionMetrics = useCallback(
     (pos: RealPosition, currentPrices: Record<string, number>) => {
       const cleanSymbol = pos.symbol.replace('/', '').replace('-', '').toUpperCase();
@@ -277,7 +387,127 @@ export function usePortfolio() {
     []
   );
 
-  // 10. Check and trigger Auto-Close on SL or TP hits
+  // 11. Individual Wallet Metrics Calculator
+  const getWalletMetrics = useCallback(
+    (walletId: string, currentPrices: Record<string, number>): WalletMetrics => {
+      // Net contributions for this specific wallet
+      const walletContributions = capitalMovements.reduce((acc, mov) => {
+        const isSelf = mov.portfolioId === walletId || (!mov.portfolioId && walletId === 'wallet_main');
+        const isTarget = mov.targetPortfolioId === walletId;
+
+        if (mov.type === 'TRANSFER') {
+          if (isSelf) return acc - Math.abs(mov.amount); // Outflow from this wallet
+          if (isTarget) return acc + Math.abs(mov.amount); // Inflow to this wallet
+          return acc;
+        }
+
+        if (isSelf) {
+          return acc + (mov.amount || 0);
+        }
+        return acc;
+      }, 0);
+
+      // Positions belonging to this wallet
+      const walletPositions = positions.filter(
+        (p) => p.portfolioId === walletId || (!p.portfolioId && walletId === 'wallet_main')
+      );
+
+      const openPos = walletPositions.filter((p) => p.status === 'OPEN');
+      const closedPos = walletPositions.filter((p) => p.status === 'CLOSED');
+
+      const realizedPnl = closedPos.reduce((acc, p) => acc + (p.realizedPnl || 0), 0);
+
+      const unrealizedPnl = openPos.reduce((acc, pos) => {
+        const metrics = getLivePositionMetrics(pos, currentPrices);
+        return acc + metrics.unrealizedPnlUSD;
+      }, 0);
+
+      const totalTradingPnl = realizedPnl + unrealizedPnl;
+      const settledCapital = walletContributions + realizedPnl;
+      const usedCapital = openPos.reduce((acc, p) => acc + (p.capitalAllocated || 0), 0);
+      const availableCash = Math.max(0, settledCapital - usedCapital);
+      const totalPortfolioValue = settledCapital + unrealizedPnl;
+
+      return {
+        walletId,
+        netContributions: walletContributions,
+        realizedPnl,
+        unrealizedPnl,
+        totalTradingPnl,
+        settledCapital,
+        usedCapital,
+        availableCash,
+        totalPortfolioValue,
+        openPositionsCount: openPos.length,
+        closedPositionsCount: closedPos.length,
+      };
+    },
+    [capitalMovements, positions, getLivePositionMetrics]
+  );
+
+  // 12. Helper to get available capital for a specific wallet (synchronous, without needing live prices)
+  const getWalletAvailableCapital = useCallback(
+    (walletId: string): number => {
+      const walletContributions = capitalMovements.reduce((acc, mov) => {
+        const isSelf = mov.portfolioId === walletId || (!mov.portfolioId && walletId === 'wallet_main');
+        const isTarget = mov.targetPortfolioId === walletId;
+
+        if (mov.type === 'TRANSFER') {
+          if (isSelf) return acc - Math.abs(mov.amount);
+          if (isTarget) return acc + Math.abs(mov.amount);
+          return acc;
+        }
+
+        if (isSelf) {
+          return acc + (mov.amount || 0);
+        }
+        return acc;
+      }, 0);
+
+      const walletPositions = positions.filter(
+        (p) => p.portfolioId === walletId || (!p.portfolioId && walletId === 'wallet_main')
+      );
+
+      const realizedPnl = walletPositions
+        .filter((p) => p.status === 'CLOSED')
+        .reduce((acc, p) => acc + (p.realizedPnl || 0), 0);
+
+      const usedCapital = walletPositions
+        .filter((p) => p.status === 'OPEN')
+        .reduce((acc, p) => acc + (p.capitalAllocated || 0), 0);
+
+      return Math.max(0, walletContributions + realizedPnl - usedCapital);
+    },
+    [capitalMovements, positions]
+  );
+
+  // 13. Consolidated Global Metrics (Across All Wallets)
+  // Transfers between internal wallets do not affect global net contributions
+  const netContributions = useMemo(() => {
+    return capitalMovements.reduce((acc, mov) => {
+      if (mov.type === 'TRANSFER') return acc; // Internal transfer has net zero effect globally
+      return acc + (mov.amount || 0);
+    }, 0);
+  }, [capitalMovements]);
+
+  const realizedPnl = useMemo(() => {
+    return positions
+      .filter((p) => p.status === 'CLOSED')
+      .reduce((acc, p) => acc + (p.realizedPnl || 0), 0);
+  }, [positions]);
+
+  const totalCapital = useMemo(() => {
+    return netContributions + realizedPnl;
+  }, [netContributions, realizedPnl]);
+
+  const availableCapital = useMemo(() => {
+    const openCapitalAllocated = positions
+      .filter((p) => p.status === 'OPEN')
+      .reduce((acc, p) => acc + (p.capitalAllocated || 0), 0);
+    return Math.max(0, totalCapital - openCapitalAllocated);
+  }, [totalCapital, positions]);
+
+  // 14. Check and trigger Auto-Close on SL or TP hits
   const checkAutoClose = useCallback(
     (currentPrices: Record<string, number>): RealPosition[] => {
       if (!currentPrices || Object.keys(currentPrices).length === 0) return [];
@@ -341,19 +571,26 @@ export function usePortfolio() {
 
       if (hasClosed) {
         setPositions(updated);
-        persistState(capitalMovements, updated);
+        persistState(wallets, capitalMovements, updated);
       }
 
       return autoClosedList;
     },
-    [positions, capitalMovements, persistState]
+    [positions, wallets, capitalMovements, persistState]
   );
 
   return {
+    wallets,
+    selectedWalletId,
+    setSelectedWalletId,
+    createWallet,
+    updateWallet,
+    deleteWallet,
     capitalMovements,
     positions,
     isHydrated,
     addCapitalMovement,
+    transferBetweenWallets,
     removeCapitalMovement,
     openPosition,
     updatePosition,
@@ -364,6 +601,8 @@ export function usePortfolio() {
     totalCapital,
     availableCapital,
     getLivePositionMetrics,
+    getWalletMetrics,
+    getWalletAvailableCapital,
     checkAutoClose,
   };
 }

@@ -2,14 +2,34 @@
 
 import React, { createContext, useContext, useState } from 'react';
 import { usePortfolio } from '../hooks/use-portfolio';
-import { CapitalMovement, RealPosition } from '../types/portfolio';
+import { CapitalMovement, RealPosition, PortfolioWallet, WalletMetrics } from '../types/portfolio';
 import { Asset } from '../types/market';
 
 interface PortfolioContextType {
+  wallets: PortfolioWallet[];
+  selectedWalletId: string | 'ALL';
+  setSelectedWalletId: (id: string | 'ALL') => void;
+  createWallet: (name: string, brokerOrExchange?: string, description?: string) => PortfolioWallet;
+  updateWallet: (id: string, changes: Partial<PortfolioWallet>) => void;
+  deleteWallet: (id: string, reassignToWalletId?: string) => void;
   capitalMovements: CapitalMovement[];
   positions: RealPosition[];
   isHydrated: boolean;
-  addCapitalMovement: (type: 'DEPOSIT' | 'WITHDRAWAL' | 'ADJUSTMENT', amount: number, note?: string, date?: string) => CapitalMovement;
+  addCapitalMovement: (
+    type: 'DEPOSIT' | 'WITHDRAWAL' | 'ADJUSTMENT' | 'TRANSFER',
+    amount: number,
+    note?: string,
+    date?: string,
+    portfolioId?: string,
+    targetPortfolioId?: string
+  ) => CapitalMovement;
+  transferBetweenWallets: (
+    fromWalletId: string,
+    toWalletId: string,
+    amount: number,
+    note?: string,
+    date?: string
+  ) => CapitalMovement;
   removeCapitalMovement: (id: string) => void;
   openPosition: (
     asset: { id: string; symbol: string },
@@ -22,10 +42,16 @@ interface PortfolioContextType {
       suggestedStopLoss: number;
       suggestedTakeProfit: number;
     },
-    entryDate?: string
+    entryDate?: string,
+    portfolioId?: string
   ) => RealPosition;
   updatePosition: (id: string, changes: Partial<RealPosition>) => void;
-  closePosition: (id: string, exitPrice: number, closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'MANUAL', exitDate?: string) => void;
+  closePosition: (
+    id: string,
+    exitPrice: number,
+    closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'MANUAL',
+    exitDate?: string
+  ) => void;
   deletePosition: (id: string) => void;
   netContributions: number;
   realizedPnl: number;
@@ -38,7 +64,10 @@ interface PortfolioContextType {
     distToSlPct: number | null;
     distToTpPct: number | null;
   };
+  getWalletMetrics: (walletId: string, currentPrices: Record<string, number>) => WalletMetrics;
+  getWalletAvailableCapital: (walletId: string) => number;
   checkAutoClose: (currentPrices: Record<string, number>) => RealPosition[];
+
   // Modal states
   applyModalAsset: Asset | null;
   applyModalPosition: RealPosition | null;
@@ -47,6 +76,9 @@ interface PortfolioContextType {
   isMovementModalOpen: boolean;
   openMovementModal: () => void;
   closeMovementModal: () => void;
+  isWalletModalOpen: boolean;
+  openWalletModal: () => void;
+  closeWalletModal: () => void;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
@@ -56,6 +88,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [applyModalAsset, setApplyModalAsset] = useState<Asset | null>(null);
   const [applyModalPosition, setApplyModalPosition] = useState<RealPosition | null>(null);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   const openApplyModal = (asset?: Asset | null, existingPosition?: RealPosition | null) => {
     setApplyModalAsset(asset || null);
@@ -70,6 +103,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const openMovementModal = () => setIsMovementModalOpen(true);
   const closeMovementModal = () => setIsMovementModalOpen(false);
 
+  const openWalletModal = () => setIsWalletModalOpen(true);
+  const closeWalletModal = () => setIsWalletModalOpen(false);
+
   return (
     <PortfolioContext.Provider
       value={{
@@ -81,6 +117,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         isMovementModalOpen,
         openMovementModal,
         closeMovementModal,
+        isWalletModalOpen,
+        openWalletModal,
+        closeWalletModal,
       }}
     >
       {children}

@@ -41,10 +41,24 @@ export function ApplyPositionModal({
 }: ApplyPositionModalProps) {
   const { settings, accent, updateSettings, formatCurrency } = useSettings();
   const isDark = settings.theme === 'dark';
-  const { openPosition, updatePosition, positions, totalCapital, availableCapital } = usePortfolioContext();
+  const {
+    openPosition,
+    updatePosition,
+    positions,
+    totalCapital,
+    availableCapital,
+    wallets,
+    getWalletAvailableCapital,
+    openWalletModal,
+  } = usePortfolioContext();
 
   const isEditing = Boolean(existingPosition);
   const isClosed = existingPosition?.status === 'CLOSED';
+
+  // Selected portfolio wallet ID for this position
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>(
+    existingPosition?.portfolioId || wallets[0]?.id || 'wallet_main'
+  );
 
   // Currently selected asset ID (for new position creation)
   const [selectedAssetId, setSelectedAssetId] = useState<string>(
@@ -101,13 +115,21 @@ export function ApplyPositionModal({
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Effective Available Capital (for existing open positions, adds back their own allocated capital)
+  // Available capital for the selected portfolio
+  const walletAvailable = useMemo(() => {
+    return getWalletAvailableCapital(selectedPortfolioId);
+  }, [getWalletAvailableCapital, selectedPortfolioId]);
+
+  // Effective Available Capital (for existing open positions in the same wallet, adds back their own allocated capital)
   const effectiveAvailableCapital = useMemo(() => {
     if (isEditing && existingPosition && existingPosition.status === 'OPEN') {
-      return availableCapital + (existingPosition.capitalAllocated || 0);
+      const posWalletId = existingPosition.portfolioId || 'wallet_main';
+      if (posWalletId === selectedPortfolioId) {
+        return walletAvailable + (existingPosition.capitalAllocated || 0);
+      }
     }
-    return Math.max(0, availableCapital);
-  }, [isEditing, existingPosition, availableCapital]);
+    return Math.max(0, walletAvailable);
+  }, [isEditing, existingPosition, selectedPortfolioId, walletAvailable]);
 
   // Capital numeric validation
   const capNum = parseFloat(capitalAllocated);
@@ -210,6 +232,7 @@ export function ApplyPositionModal({
     if (!isOpen) return;
 
     if (existingPosition) {
+      setSelectedPortfolioId(existingPosition.portfolioId || wallets[0]?.id || 'wallet_main');
       setEntryPrice(existingPosition.entryPrice.toString());
       setCapitalAllocated(existingPosition.capitalAllocated.toString());
       setUseStopLoss(existingPosition.stopLoss !== null);
@@ -224,12 +247,14 @@ export function ApplyPositionModal({
         setCloseReason(existingPosition.closeReason || 'MANUAL');
       }
     } else {
+      setSelectedPortfolioId(wallets[0]?.id || 'wallet_main');
       const initialAsset = asset || assets.find((a) => a.id === selectedAssetId) || assets[0];
       if (initialAsset) {
         setSelectedAssetId(initialAsset.id);
         applySuggestedValuesForAsset(initialAsset);
       }
-      const defaultCap = availableCapital > 0 ? (availableCapital >= 1000 ? 1000 : availableCapital) : 0;
+      const initialPortAvailable = wallets[0] ? getWalletAvailableCapital(wallets[0].id) : availableCapital;
+      const defaultCap = initialPortAvailable > 0 ? (initialPortAvailable >= 1000 ? 1000 : initialPortAvailable) : 0;
       setCapitalAllocated(defaultCap.toString());
       setEntryDate(new Date().toISOString().split('T')[0]);
       setExitPrice('');
@@ -237,7 +262,7 @@ export function ApplyPositionModal({
       setCloseReason('MANUAL');
     }
     setSavedSuccess(false);
-  }, [existingPosition, asset, isOpen, availableCapital]);
+  }, [existingPosition, asset, isOpen, wallets, availableCapital, getWalletAvailableCapital]);
 
   if (!isOpen) return null;
 
@@ -258,6 +283,7 @@ export function ApplyPositionModal({
 
     if (isEditing && existingPosition) {
       const changes: Partial<RealPosition> = {
+        portfolioId: selectedPortfolioId,
         entryPrice: ep,
         capitalAllocated: cap,
         stopLoss: sl,
@@ -286,7 +312,8 @@ export function ApplyPositionModal({
               suggestedTakeProfit: order.suggestedTakeProfit,
             }
           : undefined,
-        entryDate
+        entryDate,
+        selectedPortfolioId
       );
     }
 
@@ -407,6 +434,50 @@ export function ApplyPositionModal({
               </div>
             </div>
           )}
+
+          {/* Cartera / Subcuenta Selector */}
+          <div
+            className={`rounded-2xl border p-3.5 space-y-2 transition-colors ${
+              isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <label className={`block text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Cartera / Broker Destino:
+              </label>
+              <button
+                type="button"
+                onClick={openWalletModal}
+                className="text-[11px] font-semibold text-blue-500 hover:underline flex items-center gap-1"
+              >
+                + Gestionar carteras
+              </button>
+            </div>
+            <select
+              value={selectedPortfolioId}
+              onChange={(e) => setSelectedPortfolioId(e.target.value)}
+              className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-medium transition-all ${
+                isDark
+                  ? 'border-slate-700/80 bg-[#1c1c1e] text-white focus:border-blue-500'
+                  : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500'
+              }`}
+            >
+              {wallets.map((w) => {
+                const wAvail = getWalletAvailableCapital(w.id);
+                return (
+                  <option key={w.id} value={w.id}>
+                    {w.name} {w.brokerOrExchange ? `(${w.brokerOrExchange})` : ''} • Disp: {formatCurrency(wAvail)}
+                  </option>
+                );
+              })}
+            </select>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-0.5">
+              <span>Saldo disponible en esta cartera:</span>
+              <span className="font-mono font-bold text-emerald-400">
+                {formatCurrency(effectiveAvailableCapital)}
+              </span>
+            </div>
+          </div>
 
           {/* Asset Dropdown Selector (Only for new operations) */}
           {!isEditing && assets.length > 0 && activeAsset && (

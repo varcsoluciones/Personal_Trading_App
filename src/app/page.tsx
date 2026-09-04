@@ -20,6 +20,7 @@ import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import { PortfolioDashboard } from '@/components/portfolio/portfolio-dashboard';
 import { ApplyPositionModal } from '@/components/portfolio/apply-position-modal';
 import { CapitalMovementModal } from '@/components/portfolio/capital-movement-modal';
+import { PortfolioWalletsModal } from '@/components/portfolio/portfolio-wallets-modal';
 import { ALERT_NAVIGATE_EVENT } from '@/lib/utils/browser-notifications';
 import { APP_VERSION } from '@/lib/version';
 import {
@@ -63,6 +64,8 @@ export default function Home() {
     closeApplyModal,
     isMovementModalOpen,
     closeMovementModal,
+    isWalletModalOpen,
+    closeWalletModal,
     checkAutoClose,
   } = usePortfolioContext();
 
@@ -561,6 +564,12 @@ export default function Home() {
       <CapitalMovementModal
         isOpen={isMovementModalOpen}
         onClose={closeMovementModal}
+      />
+
+      {/* Portfolio Wallets Management Modal */}
+      <PortfolioWalletsModal
+        isOpen={isWalletModalOpen}
+        onClose={closeWalletModal}
       />
 
       {/* In-App Toast Banner Alert Notification */}
