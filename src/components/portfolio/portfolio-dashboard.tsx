@@ -822,21 +822,21 @@ export function PortfolioDashboard({
                       </div>
                     </div>
 
-                    {/* SL & TP Targets & Distances */}
+                    {/* SL & TP Targets & Distances (Informativos - sin negrita) */}
                     <div className="mt-2.5 space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className={`${isDark ? 'text-rose-400' : 'text-rose-600'} flex items-center gap-1.5 font-sans font-medium`}>
+                        <span className={`${isDark ? 'text-rose-400/90' : 'text-rose-600'} flex items-center gap-1.5 font-sans`}>
                           <Shield className="h-3.5 w-3.5" /> Stop Loss:
                         </span>
-                        <span className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                        <span className={`font-mono text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                           {pos.stopLoss !== null ? `$${pos.stopLoss} (${live.distToSlPct !== null && live.distToSlPct >= 0 ? '+' : ''}${live.distToSlPct}%)` : 'Sin SL'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} flex items-center gap-1.5 font-sans font-medium`}>
+                        <span className={`${isDark ? 'text-emerald-400/90' : 'text-emerald-600'} flex items-center gap-1.5 font-sans`}>
                           <Target className="h-3.5 w-3.5" /> Take Profit:
                         </span>
-                        <span className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                        <span className={`font-mono text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                           {pos.takeProfit !== null ? `$${pos.takeProfit} (${live.distToTpPct !== null && live.distToTpPct >= 0 ? '+' : ''}${live.distToTpPct}%)` : 'Sin TP'}
                         </span>
                       </div>
