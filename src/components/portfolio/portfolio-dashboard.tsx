@@ -369,18 +369,24 @@ export function PortfolioDashboard({
         <div
           className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
             isDark
-              ? `${accent.borderClass} ${accent.tintBgClass}`
-              : `${accent.borderClass} ${accent.tintBgClass} shadow-xs`
+              ? 'border-slate-800/80 bg-[#1c1c1e]'
+              : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
           <div>
             <div className="flex items-center justify-between gap-2 min-h-[24px]">
-              <span className={`text-xs font-bold tracking-tight font-sans ${accent.textClass}`}>
+              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
                 3. Valor Total de la Cartera
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 font-sans">
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
+                  isDark
+                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}
+              >
                 <TrendingUp className="h-3 w-3" />
-                <span>Patrimonio Real</span>
+                <span>Patrimonio Total</span>
               </span>
             </div>
             <div className="mt-2.5 flex items-baseline">
@@ -391,7 +397,7 @@ export function PortfolioDashboard({
           </div>
           <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <span>Efectivo: <strong className="font-mono font-bold text-emerald-400">{formatCurrency(availableCash)}</strong></span>
-            <span>En activos: <strong className="font-mono font-bold text-blue-400">{formatCurrency(openPositionsMarketValue)}</strong></span>
+            <span>En activos: <strong className={`font-mono font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{formatCurrency(openPositionsMarketValue)}</strong></span>
           </div>
         </div>
 
@@ -655,7 +661,7 @@ export function PortfolioDashboard({
 
             <div>
               <span className="text-slate-400 font-sans">Patrimonio: </span>
-              <strong className="font-mono font-bold text-blue-400">
+              <strong className={`font-mono font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                 {formatCurrency(currentSummaryMetrics.totalPortfolioValue)}
               </strong>
             </div>
