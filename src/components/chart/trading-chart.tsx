@@ -89,6 +89,9 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
   // Synchronization References
   const activeChartsRef = useRef<IChartApi[]>([]);
   const isSyncingRangeRef = useRef<boolean>(false);
+  const lastVisibleRangeRef = useRef<LogicalRange | null>(null);
+  const lastAssetIdRef = useRef<string>(asset.id);
+  const lastIntervalRef = useRef<string>('1d');
 
   // Timeframe interval state
   const [selectedInterval, setSelectedInterval] = useState<string>('1d');
@@ -640,8 +643,11 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
     activeChartsRef.current = createdCharts;
 
     createdCharts.forEach((chart) => {
-      // 1. Time Range Synchronization (Zoom / Pan)
+      // 1. Time Range Synchronization (Zoom / Pan) with Persistent State
       chart.timeScale().subscribeVisibleLogicalRangeChange((range: LogicalRange | null) => {
+        if (range) {
+          lastVisibleRangeRef.current = range;
+        }
         if (isSyncingRangeRef.current || !range) return;
         isSyncingRangeRef.current = true;
         activeChartsRef.current.forEach((targetChart) => {
@@ -694,8 +700,26 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
       });
     });
 
-    // Initial Fit Content
-    mainChart.timeScale().fitContent();
+    // Preserve existing Zoom & Pan Viewport if toggling indicators on the same asset and timeframe
+    const preservedRange = lastVisibleRangeRef.current;
+    const isSameAssetAndInterval =
+      lastAssetIdRef.current === asset.id &&
+      lastIntervalRef.current === selectedInterval;
+
+    if (preservedRange && isSameAssetAndInterval) {
+      createdCharts.forEach((c) => {
+        try {
+          c.timeScale().setVisibleLogicalRange(preservedRange);
+        } catch (err) {
+          c.timeScale().fitContent();
+        }
+      });
+    } else {
+      mainChart.timeScale().fitContent();
+      lastAssetIdRef.current = asset.id;
+      lastIntervalRef.current = selectedInterval;
+      lastVisibleRangeRef.current = null;
+    }
 
     // Responsive Resize Handler
     const handleResize = () => {
