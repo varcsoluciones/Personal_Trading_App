@@ -82,7 +82,7 @@ export function PortfolioDashboard({
     return positions.filter((p) => p.status === 'CLOSED');
   }, [positions]);
 
-  // Total Unrealized PnL from live open positions
+  // Total Unrealized PnL from live open positions (Flotante en operaciones abiertas)
   const unrealizedPnlTotal = useMemo(() => {
     return openPositions.reduce((acc, pos) => {
       const metrics = getLivePositionMetrics(pos, currentPrices);
@@ -93,20 +93,27 @@ export function PortfolioDashboard({
   // Total Trading PnL (Realized + Unrealized)
   const totalTradingPnl = realizedPnl + unrealizedPnlTotal;
 
-  // Total Current Capital
-  const totalCapital = netContributions + totalTradingPnl;
+  // Capital Liquidado / Balance Contable Cerrado (Aportes Netos + PnL Realizado)
+  const settledCapital = netContributions + realizedPnl;
 
   // Capital currently utilized in OPEN positions
   const usedCapital = useMemo(() => {
     return openPositions.reduce((acc, pos) => acc + (pos.capitalAllocated || 0), 0);
   }, [openPositions]);
 
-  // Available Capital for new trades
-  const availableCapital = Math.max(0, totalCapital - usedCapital);
+  // Saldo Disponible en Efectivo para Nuevas Operaciones (Liquid Cash para operar)
+  // Coincide exactamente con el límite disponible del modal de operaciones
+  const availableCash = Math.max(0, settledCapital - usedCapital);
 
-  // Capital utilization percentages
-  const usedCapitalPct = totalCapital > 0 ? (usedCapital / totalCapital) * 100 : 0;
-  const availableCapitalPct = totalCapital > 0 ? (availableCapital / totalCapital) * 100 : 0;
+  // Valor Actual de las Posiciones Abiertas (Capital invertido + ganancia/pérdida flotante)
+  const openPositionsMarketValue = usedCapital + unrealizedPnlTotal;
+
+  // Valor Total de la Cartera / Patrimonio Total (Efectivo disponible + Valor de posiciones abiertas)
+  const totalPortfolioValue = settledCapital + unrealizedPnlTotal;
+
+  // Capital utilization & liquidity percentages
+  const usedCapitalPct = settledCapital > 0 ? (usedCapital / settledCapital) * 100 : 0;
+  const availableCashPct = settledCapital > 0 ? (availableCash / settledCapital) * 100 : 0;
 
   // Trading Return % on Net Contributions
   const returnOnCapitalPct =
@@ -213,7 +220,7 @@ export function PortfolioDashboard({
             <button
               type="button"
               onClick={() => setIsMovementsExpanded(!isMovementsExpanded)}
-              className="text-blue-500 hover:underline flex items-center gap-0.5 text-[11px] font-semibold"
+              className="text-blue-500 hover:underline flex items-center gap-0.5 text-[11px] font-semibold cursor-pointer"
             >
               <span>{isMovementsExpanded ? 'Ocultar historial' : 'Ver movimientos'}</span>
               {isMovementsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -256,7 +263,7 @@ export function PortfolioDashboard({
           </div>
         </div>
 
-        {/* KPI 3: Capital Total Actual */}
+        {/* KPI 3: Valor Total de la Cartera (Patrimonio Total) */}
         <div
           className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
             isDark
@@ -266,25 +273,25 @@ export function PortfolioDashboard({
         >
           <div className="flex items-center justify-between">
             <span className={`text-xs font-bold uppercase tracking-wider ${accent.textClass}`}>
-              3. Capital Total Actual
+              3. Valor Total de la Cartera
             </span>
             <div className={`flex items-center gap-1 text-[11px] font-bold ${accent.textClass}`}>
               <TrendingUp className="h-3.5 w-3.5" />
-              <span>Balance Real</span>
+              <span>Patrimonio Real</span>
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className={`font-mono text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              {formatCurrency(totalCapital)}
+              {formatCurrency(totalPortfolioValue)}
             </span>
           </div>
           <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Posiciones activas: <strong className="font-mono text-blue-500">{openPositions.length}</strong></span>
-            <span>Cerradas: <strong className="font-mono">{closedPositions.length}</strong></span>
+            <span>Efectivo: <strong className="font-mono text-emerald-400">{formatCurrency(availableCash)}</strong></span>
+            <span>En activos: <strong className="font-mono text-blue-400">{formatCurrency(openPositionsMarketValue)}</strong></span>
           </div>
         </div>
 
-        {/* KPI 4: Capital Utilizado & Saldo Disponible */}
+        {/* KPI 4: Capital Utilizado & Saldo Disponible en Efectivo */}
         <div
           className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
@@ -292,11 +299,11 @@ export function PortfolioDashboard({
         >
           <div className="flex items-center justify-between">
             <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              4. Utilizado vs Disponible
+              4. Saldo Disponible en Efectivo
             </span>
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                availableCapital > 0
+                availableCash > 0
                   ? isDark
                     ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                     : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -305,20 +312,20 @@ export function PortfolioDashboard({
                   : 'bg-amber-50 text-amber-700 border border-amber-200'
               }`}
             >
-              {availableCapitalPct.toFixed(0)}% libre
+              {availableCashPct.toFixed(0)}% libre
             </span>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className={`font-mono text-2xl sm:text-3xl font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-              {formatCurrency(availableCapital)}
+              {formatCurrency(availableCash)}
             </span>
             <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              disponible
+              para operar
             </span>
           </div>
           <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <span>En órdenes: <strong className="font-mono text-amber-500">{formatCurrency(usedCapital)}</strong></span>
-            <span>Uso: <strong className="font-mono">{usedCapitalPct.toFixed(1)}%</strong></span>
+            <span>Flotante: <strong className={`font-mono ${unrealizedPnlTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
           </div>
         </div>
       </div>
