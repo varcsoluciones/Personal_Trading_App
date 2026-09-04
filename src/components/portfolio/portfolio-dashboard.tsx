@@ -765,7 +765,9 @@ export function PortfolioDashboard({
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-base font-black tracking-tight text-white">{pos.symbol}</span>
+                          <span className={`font-mono text-base font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {pos.symbol}
+                          </span>
                           <span className="rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold uppercase font-sans">
                             Abierta
                           </span>
@@ -782,26 +784,26 @@ export function PortfolioDashboard({
                             {posWallet.name}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-400 font-sans block mt-0.5">
-                          Entrada: <span className="font-mono text-slate-300">{pos.entryDate}</span>
+                        <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'} font-sans block mt-0.5`}>
+                          Entrada: <span className={`font-mono font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{pos.entryDate}</span>
                         </span>
                       </div>
 
                       <div className="text-right">
-                        <span className="text-[11px] text-slate-400 font-sans block">Precio Actual</span>
-                        <span className="font-mono font-bold text-sm text-white">{formatCurrency(live.currentPrice)}</span>
+                        <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'} font-sans block`}>Precio Actual</span>
+                        <span className={`font-mono font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatCurrency(live.currentPrice)}</span>
                       </div>
                     </div>
 
                     {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-slate-800/40">
+                    <div className="grid grid-cols-2 gap-2 text-xs py-2.5 border-y border-slate-800/40">
                       <div>
-                        <span className="text-[11px] font-sans text-slate-400 block">Capital Invertido:</span>
-                        <span className="font-mono font-bold text-slate-200">{formatCurrency(pos.capitalAllocated)}</span>
+                        <span className={`text-[11px] font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'} block`}>Capital Invertido:</span>
+                        <span className={`font-mono font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{formatCurrency(pos.capitalAllocated)}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[11px] font-sans text-slate-400 block">Precio Entrada:</span>
-                        <span className="font-mono font-bold text-slate-200">${pos.entryPrice}</span>
+                        <span className={`text-[11px] font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'} block`}>Precio Entrada:</span>
+                        <span className={`font-mono font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>${pos.entryPrice}</span>
                       </div>
                     </div>
 
@@ -811,11 +813,11 @@ export function PortfolioDashboard({
                         ? isDark ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50'
                         : isDark ? 'border-rose-500/30 bg-rose-500/10' : 'border-rose-200 bg-rose-50'
                     }`}>
-                      <div className="text-xs font-bold text-slate-300 font-sans flex items-center gap-1.5">
+                      <div className={`text-xs font-bold font-sans flex items-center gap-1.5 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                         {isProfit ? <TrendingUp className="h-3.5 w-3.5 text-emerald-400" /> : <TrendingDown className="h-3.5 w-3.5 text-rose-400" />}
                         <span>P&L Flotante:</span>
                       </div>
-                      <div className={`font-mono font-bold text-sm ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <div className={`font-mono font-bold text-sm ${isProfit ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (isDark ? 'text-rose-400' : 'text-rose-700')}`}>
                         {isProfit ? '+' : ''}{formatCurrency(live.unrealizedPnlUSD)} ({isProfit ? '+' : ''}{live.unrealizedPnlPct}%)
                       </div>
                     </div>
@@ -823,18 +825,18 @@ export function PortfolioDashboard({
                     {/* SL & TP Targets & Distances */}
                     <div className="mt-2.5 space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-rose-400 flex items-center gap-1.5 font-sans font-medium">
+                        <span className={`${isDark ? 'text-rose-400' : 'text-rose-600'} flex items-center gap-1.5 font-sans font-medium`}>
                           <Shield className="h-3.5 w-3.5" /> Stop Loss:
                         </span>
-                        <span className="font-mono font-bold text-slate-200">
+                        <span className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                           {pos.stopLoss !== null ? `$${pos.stopLoss} (${live.distToSlPct !== null && live.distToSlPct >= 0 ? '+' : ''}${live.distToSlPct}%)` : 'Sin SL'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-emerald-400 flex items-center gap-1.5 font-sans font-medium">
+                        <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} flex items-center gap-1.5 font-sans font-medium`}>
                           <Target className="h-3.5 w-3.5" /> Take Profit:
                         </span>
-                        <span className="font-mono font-bold text-slate-200">
+                        <span className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                           {pos.takeProfit !== null ? `$${pos.takeProfit} (${live.distToTpPct !== null && live.distToTpPct >= 0 ? '+' : ''}${live.distToTpPct}%)` : 'Sin TP'}
                         </span>
                       </div>
@@ -945,7 +947,7 @@ export function PortfolioDashboard({
 
                   return (
                     <tr key={pos.id} className={isDark ? 'hover:bg-[#2c2c2e]/30' : 'hover:bg-slate-50'}>
-                      <td className="py-3 px-3 font-bold text-sm font-mono text-white">
+                      <td className={`py-3 px-3 font-bold text-sm font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         {pos.symbol}
                       </td>
                       <td className="py-3 px-3 font-sans">
@@ -961,18 +963,18 @@ export function PortfolioDashboard({
                           {posWallet.name}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-slate-400 text-xs font-sans">
-                        <div>Entrada: <span className="font-mono text-slate-300">{pos.entryDate}</span></div>
-                        <div>Salida: <span className="font-mono text-slate-300">{pos.exitDate || '-'}</span></div>
+                      <td className={`py-3 px-3 text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <div>Entrada: <span className={`font-mono font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{pos.entryDate}</span></div>
+                        <div>Salida: <span className={`font-mono font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{pos.exitDate || '-'}</span></div>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-200 text-xs">
+                      <td className={`py-3 px-3 text-right font-mono font-bold text-xs ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                         {formatCurrency(pos.capitalAllocated)}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-xs text-slate-300">
-                        ${pos.entryPrice} → <strong className="text-white font-bold">${pos.exitPrice}</strong>
+                      <td className={`py-3 px-3 text-right font-mono text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                        ${pos.entryPrice} → <strong className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>${pos.exitPrice}</strong>
                       </td>
                       <td className={`py-3 px-3 text-right font-mono font-bold text-sm ${
-                        isProfit ? 'text-emerald-400' : 'text-rose-400'
+                        isProfit ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-rose-400' : 'text-rose-600')
                       }`}>
                         {isProfit ? '+' : ''}{formatCurrency(pnl)}
                         <span className="block text-[10px] font-mono">
