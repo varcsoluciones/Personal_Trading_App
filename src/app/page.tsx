@@ -37,6 +37,7 @@ import {
   CheckCircle2,
   Bell,
   Save,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function Home() {
@@ -48,6 +49,8 @@ export default function Home() {
     activeTab,
     setActiveTab,
     isLoading,
+    isRefreshing,
+    refreshData,
     backtestConfig,
     updateBacktestConfig,
     backtestResult,
@@ -515,11 +518,27 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <div className="flex items-center gap-1.5 text-emerald-500 text-[11px]">
+          <div className="flex items-center gap-2.5 text-xs font-semibold flex-wrap justify-end">
+            <div className="flex items-center gap-1.5 text-emerald-500 text-[11px] font-sans">
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>Navegador Sincronizado</span>
             </div>
+
+            {/* Manual Data Refresh Button (Ideal for mobile web / PWA home icon) */}
+            <button
+              type="button"
+              onClick={() => refreshData()}
+              disabled={isRefreshing}
+              className={`flex items-center gap-1 rounded-xl border px-2.5 py-1 text-[11px] font-sans font-bold transition-all shadow-xs active:scale-95 cursor-pointer ${
+                isDark
+                  ? 'border-slate-800 bg-[#2c2c2e]/90 text-slate-300 hover:text-white hover:bg-[#3a3a3c] hover:border-slate-700'
+                  : 'border-slate-200 bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 hover:border-slate-300'
+              } ${isRefreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
+              title="Actualizar datos de mercado y precios ahora"
+            >
+              <RefreshCw className={`h-3 w-3 text-blue-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Actualizando...' : 'Actualizar'}</span>
+            </button>
           </div>
         </div>
       </footer>

@@ -21,6 +21,7 @@ export function useMarketData() {
   const [selectedAssetId, setSelectedAssetIdState] = useState<string>('BTCUSDT');
   const [activeTab, setActiveTabState] = useState<'dashboard' | 'screener' | 'chart' | 'backtest' | 'portfolio'>('dashboard');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [backtestConfig, setBacktestConfig] = useState<BacktestConfig>(DEFAULT_BACKTEST_CONFIG);
 
   // Hydrate persistent state from localStorage
@@ -176,74 +177,84 @@ export function useMarketData() {
     loadInitialAssets();
   }, []);
 
+  // Manual and periodic refresh handler
+  const refreshData = useCallback(async () => {
+    setIsRefreshing(true);
+    setAssets((prevAssets) => {
+      if (prevAssets.length === 0) {
+        setIsRefreshing(false);
+        return prevAssets;
+      }
+
+      (async () => {
+        try {
+          const results = await Promise.allSettled(
+            prevAssets.map(async (asset) => {
+              const cleanId = asset.id.replace("/", "").toUpperCase();
+              const res = await fetch(`/api/market-data?symbol=${cleanId}&type=${asset.type}`);
+              if (!res.ok) return asset;
+              const data = await res.json();
+              if (!data.candles || data.candles.length === 0) return asset;
+
+              const candles: Candle[] = data.candles;
+              const lastCandle = candles[candles.length - 1];
+              const prevCandle = candles[candles.length - 2] || lastCandle;
+              const price = data.price ?? lastCandle.close;
+              const change24h = data.change24h ?? (price - prevCandle.close);
+              const change24hPct = data.change24hPct ?? (((price - prevCandle.close) / prevCandle.close) * 100);
+              const analysis = data.analysis ?? analyzeAsset(candles);
+
+              return {
+                ...asset,
+                price: Number(price.toFixed(4)),
+                change24h: Number(change24h.toFixed(4)),
+                change24hPct: Number(change24hPct.toFixed(2)),
+                high24h: data.high24h ?? lastCandle.high,
+                low24h: data.low24h ?? lastCandle.low,
+                volume24h: data.volume24h ?? lastCandle.volume,
+                candles,
+                analysis,
+              } as Asset;
+            })
+          );
+
+          const updated: Asset[] = [];
+          const priceMap: Record<string, number> = {};
+
+          results.forEach((r, idx) => {
+            if (r.status === "fulfilled" && r.value) {
+              updated.push(r.value);
+              priceMap[r.value.id] = r.value.price;
+              priceMap[r.value.symbol] = r.value.price;
+            } else {
+              updated.push(prevAssets[idx]);
+            }
+          });
+
+          setAssets(updated);
+          checkAlerts(priceMap);
+        } catch (err) {
+          console.warn("[MarketData] Refresh error:", err);
+        } finally {
+          setIsRefreshing(false);
+        }
+      })();
+
+      return prevAssets;
+    });
+  }, [checkAlerts]);
+
   // Periodic background refresh based on user settings (30s, 60s default, or 120s)
   useEffect(() => {
     const intervalSec = settings.refreshInterval || 60;
     const intervalMs = intervalSec * 1000;
 
-    const intervalId = setInterval(async () => {
-      setAssets((prevAssets) => {
-        if (prevAssets.length === 0) return prevAssets;
-
-        // Perform async background refresh
-        (async () => {
-          try {
-            const results = await Promise.allSettled(
-              prevAssets.map(async (asset) => {
-                const cleanId = asset.id.replace("/", "").toUpperCase();
-                const res = await fetch(`/api/market-data?symbol=${cleanId}&type=${asset.type}`);
-                if (!res.ok) return asset;
-                const data = await res.json();
-                if (!data.candles || data.candles.length === 0) return asset;
-
-                const candles: Candle[] = data.candles;
-                const lastCandle = candles[candles.length - 1];
-                const prevCandle = candles[candles.length - 2] || lastCandle;
-                const price = data.price ?? lastCandle.close;
-                const change24h = data.change24h ?? (price - prevCandle.close);
-                const change24hPct = data.change24hPct ?? (((price - prevCandle.close) / prevCandle.close) * 100);
-                const analysis = data.analysis ?? analyzeAsset(candles);
-
-                return {
-                  ...asset,
-                  price: Number(price.toFixed(4)),
-                  change24h: Number(change24h.toFixed(4)),
-                  change24hPct: Number(change24hPct.toFixed(2)),
-                  high24h: data.high24h ?? lastCandle.high,
-                  low24h: data.low24h ?? lastCandle.low,
-                  volume24h: data.volume24h ?? lastCandle.volume,
-                  candles,
-                  analysis,
-                } as Asset;
-              })
-            );
-
-            const updated: Asset[] = [];
-            const priceMap: Record<string, number> = {};
-
-            results.forEach((r, idx) => {
-              if (r.status === "fulfilled" && r.value) {
-                updated.push(r.value);
-                priceMap[r.value.id] = r.value.price;
-                priceMap[r.value.symbol] = r.value.price;
-              } else {
-                updated.push(prevAssets[idx]);
-              }
-            });
-
-            setAssets(updated);
-            checkAlerts(priceMap);
-          } catch (err) {
-            console.warn("[MarketData] Periodic background refresh error:", err);
-          }
-        })();
-
-        return prevAssets;
-      });
+    const intervalId = setInterval(() => {
+      refreshData();
     }, intervalMs);
 
     return () => clearInterval(intervalId);
-  }, [settings.refreshInterval, checkAlerts]);
+  }, [settings.refreshInterval, refreshData]);
 
 
   // Selected asset
@@ -357,6 +368,8 @@ export function useMarketData() {
     activeTab,
     setActiveTab,
     isLoading,
+    isRefreshing,
+    refreshData,
     backtestConfig,
     updateBacktestConfig,
     backtestResult,
