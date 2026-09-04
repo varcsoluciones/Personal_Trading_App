@@ -21,6 +21,7 @@ import { PortfolioDashboard } from '@/components/portfolio/portfolio-dashboard';
 import { ApplyPositionModal } from '@/components/portfolio/apply-position-modal';
 import { CapitalMovementModal } from '@/components/portfolio/capital-movement-modal';
 import { ALERT_NAVIGATE_EVENT } from '@/lib/utils/browser-notifications';
+import { APP_VERSION } from '@/lib/version';
 import {
   LayoutGrid,
   Table as TableIcon,
@@ -34,6 +35,7 @@ import {
   Database,
   CheckCircle2,
   Bell,
+  Save,
 } from 'lucide-react';
 
 export default function Home() {
@@ -52,7 +54,7 @@ export default function Home() {
     removeAsset,
   } = useMarketData();
 
-  const { settings, accent, lastSavedTimestamp, updateSettings, formatCurrency } = useSettings();
+  const { settings, accent, lastSavedTimestamp, updateSettings, formatCurrency, recordSaveAction } = useSettings();
   const isDark = settings.theme === 'dark';
   const { modalAsset, closeAlertsModal, activeToast, dismissToast } = useAlerts();
   const {
@@ -63,6 +65,19 @@ export default function Home() {
     closeMovementModal,
     checkAutoClose,
   } = usePortfolioContext();
+
+  const [isManualSaving, setIsManualSaving] = useState(false);
+
+  const handleManualSave = () => {
+    setIsManualSaving(true);
+    recordSaveAction();
+    try {
+      localStorage.setItem('personal_trading_user_settings_v3', JSON.stringify(settings));
+    } catch (e) {}
+    setTimeout(() => {
+      setIsManualSaving(false);
+    }, 1200);
+  };
 
   // Check auto-close on SL / TP for open positions whenever prices refresh
   useEffect(() => {
@@ -455,31 +470,53 @@ export default function Home() {
                 Personal Trading Pro
               </span>
               <span className="rounded-lg bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-500 font-mono">
-                v2.1.0
+                {APP_VERSION}
               </span>
             </div>
             <span className="hidden sm:inline text-slate-400">•</span>
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <Database className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Último guardado local:</span>
-              <strong className={`font-mono ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                {lastSavedTimestamp || 'Guardado'}
-              </strong>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <Database className="h-3.5 w-3.5 text-emerald-500" />
+                <span>Último guardado:</span>
+                <strong className={`font-mono ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {lastSavedTimestamp || 'Guardado'}
+                </strong>
+              </div>
+
+              {/* Manual Save Button */}
+              <button
+                type="button"
+                onClick={handleManualSave}
+                disabled={isManualSaving}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border shadow-sm active:scale-95 cursor-pointer ${
+                  isManualSaving
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                    : isDark
+                    ? 'bg-[#18181b] border-slate-700/70 text-slate-300 hover:text-white hover:bg-[#27272a] hover:border-slate-600'
+                    : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'
+                }`}
+                title="Guardar manualmente configuración, alertas y cartera en el navegador"
+              >
+                {isManualSaving ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in-50" />
+                    <span>¡Guardado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3.5 w-3.5 text-blue-400" />
+                    <span>Guardar</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <div className="flex items-center gap-1 text-emerald-500 text-[11px]">
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <div className="flex items-center gap-1.5 text-emerald-500 text-[11px]">
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>Navegador Sincronizado</span>
             </div>
-            <button
-              onClick={() => setIsGuideModalOpen(true)}
-              className="text-blue-500 hover:underline flex items-center gap-1"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              <span>Guía de Indicadores</span>
-            </button>
           </div>
         </div>
       </footer>
