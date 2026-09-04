@@ -807,7 +807,11 @@ export function OpportunityScreener({
                                 {formatCurrency(order.suggestedEntryPrice)}
                               </span>
                               {order.distanceToEntryPct !== 0 && (
-                                <span className="text-[10px] text-amber-400 font-semibold">
+                                <span className={`text-[10px] font-semibold ${
+                                  Math.abs(order.distanceToEntryPct) <= 1.0
+                                    ? 'text-emerald-400 font-bold bg-emerald-500/15 px-1 rounded border border-emerald-500/30'
+                                    : 'text-amber-400'
+                                }`}>
                                   ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
                                 </span>
                               )}

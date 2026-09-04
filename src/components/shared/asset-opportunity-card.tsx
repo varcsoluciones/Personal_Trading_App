@@ -176,7 +176,11 @@ export function AssetOpportunityCard({
                 {formatCurrency(order.suggestedEntryPrice)}
               </span>
               {order.distanceToEntryPct !== 0 && (
-                <span className="text-[10px] text-amber-500 font-bold ml-1 font-mono">
+                <span className={`text-[10px] font-bold ml-1 font-mono ${
+                  Math.abs(order.distanceToEntryPct) <= 1.0
+                    ? 'text-emerald-400 bg-emerald-500/15 px-1 py-0.5 rounded border border-emerald-500/30'
+                    : 'text-amber-500'
+                }`}>
                   ({order.distanceToEntryPct > 0 ? '+' : ''}{order.distanceToEntryPct}%)
                 </span>
               )}

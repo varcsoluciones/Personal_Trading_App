@@ -225,7 +225,14 @@ export function analyzeAsset(candles: Candle[], config?: StrategyRulesConfig): T
   }
 
   // 7. Projected Ideal Entry Price & Order Setup (Shared Strategy Calculation)
-  const entryCalc = calculateSuggestedEntry(currentPrice, currentEma20, currentAtr, trend, signal);
+  const entryCalc = calculateSuggestedEntry(
+    currentPrice,
+    currentEma20,
+    currentAtr,
+    trend,
+    signal,
+    config?.entryTolerancePct ?? 1.0
+  );
   const suggestedEntryPrice = entryCalc.suggestedEntryPrice;
   const entryType = entryCalc.entryType;
   const entryLabel = entryCalc.entryLabel;

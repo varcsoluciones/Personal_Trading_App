@@ -105,6 +105,7 @@ export interface BacktestConfig {
   stopLossPct: number;    // default 3.5%
   takeProfitRatio: number;// default 2.0 (1:2 R:R)
   useAtrStop: boolean;    // optional ATR dynamic stop
+  entryTolerancePct?: number; // default 1.0 (±1% tolerance zone)
 }
 
 export interface Trade {

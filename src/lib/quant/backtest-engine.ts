@@ -20,6 +20,7 @@ export const DEFAULT_BACKTEST_CONFIG: BacktestConfig = {
   stopLossPct: 3.5,
   takeProfitRatio: 2.2,  // 1:2.2 Risk/Reward
   useAtrStop: true,      // Uses ATR dynamic stop matching live signals
+  entryTolerancePct: 1.0,// ±1% dynamic support tolerance zone
 };
 
 interface PendingLimitOrder {
@@ -290,13 +291,21 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
           adxMin: 20,
           requireVolumeConfirmation: true,
           requireWeeklyAlignment: true,
+          entryTolerancePct: cfg.entryTolerancePct ?? 1.0,
         },
       });
 
       if (entryCheck.shouldEnter) {
         // Calculate the exact projected limit entry price using the shared strategy rule
         const trend = currentEmaFast > currentEmaSlow ? 'BULLISH' : 'NEUTRAL';
-        const entryPlan = calculateSuggestedEntry(currentPrice, currentEmaFast, currentAtr, trend, 'OPORTUNIDAD DE ENTRADA');
+        const entryPlan = calculateSuggestedEntry(
+          currentPrice,
+          currentEmaFast,
+          currentAtr,
+          trend,
+          'OPORTUNIDAD DE ENTRADA',
+          cfg.entryTolerancePct ?? 1.0
+        );
 
         pendingOrder = {
           limitPrice: entryPlan.suggestedEntryPrice,

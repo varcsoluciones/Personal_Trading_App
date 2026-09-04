@@ -179,19 +179,19 @@ export function IndicatorGuideModal({ isOpen, onClose }: IndicatorGuideModalProp
                   <div className={`p-3 rounded-2xl border flex items-start gap-2.5 ${isDark ? 'border-emerald-500/30 bg-emerald-950/15' : 'border-emerald-200 bg-emerald-50/70'}`}>
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-emerald-500">🟢 Oportunidad de Entrada:</strong> El precio actual coincide con el punto óptimo de compra (zona de retroceso a la EMA 20 y RSI en impulso). **Es el momento de ejecutar la operación.**
+                      <strong className="text-emerald-500">🟢 Oportunidad de Entrada (Zona ±1%):</strong> El activo cumple tendencia alcista, confirmación semanal y volumen, y el precio actual está dentro de la **zona de tolerancia (±1% del soporte de la EMA 20)** con RSI saludable (&le; 62). **Es el momento de ejecutar la orden de compra.**
                     </div>
                   </div>
                   <div className={`p-3 rounded-2xl border flex items-start gap-2.5 ${isDark ? 'border-amber-500/30 bg-amber-950/15' : 'border-amber-200 bg-amber-50/70'}`}>
                     <Clock className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-amber-500">🟡 Esperar / Mantener:</strong> El setup es el plan proyectado si el activo retrocede a la entrada ideal. No compres a mercado; coloca una orden límite o mantén si ya estás dentro.
+                      <strong className="text-amber-500">🟡 Esperar / Mantener:</strong> El activo está en tendencia o consolidación, pero el precio cotiza alejado del soporte (&gt; +1% de la EMA 20) o con RSI extendido. La app te proyecta la entrada ideal para colocar una orden límite o alerta de precio.
                     </div>
                   </div>
                   <div className={`p-3 rounded-2xl border flex items-start gap-2.5 ${isDark ? 'border-rose-500/30 bg-rose-950/15' : 'border-rose-200 bg-rose-50/70'}`}>
                     <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-rose-500">🔴 Oportunidad de Salida:</strong> El activo alcanzó sobrecompra extrema (RSI &gt; 70) o rompió la EMA 50 a la baja. Momento de tomar beneficios o cerrar.
+                      <strong className="text-rose-500">🔴 Oportunidad de Salida:</strong> El activo alcanzó sobrecompra extrema (RSI &gt; 70) o rompió la EMA 50 a la baja. Momento de tomar beneficios o cerrar posición.
                     </div>
                   </div>
                 </div>

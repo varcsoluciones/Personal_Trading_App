@@ -11,6 +11,7 @@ export interface StrategyRulesConfig {
   stopLossPct?: number;
   requireVolumeConfirmation?: boolean;
   requireWeeklyAlignment?: boolean;
+  entryTolerancePct?: number;
 }
 
 export const DEFAULT_STRATEGY_CONFIG: Required<StrategyRulesConfig> = {
@@ -26,6 +27,7 @@ export const DEFAULT_STRATEGY_CONFIG: Required<StrategyRulesConfig> = {
   stopLossPct: 3.5,
   requireVolumeConfirmation: true,
   requireWeeklyAlignment: true,
+  entryTolerancePct: 1.0,
 };
 
 /**
@@ -77,14 +79,29 @@ export function evaluateEntryCondition(params: {
   const trendIsBullish = currentEmaFast > currentEmaSlow && currentPrice >= currentEmaSlow;
   const adxFilter = currentAdx >= cfg.adxMin;
 
+  // Proximity to dynamic support (EMA Fast / EMA 20): Tolerance zone ±1% (configurable)
+  const tolerance = (cfg.entryTolerancePct ?? 1.0) / 100;
+  const upperTolerancePrice = currentEmaFast * (1 + tolerance);
+  const lowerTolerancePrice = currentEmaSlow * 0.99; // allows slight test below fast EMA but above/at slow EMA
+  const isNearSupportZone = currentPrice <= upperTolerancePrice && currentPrice >= lowerTolerancePrice;
+
   // 3. Pullback to support in bullish trend with healthy RSI, ADX & Volume confirmation
+  // Case A: Standard healthy pullback (RSI 38 - 58)
   const rsiPullback = currentRsi >= cfg.rsiOversold && currentRsi <= 58;
+
+  // Case B: Bouncing from oversold
   const rsiBouncing = prevRsi <= cfg.rsiOversold + 5 && currentRsi > prevRsi && currentRsi < 62;
 
-  if (trendIsBullish && adxFilter && (rsiPullback || rsiBouncing)) {
+  // Case C: Proximity Zone Entry: price is within ±1% (tolerance) of the EMA 20 support zone and RSI is healthy (<= 62)
+  const proximityZoneTrigger = isNearSupportZone && currentRsi >= cfg.rsiOversold && currentRsi <= 62;
+
+  if (trendIsBullish && adxFilter && (rsiPullback || rsiBouncing || proximityZoneTrigger)) {
+    const isProximity = proximityZoneTrigger && !rsiPullback && !rsiBouncing;
     return {
       shouldEnter: true,
-      reason: "Retroceso saludable (pullback) hacia soporte con RSI favorable, filtro ADX >= " + cfg.adxMin + " y confirmación de volumen.",
+      reason: isProximity
+        ? `Precio en zona de soporte (dentro de ±${(cfg.entryTolerancePct ?? 1.0).toFixed(1)}% de EMA ${cfg.emaFastPeriod}) con RSI saludable (${currentRsi.toFixed(1)}) y ADX >= ${cfg.adxMin}.`
+        : `Retroceso saludable (pullback) hacia soporte con RSI favorable, filtro ADX >= ${cfg.adxMin} y confirmación de volumen.`,
     };
   }
 
@@ -191,16 +208,22 @@ export function calculateSuggestedEntry(
   currentEma20: number,
   currentAtr: number,
   trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL',
-  signal: 'OPORTUNIDAD DE ENTRADA' | 'OPORTUNIDAD DE SALIDA' | 'ESPERAR / MANTENER'
+  signal: 'OPORTUNIDAD DE ENTRADA' | 'OPORTUNIDAD DE SALIDA' | 'ESPERAR / MANTENER',
+  tolerancePct: number = 1.0
 ): SuggestedEntryResult {
   let suggestedEntryPrice = currentPrice;
   let entryType: EntryStrategyType = 'PULLBACK_ESPERADO';
   let entryLabel = 'Esperar retroceso';
 
+  const tolerance = tolerancePct / 100;
+  const isWithinZone = currentEma20 > 0 && Math.abs(currentPrice - currentEma20) / currentEma20 <= tolerance;
+
   if (signal === 'OPORTUNIDAD DE ENTRADA') {
     suggestedEntryPrice = currentPrice;
     entryType = 'INMEDIATA';
-    entryLabel = 'Comprar en Mercado (Pullback Confirmado)';
+    entryLabel = isWithinZone
+      ? `En Zona de Compra (±${tolerancePct.toFixed(1)}%)`
+      : 'Comprar en Mercado (Pullback Confirmado)';
   } else if (trend === 'BULLISH') {
     // In bullish trend, target pullback to EMA 20 dynamic support
     const pullbackTarget = currentEma20 > 0 && currentPrice > currentEma20
@@ -208,7 +231,9 @@ export function calculateSuggestedEntry(
       : currentPrice * 0.985;
     suggestedEntryPrice = Math.min(currentPrice, pullbackTarget);
     entryType = 'PULLBACK_ESPERADO';
-    entryLabel = 'Esperar retroceso a EMA 20';
+    entryLabel = isWithinZone
+      ? `En Zona de Compra (±${tolerancePct.toFixed(1)}%)`
+      : 'Esperar retroceso a EMA 20';
   } else if (trend === 'NEUTRAL') {
     // In range/lateral trend, target lower boundary support
     const rangeLowTarget = Math.max(0.0001, currentPrice - currentAtr * 1.2);
@@ -262,6 +287,7 @@ export const STRATEGY_PRESETS: StrategyPresetProfile[] = [
       adxMin: 22,
       requireVolumeConfirmation: true,
       requireWeeklyAlignment: true,
+      entryTolerancePct: 0.8,
     },
   },
   {
@@ -282,6 +308,7 @@ export const STRATEGY_PRESETS: StrategyPresetProfile[] = [
       adxMin: 20,
       requireVolumeConfirmation: true,
       requireWeeklyAlignment: true,
+      entryTolerancePct: 1.0,
     },
   },
   {
@@ -302,6 +329,7 @@ export const STRATEGY_PRESETS: StrategyPresetProfile[] = [
       adxMin: 16,
       requireVolumeConfirmation: true,
       requireWeeklyAlignment: true,
+      entryTolerancePct: 1.5,
     },
   },
 ];
