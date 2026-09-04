@@ -261,25 +261,25 @@ export function OpportunityScreener({
     <div className="space-y-6">
       {/* 1. STRATEGY PRESET PROFILE SELECTOR (Conservador / Equilibrado / Agresivo) */}
       <div
-        className={`rounded-3xl border p-5 shadow-xs transition-colors ${
+        className={`rounded-3xl border p-3.5 sm:p-5 shadow-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
-        <div className="mb-3">
-          <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
-            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+        <div className="mb-2.5 sm:mb-3">
+          <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-0.5 sm:pb-1">
+            <h3 className={`text-sm sm:text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Perfil de Estrategia Cuantitativa
             </h3>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${accent.tintBgClass} ${accent.textClass}`}>
+            <span className={`rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 ${accent.tintBgClass} ${accent.textClass}`}>
               Simulación en Vivo
             </span>
           </div>
-          <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-[11px] sm:text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             Selecciona el nivel de riesgo deseado. Todas las oportunidades, entradas, stops y objetivos se recalcularán al instante.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+        <div className="flex sm:grid sm:grid-cols-3 gap-2.5 sm:gap-3.5 overflow-x-auto custom-horizontal-scrollbar pb-1 sm:pb-0">
           {STRATEGY_PRESETS.map((preset) => {
             const isSelected = selectedProfileId === preset.id;
             const Icon = preset.id === 'conservative' ? Shield : preset.id === 'aggressive' ? Zap : Scale;
@@ -289,7 +289,7 @@ export function OpportunityScreener({
                 key={preset.id}
                 type="button"
                 onClick={() => handleSetProfile(preset.id)}
-                className={`flex flex-col justify-between rounded-2xl border p-4 text-left transition-all ${
+                className={`min-w-[240px] sm:min-w-0 flex-1 shrink-0 sm:shrink flex flex-col justify-between rounded-xl sm:rounded-2xl border p-3 sm:p-4 text-left transition-all ${
                   isSelected
                     ? isDark
                       ? 'border-blue-500 bg-[#2c2c2e] shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
@@ -300,10 +300,10 @@ export function OpportunityScreener({
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-1">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2">
+                    <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-0.5 sm:pb-1 min-w-0">
                       <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                        className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${
                           isSelected
                             ? 'bg-blue-500 text-white shadow-xs'
                             : isDark
@@ -311,32 +311,32 @@ export function OpportunityScreener({
                             : 'bg-white text-slate-600 border border-slate-200'
                         }`}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </div>
-                      <div>
-                        <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <div className="min-w-0">
+                        <h4 className={`text-xs sm:text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                           {preset.name}
                         </h4>
-                        <p className={`text-[10px] font-semibold ${isSelected ? 'text-blue-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <p className={`text-[9px] sm:text-[10px] font-semibold truncate ${isSelected ? 'text-blue-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                           {preset.tagline}
                         </p>
                       </div>
                     </div>
 
                     {isSelected && (
-                      <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-bold text-blue-500">
+                      <span className="shrink-0 rounded-full bg-blue-500/15 border border-blue-500/30 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-blue-500">
                         Activo
                       </span>
                     )}
                   </div>
 
-                  <p className={`text-xs leading-relaxed mt-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <p className={`text-[11px] sm:text-xs leading-snug sm:leading-relaxed mt-1 sm:mt-2 line-clamp-2 sm:line-clamp-none ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                     {preset.description}
                   </p>
                 </div>
 
                 {/* Quick Strategy Blueprint Pill */}
-                <div className={`mt-3 pt-2 border-t flex items-center justify-between text-[10px] font-mono font-semibold ${
+                <div className={`mt-2.5 sm:mt-3 pt-1.5 sm:pt-2 border-t flex items-center justify-between text-[9px] sm:text-[10px] font-mono font-semibold ${
                   isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
                 }`}>
                   <span>SL: -{preset.config.stopLossPct}%</span>

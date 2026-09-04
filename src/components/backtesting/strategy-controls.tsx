@@ -120,13 +120,13 @@ export function StrategyControls({
 
   return (
     <div
-      className={`rounded-3xl border p-4 sm:p-5 backdrop-blur-md transition-colors ${
+      className={`rounded-3xl border p-3.5 sm:p-5 backdrop-blur-md transition-colors ${
         isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
       }`}
     >
       {/* Header Bar with Integrated Asset Dropdown Filter */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 mb-3 sm:mb-4">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {assets && selectedAsset && onSelectAsset && (
             <AssetDropdownSelect
               assets={assets}
@@ -136,20 +136,20 @@ export function StrategyControls({
           )}
 
           <div>
-            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-sm sm:text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Simulación de Estrategia Quant
             </h3>
-            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Selecciona un perfil predeterminado o despliega los controles avanzados
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => updateSettings({ backtestAdvancedMode: !isAdvanced })}
-            className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 sm:gap-1.5 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold transition-all ${
               isAdvanced
                 ? `${accent.borderClass} ${accent.tintBgClass} ${accent.textClass}`
                 : isDark
@@ -166,7 +166,7 @@ export function StrategyControls({
             type="button"
             onClick={handleResetDefaults}
             title="Restablecer a valores recomendados"
-            className={`flex items-center gap-1 rounded-2xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition-all ${
               isDark
                 ? 'border-slate-700/80 bg-[#2c2c2e] text-slate-300 hover:text-white'
                 : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900'
@@ -178,8 +178,8 @@ export function StrategyControls({
         </div>
       </div>
 
-      {/* 3 PRESETS GRID */}
-      <div className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+      {/* 3 PRESETS GRID - Compact & swipeable on mobile */}
+      <div className="flex sm:grid sm:grid-cols-3 gap-2.5 sm:gap-3.5 overflow-x-auto custom-horizontal-scrollbar pb-1 sm:pb-0">
         {STRATEGY_PRESETS.map((preset) => {
           const isSelected = activePresetId === preset.id;
           const Icon = preset.icon;
@@ -189,7 +189,7 @@ export function StrategyControls({
               key={preset.id}
               type="button"
               onClick={() => handleSelectPreset(preset)}
-              className={`flex flex-col justify-between rounded-2xl border p-4 text-left transition-all ${
+              className={`min-w-[240px] sm:min-w-0 flex-1 shrink-0 sm:shrink flex flex-col justify-between rounded-xl sm:rounded-2xl border p-3 sm:p-4 text-left transition-all ${
                 isSelected
                   ? isDark
                     ? 'border-blue-500 bg-[#2c2c2e] shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
@@ -200,10 +200,10 @@ export function StrategyControls({
               }`}
             >
               <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <div
-                      className={`flex h-7 w-7 items-center justify-center rounded-xl ${
+                      className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${
                         isSelected
                           ? 'bg-blue-500 text-white'
                           : isDark
@@ -211,30 +211,30 @@ export function StrategyControls({
                           : 'bg-slate-200 text-slate-600'
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </div>
-                    <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    <span className={`text-xs sm:text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
                       {preset.name}
                     </span>
                   </div>
 
                   {preset.id === 'balanced' && (
-                    <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.2 text-[9px] font-bold text-blue-500">
+                    <span className="shrink-0 rounded-full bg-blue-500/15 border border-blue-500/30 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-blue-500">
                       Recomendado
                     </span>
                   )}
                 </div>
 
-                <p className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <p className={`mt-1.5 sm:mt-2 text-[10px] sm:text-[11px] font-semibold truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                   {preset.tagline}
                 </p>
-                <p className={`mt-1 text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`mt-1 text-[10px] sm:text-[11px] leading-snug sm:leading-relaxed line-clamp-2 sm:line-clamp-none ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                   {preset.description}
                 </p>
               </div>
 
               {/* Quick Metrics Summary */}
-              <div className={`mt-3 flex items-center justify-between border-t pt-2 text-[10px] font-mono ${isDark ? 'border-slate-700/50 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+              <div className={`mt-2.5 sm:mt-3 flex items-center justify-between border-t pt-1.5 sm:pt-2 text-[9px] sm:text-[10px] font-mono ${isDark ? 'border-slate-700/50 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
                 <span>Stop: -{preset.config.stopLossPct}%</span>
                 <span>R:B 1:{preset.config.takeProfitRatio}x</span>
                 <span>RSI: {preset.config.rsiOversold}/{preset.config.rsiOverbought}</span>

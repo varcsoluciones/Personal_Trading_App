@@ -216,77 +216,77 @@ export function PortfolioDashboard({
     <div className="space-y-6">
       {/* 1. Header with 3 Action Buttons */}
       <div
-        className={`rounded-3xl border p-5 sm:p-6 shadow-xs transition-colors ${
+        className={`rounded-3xl border p-3.5 sm:p-6 shadow-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+              className={`flex h-9 w-9 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl ${
                 isDark
                   ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                   : 'bg-blue-50 text-blue-600 border border-blue-200'
               }`}
             >
-              <Wallet className="h-6 w-6" />
+              <Wallet className="h-4 w-4 sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className={`text-lg sm:text-xl font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className={`text-sm sm:text-xl font-bold font-sans tracking-tight truncate whitespace-nowrap ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   Mi Cartera & Operaciones Reales
                 </h2>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold font-sans uppercase tracking-wider ${accent.tintBgClass} ${accent.textClass}`}>
+                <span className={`rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold font-sans uppercase tracking-wider shrink-0 ${accent.tintBgClass} ${accent.textClass}`}>
                   En Vivo
                 </span>
               </div>
-              <p className={`text-xs mt-0.5 font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-[11px] sm:text-xs mt-0.5 font-sans truncate sm:whitespace-normal ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Seguimiento de capital real, control de posiciones por broker y balance general
               </p>
             </div>
           </div>
 
-          {/* 3 Action Buttons in Main Header */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* 3 Action Buttons in Main Header - 1 single row on mobile */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-x-auto custom-horizontal-scrollbar no-scrollbar pb-0.5 sm:pb-0 max-w-full">
             {/* Button 1: Mis Carteras */}
             <button
               type="button"
               onClick={openWalletModal}
-              className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-bold font-sans transition-all shadow-xs cursor-pointer ${
+              className={`shrink-0 flex items-center gap-1 sm:gap-1.5 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold font-sans transition-all shadow-xs cursor-pointer ${
                 isDark
                   ? 'border-slate-700/80 bg-[#2c2c2e] text-white hover:bg-[#3a3a3c]'
                   : 'border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200'
               }`}
               title="Gestionar subcuentas y carteras (Binance, IBKR, etc.)"
             >
-              <Layers className="h-4 w-4 text-purple-400" />
-              <span>Mis Carteras ({wallets.length})</span>
+              <Layers className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+              <span><span className="hidden sm:inline">Mis </span>Carteras ({wallets.length})</span>
             </button>
 
             {/* Button 2: Registrar Movimiento */}
             <button
               type="button"
               onClick={() => openMovementModal()}
-              className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-bold font-sans transition-all shadow-xs cursor-pointer ${
+              className={`shrink-0 flex items-center gap-1 sm:gap-1.5 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold font-sans transition-all shadow-xs cursor-pointer ${
                 isDark
                   ? 'border-slate-700/80 bg-[#2c2c2e] text-white hover:bg-[#3a3a3c]'
                   : 'border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200'
               }`}
             >
-              <PlusCircle className="h-4 w-4 text-blue-500" />
-              <span>+ Registrar Movimiento</span>
+              <PlusCircle className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+              <span><span className="hidden sm:inline">+ Registrar </span><span className="sm:hidden">+ </span>Movimiento</span>
             </button>
 
             {/* Button 3: Nueva Operación */}
             <button
               type="button"
               onClick={() => openApplyModal(assets[0] || null)}
-              className={`flex items-center gap-1.5 rounded-2xl px-4 py-2 text-xs font-bold font-sans text-white transition-all shadow-md cursor-pointer ${
+              className={`shrink-0 flex items-center gap-1 sm:gap-1.5 rounded-xl sm:rounded-2xl px-2.5 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold font-sans text-white transition-all shadow-md cursor-pointer ${
                 accent.bgClass
               } hover:opacity-95 active:scale-[0.99]`}
             >
-              <Plus className="h-4 w-4" />
-              <span>+ Nueva Operación</span>
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span><span className="hidden sm:inline">+ </span>Nueva Operación</span>
             </button>
           </div>
         </div>
