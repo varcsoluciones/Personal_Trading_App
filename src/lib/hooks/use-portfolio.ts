@@ -63,22 +63,20 @@ export function usePortfolio() {
     setIsHydrated(true);
   }, []);
 
-  // 2. Persist state helper
-  const persistState = useCallback(
-    (newWallets: PortfolioWallet[], newMovements: CapitalMovement[], newPositions: RealPosition[]) => {
-      try {
-        const payload: StoredPortfolio = {
-          wallets: newWallets,
-          capitalMovements: newMovements,
-          positions: newPositions,
-        };
-        localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(payload));
-      } catch (e) {
-        console.warn('Failed to save portfolio to localStorage', e);
-      }
-    },
-    []
-  );
+  // 2. Persist state whenever state changes after initial hydration
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      const payload: StoredPortfolio = {
+        wallets,
+        capitalMovements,
+        positions,
+      };
+      localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Failed to save portfolio to localStorage', e);
+    }
+  }, [wallets, capitalMovements, positions, isHydrated]);
 
   // 3. Wallet CRUD
   const createWallet = useCallback(
@@ -92,46 +90,34 @@ export function usePortfolio() {
         createdAt: new Date().toISOString().split('T')[0],
       };
 
-      setWallets((prev) => {
-        const next = [...prev, newWallet];
-        persistState(next, capitalMovements, positions);
-        return next;
-      });
-
+      setWallets((prev) => [...prev, newWallet]);
       return newWallet;
     },
-    [persistState, capitalMovements, positions]
+    []
   );
 
-  const updateWallet = useCallback(
-    (id: string, changes: Partial<PortfolioWallet>) => {
-      setWallets((prev) => {
-        const next = prev.map((w) => (w.id === id ? { ...w, ...changes } : w));
-        persistState(next, capitalMovements, positions);
-        return next;
-      });
-    },
-    [persistState, capitalMovements, positions]
-  );
+  const updateWallet = useCallback((id: string, changes: Partial<PortfolioWallet>) => {
+    setWallets((prev) => prev.map((w) => (w.id === id ? { ...w, ...changes } : w)));
+  }, []);
 
-  const deleteWallet = useCallback(
-    (id: string, reassignToWalletId?: string) => {
-      setWallets((prev) => {
-        if (prev.length <= 1) {
-          alert('No es posible eliminar la única cartera activa.');
-          return prev;
-        }
+  const deleteWallet = useCallback((id: string, reassignToWalletId?: string) => {
+    setWallets((prev) => {
+      if (prev.length <= 1) {
+        alert('No es posible eliminar la única cartera activa.');
+        return prev;
+      }
 
-        const remaining = prev.filter((w) => w.id !== id);
-        const fallbackTargetId = reassignToWalletId || remaining[0]?.id || 'wallet_main';
+      const remaining = prev.filter((w) => w.id !== id);
+      const fallbackTargetId = reassignToWalletId || remaining[0]?.id || 'wallet_main';
 
-        // Reassign any positions and movements belonging to the deleted wallet
-        const updatedPositions = positions.map((p) =>
-          p.portfolioId === id ? { ...p, portfolioId: fallbackTargetId } : p
-        );
+      // Reassign any positions and movements belonging to the deleted wallet
+      setPositions((prevPos) =>
+        prevPos.map((p) => (p.portfolioId === id ? { ...p, portfolioId: fallbackTargetId } : p))
+      );
 
-        const updatedMovements = capitalMovements.map((m) => {
-          let updatedM = { ...m };
+      setCapitalMovements((prevMov) =>
+        prevMov.map((m) => {
+          const updatedM = { ...m };
           if (updatedM.portfolioId === id) {
             updatedM.portfolioId = fallbackTargetId;
           }
@@ -139,21 +125,14 @@ export function usePortfolio() {
             updatedM.targetPortfolioId = fallbackTargetId;
           }
           return updatedM;
-        });
+        })
+      );
 
-        setPositions(updatedPositions);
-        setCapitalMovements(updatedMovements);
-        persistState(remaining, updatedMovements, updatedPositions);
+      setSelectedWalletId((current) => (current === id ? 'ALL' : current));
 
-        if (selectedWalletId === id) {
-          setSelectedWalletId('ALL');
-        }
-
-        return remaining;
-      });
-    },
-    [positions, capitalMovements, selectedWalletId, persistState]
-  );
+      return remaining;
+    });
+  }, []);
 
   // 4. Add Capital Movement (supports DEPOSIT, WITHDRAWAL, ADJUSTMENT, TRANSFER)
   const addCapitalMovement = useCallback(
@@ -165,7 +144,7 @@ export function usePortfolio() {
       portfolioId?: string,
       targetPortfolioId?: string
     ): CapitalMovement => {
-      const activePortId = portfolioId || wallets[0]?.id || 'wallet_main';
+      const activePortId = portfolioId || 'wallet_main';
       let finalAmount = Math.abs(rawAmount);
 
       if (type === 'WITHDRAWAL') {
@@ -184,15 +163,10 @@ export function usePortfolio() {
         date: customDate || new Date().toISOString().split('T')[0],
       };
 
-      setCapitalMovements((prev) => {
-        const next = [movement, ...prev];
-        persistState(wallets, next, positions);
-        return next;
-      });
-
+      setCapitalMovements((prev) => [movement, ...prev]);
       return movement;
     },
-    [persistState, wallets, positions]
+    []
   );
 
   // Transfer helper
@@ -217,42 +191,30 @@ export function usePortfolio() {
   );
 
   // 5. Update & Remove Capital Movement
-  const updateCapitalMovement = useCallback(
-    (id: string, changes: Partial<CapitalMovement>) => {
-      setCapitalMovements((prev) => {
-        const next = prev.map((m) => {
-          if (m.id !== id) return m;
-          const updated = { ...m, ...changes };
-          if (changes.amount !== undefined || changes.type !== undefined) {
-            const raw = Math.abs(changes.amount !== undefined ? changes.amount : m.amount);
-            const currentType = changes.type || m.type;
-            if (currentType === 'WITHDRAWAL') {
-              updated.amount = -raw;
-            } else if (currentType === 'DEPOSIT' || currentType === 'TRANSFER') {
-              updated.amount = raw;
-            } else if (currentType === 'ADJUSTMENT' && changes.amount !== undefined) {
-              updated.amount = changes.amount;
-            }
+  const updateCapitalMovement = useCallback((id: string, changes: Partial<CapitalMovement>) => {
+    setCapitalMovements((prev) =>
+      prev.map((m) => {
+        if (m.id !== id) return m;
+        const updated = { ...m, ...changes };
+        if (changes.amount !== undefined || changes.type !== undefined) {
+          const raw = Math.abs(changes.amount !== undefined ? changes.amount : m.amount);
+          const currentType = changes.type || m.type;
+          if (currentType === 'WITHDRAWAL') {
+            updated.amount = -raw;
+          } else if (currentType === 'DEPOSIT' || currentType === 'TRANSFER') {
+            updated.amount = raw;
+          } else if (currentType === 'ADJUSTMENT' && changes.amount !== undefined) {
+            updated.amount = changes.amount;
           }
-          return updated;
-        });
-        persistState(wallets, next, positions);
-        return next;
-      });
-    },
-    [persistState, wallets, positions]
-  );
+        }
+        return updated;
+      })
+    );
+  }, []);
 
-  const removeCapitalMovement = useCallback(
-    (id: string) => {
-      setCapitalMovements((prev) => {
-        const next = prev.filter((m) => m.id !== id);
-        persistState(wallets, next, positions);
-        return next;
-      });
-    },
-    [persistState, wallets, positions]
-  );
+  const removeCapitalMovement = useCallback((id: string) => {
+    setCapitalMovements((prev) => prev.filter((m) => m.id !== id));
+  }, []);
 
   // 6. Open Position with Portfolio support
   const openPosition = useCallback(
@@ -270,7 +232,7 @@ export function usePortfolio() {
       entryDate?: string,
       portfolioId?: string
     ): RealPosition => {
-      const activePortId = portfolioId || wallets[0]?.id || 'wallet_main';
+      const activePortId = portfolioId || 'wallet_main';
 
       const newPos: RealPosition = {
         id: `pos_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -286,43 +248,32 @@ export function usePortfolio() {
         sourceSuggestion,
       };
 
-      setPositions((prev) => {
-        const next = [newPos, ...prev];
-        persistState(wallets, capitalMovements, next);
-        return next;
-      });
-
+      setPositions((prev) => [newPos, ...prev]);
       return newPos;
     },
-    [persistState, wallets, capitalMovements]
+    []
   );
 
   // 7. Update Position
-  const updatePosition = useCallback(
-    (id: string, changes: Partial<RealPosition>) => {
-      setPositions((prev) => {
-        const next = prev.map((pos) => {
-          if (pos.id !== id) return pos;
+  const updatePosition = useCallback((id: string, changes: Partial<RealPosition>) => {
+    setPositions((prev) =>
+      prev.map((pos) => {
+        if (pos.id !== id) return pos;
 
-          const updated: RealPosition = { ...pos, ...changes };
+        const updated: RealPosition = { ...pos, ...changes };
 
-          // If position is closed or becoming closed, recalculate realized PnL
-          if (updated.status === 'CLOSED' && updated.exitPrice !== undefined && updated.entryPrice > 0) {
-            const pnlPct = ((updated.exitPrice - updated.entryPrice) / updated.entryPrice) * 100;
-            const pnlUSD = (pnlPct / 100) * updated.capitalAllocated;
-            updated.realizedPnlPct = Number(pnlPct.toFixed(2));
-            updated.realizedPnl = Number(pnlUSD.toFixed(2));
-          }
+        // If position is closed or becoming closed, recalculate realized PnL
+        if (updated.status === 'CLOSED' && updated.exitPrice !== undefined && updated.entryPrice > 0) {
+          const pnlPct = ((updated.exitPrice - updated.entryPrice) / updated.entryPrice) * 100;
+          const pnlUSD = (pnlPct / 100) * updated.capitalAllocated;
+          updated.realizedPnlPct = Number(pnlPct.toFixed(2));
+          updated.realizedPnl = Number(pnlUSD.toFixed(2));
+        }
 
-          return updated;
-        });
-
-        persistState(wallets, capitalMovements, next);
-        return next;
-      });
-    },
-    [persistState, wallets, capitalMovements]
-  );
+        return updated;
+      })
+    );
+  }, []);
 
   // 8. Close Position
   const closePosition = useCallback(
@@ -332,8 +283,8 @@ export function usePortfolio() {
       closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' | 'MANUAL',
       exitDate?: string
     ) => {
-      setPositions((prev) => {
-        const next = prev.map((pos) => {
+      setPositions((prev) =>
+        prev.map((pos) => {
           if (pos.id !== id) return pos;
 
           const ep = Number(exitPrice);
@@ -351,26 +302,16 @@ export function usePortfolio() {
           };
 
           return closed;
-        });
-
-        persistState(wallets, capitalMovements, next);
-        return next;
-      });
+        })
+      );
     },
-    [persistState, wallets, capitalMovements]
+    []
   );
 
   // 9. Delete Position
-  const deletePosition = useCallback(
-    (id: string) => {
-      setPositions((prev) => {
-        const next = prev.filter((p) => p.id !== id);
-        persistState(wallets, capitalMovements, next);
-        return next;
-      });
-    },
-    [persistState, wallets, capitalMovements]
-  );
+  const deletePosition = useCallback((id: string) => {
+    setPositions((prev) => prev.filter((p) => p.id !== id));
+  }, []);
 
   // 10. Helper to compute live unrealized PnL for a single position
   const getLivePositionMetrics = useCallback(
@@ -539,68 +480,67 @@ export function usePortfolio() {
       let hasClosed = false;
       const autoClosedList: RealPosition[] = [];
 
-      const updated = positions.map((pos) => {
-        if (pos.status !== 'OPEN') return pos;
+      setPositions((prev) => {
+        const updated = prev.map((pos) => {
+          if (pos.status !== 'OPEN') return pos;
 
-        const cleanSymbol = pos.symbol.replace('/', '').replace('-', '').toUpperCase();
-        const price =
-          currentPrices[pos.assetId] ??
-          currentPrices[pos.symbol] ??
-          currentPrices[cleanSymbol];
+          const cleanSymbol = pos.symbol.replace('/', '').replace('-', '').toUpperCase();
+          const price =
+            currentPrices[pos.assetId] ??
+            currentPrices[pos.symbol] ??
+            currentPrices[cleanSymbol];
 
-        if (price === undefined || isNaN(price) || price <= 0) return pos;
+          if (price === undefined || isNaN(price) || price <= 0) return pos;
 
-        // Check Stop Loss hit (Price <= SL)
-        if (pos.stopLoss !== null && price <= pos.stopLoss) {
-          hasClosed = true;
-          const exitPrice = pos.stopLoss;
-          const pnlPct = ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100;
-          const pnlUSD = (pnlPct / 100) * pos.capitalAllocated;
+          // Check Stop Loss hit (Price <= SL)
+          if (pos.stopLoss !== null && price <= pos.stopLoss) {
+            hasClosed = true;
+            const exitPrice = pos.stopLoss;
+            const pnlPct = ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100;
+            const pnlUSD = (pnlPct / 100) * pos.capitalAllocated;
 
-          const closedPos: RealPosition = {
-            ...pos,
-            status: 'CLOSED',
-            exitPrice,
-            exitDate: new Date().toISOString().split('T')[0],
-            closeReason: 'STOP_LOSS',
-            realizedPnlPct: Number(pnlPct.toFixed(2)),
-            realizedPnl: Number(pnlUSD.toFixed(2)),
-          };
-          autoClosedList.push(closedPos);
-          return closedPos;
-        }
+            const closedPos: RealPosition = {
+              ...pos,
+              status: 'CLOSED',
+              exitPrice,
+              exitDate: new Date().toISOString().split('T')[0],
+              closeReason: 'STOP_LOSS',
+              realizedPnlPct: Number(pnlPct.toFixed(2)),
+              realizedPnl: Number(pnlUSD.toFixed(2)),
+            };
+            autoClosedList.push(closedPos);
+            return closedPos;
+          }
 
-        // Check Take Profit hit (Price >= TP)
-        if (pos.takeProfit !== null && price >= pos.takeProfit) {
-          hasClosed = true;
-          const exitPrice = pos.takeProfit;
-          const pnlPct = ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100;
-          const pnlUSD = (pnlPct / 100) * pos.capitalAllocated;
+          // Check Take Profit hit (Price >= TP)
+          if (pos.takeProfit !== null && price >= pos.takeProfit) {
+            hasClosed = true;
+            const exitPrice = pos.takeProfit;
+            const pnlPct = ((exitPrice - pos.entryPrice) / pos.entryPrice) * 100;
+            const pnlUSD = (pnlPct / 100) * pos.capitalAllocated;
 
-          const closedPos: RealPosition = {
-            ...pos,
-            status: 'CLOSED',
-            exitPrice,
-            exitDate: new Date().toISOString().split('T')[0],
-            closeReason: 'TAKE_PROFIT',
-            realizedPnlPct: Number(pnlPct.toFixed(2)),
-            realizedPnl: Number(pnlUSD.toFixed(2)),
-          };
-          autoClosedList.push(closedPos);
-          return closedPos;
-        }
+            const closedPos: RealPosition = {
+              ...pos,
+              status: 'CLOSED',
+              exitPrice,
+              exitDate: new Date().toISOString().split('T')[0],
+              closeReason: 'TAKE_PROFIT',
+              realizedPnlPct: Number(pnlPct.toFixed(2)),
+              realizedPnl: Number(pnlUSD.toFixed(2)),
+            };
+            autoClosedList.push(closedPos);
+            return closedPos;
+          }
 
-        return pos;
+          return pos;
+        });
+
+        return hasClosed ? updated : prev;
       });
-
-      if (hasClosed) {
-        setPositions(updated);
-        persistState(wallets, capitalMovements, updated);
-      }
 
       return autoClosedList;
     },
-    [positions, wallets, capitalMovements, persistState]
+    []
   );
 
   return {

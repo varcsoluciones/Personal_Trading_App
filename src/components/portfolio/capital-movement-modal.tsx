@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '@/lib/context/settings-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import {
@@ -11,7 +11,6 @@ import {
   RefreshCw,
   ArrowRightLeft,
   CheckCircle2,
-  Building2,
   AlertTriangle,
   Edit2,
 } from 'lucide-react';
@@ -40,26 +39,35 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
   const [targetWalletId, setTargetWalletId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState<string>('');
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>('');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Initialize form state whenever modal opens or editingMovement changes
+  // Sync state whenever modal opens or editingMovement changes
   useEffect(() => {
     if (!isOpen) return;
 
     if (editingMovement) {
       setType(editingMovement.type);
-      setSelectedWalletId(editingMovement.portfolioId || wallets[0]?.id || 'wallet_main');
-      const fallbackTarget = wallets.find((w) => w.id !== editingMovement.portfolioId) || wallets[0];
-      setTargetWalletId(editingMovement.targetPortfolioId || fallbackTarget?.id || 'wallet_main');
+      const matchedWallet = wallets.find((w) => w.id === editingMovement.portfolioId);
+      const wId = matchedWallet ? matchedWallet.id : (wallets[0]?.id || 'wallet_main');
+      setSelectedWalletId(wId);
+
+      const targetMatch = wallets.find((w) => w.id === editingMovement.targetPortfolioId);
+      const fallbackTarget = wallets.find((w) => w.id !== wId) || wallets[0];
+      setTargetWalletId(targetMatch ? targetMatch.id : (fallbackTarget?.id || 'wallet_main'));
+
       setAmount(Math.abs(editingMovement.amount).toString());
       setNote(editingMovement.note || '');
-      setDate(editingMovement.date || new Date().toISOString().split('T')[0]);
+      const cleanDate = editingMovement.date ? editingMovement.date.split('T')[0] : new Date().toISOString().split('T')[0];
+      setDate(cleanDate);
     } else {
       setType('DEPOSIT');
-      setSelectedWalletId(wallets[0]?.id || 'wallet_main');
-      const nextWallet = wallets.find((w) => w.id !== wallets[0]?.id) || wallets[0];
-      setTargetWalletId(nextWallet?.id || wallets[0]?.id || 'wallet_main');
+      const firstWalletId = wallets[0]?.id || 'wallet_main';
+      setSelectedWalletId(firstWalletId);
+
+      const secondWallet = wallets.find((w) => w.id !== firstWalletId) || wallets[0];
+      setTargetWalletId(secondWallet?.id || firstWalletId);
+
       setAmount('');
       setNote('');
       setDate(new Date().toISOString().split('T')[0]);
@@ -68,42 +76,49 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
 
   if (!isOpen) return null;
 
-  const rawAvailable = getWalletAvailableCapital(selectedWalletId);
+  const effectiveWalletId = selectedWalletId || wallets[0]?.id || 'wallet_main';
+  const effectiveTargetId = targetWalletId || (wallets.find((w) => w.id !== effectiveWalletId)?.id || effectiveWalletId);
+
+  const rawAvailable = getWalletAvailableCapital(effectiveWalletId);
 
   // If editing an existing withdrawal/transfer, add back its previous deduction to available liquidity
-  const originAvailable = useMemo(() => {
-    if (isEditing && editingMovement && editingMovement.portfolioId === selectedWalletId) {
+  const originAvailable = (() => {
+    if (isEditing && editingMovement && (editingMovement.portfolioId === effectiveWalletId || (!editingMovement.portfolioId && effectiveWalletId === 'wallet_main'))) {
       if (editingMovement.type === 'WITHDRAWAL' || editingMovement.type === 'TRANSFER') {
         return rawAvailable + Math.abs(editingMovement.amount);
       }
     }
     return rawAvailable;
-  }, [isEditing, editingMovement, selectedWalletId, rawAvailable]);
+  })();
 
   const numAmount = parseFloat(amount);
-  const isAmountValid = !isNaN(numAmount) && numAmount > 0;
+  const isAmountValid = !isNaN(numAmount) && (type === 'ADJUSTMENT' ? numAmount !== 0 : numAmount > 0);
   const isTransferExceeding = type === 'TRANSFER' && isAmountValid && numAmount > originAvailable;
-  const isSameWalletTransfer = type === 'TRANSFER' && selectedWalletId === targetWalletId;
+  const isSameWalletTransfer = type === 'TRANSFER' && effectiveWalletId === effectiveTargetId;
   const isWithdrawalExceeding = type === 'WITHDRAWAL' && isAmountValid && numAmount > originAvailable;
+
+  const isFormInvalid = !isAmountValid || isTransferExceeding || isSameWalletTransfer || isWithdrawalExceeding;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAmountValid) return;
-    if (isTransferExceeding || isSameWalletTransfer || isWithdrawalExceeding) return;
+    if (isFormInvalid) return;
+
+    const finalDate = date || new Date().toISOString().split('T')[0];
+    const cleanNote = note.trim() || undefined;
 
     if (isEditing && editingMovement) {
       updateCapitalMovement(editingMovement.id, {
         type,
         amount: numAmount,
-        note: note.trim() || undefined,
-        date,
-        portfolioId: selectedWalletId,
-        targetPortfolioId: type === 'TRANSFER' ? targetWalletId : undefined,
+        note: cleanNote,
+        date: finalDate,
+        portfolioId: effectiveWalletId,
+        targetPortfolioId: type === 'TRANSFER' ? effectiveTargetId : undefined,
       });
     } else if (type === 'TRANSFER') {
-      transferBetweenWallets(selectedWalletId, targetWalletId, numAmount, note, date);
+      transferBetweenWallets(effectiveWalletId, effectiveTargetId, numAmount, cleanNote, finalDate);
     } else {
-      addCapitalMovement(type, numAmount, note, date, selectedWalletId);
+      addCapitalMovement(type, numAmount, cleanNote, finalDate, effectiveWalletId);
     }
 
     setSavedSuccess(true);
@@ -275,7 +290,7 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
                   Cartera Origen (Sale dinero):
                 </label>
                 <select
-                  value={selectedWalletId}
+                  value={effectiveWalletId}
                   onChange={(e) => setSelectedWalletId(e.target.value)}
                   className={`w-full rounded-2xl border px-3.5 py-2 text-xs font-medium transition-colors ${
                     isDark
@@ -300,7 +315,7 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
                   Cartera Destino (Entra dinero):
                 </label>
                 <select
-                  value={targetWalletId}
+                  value={effectiveTargetId}
                   onChange={(e) => setTargetWalletId(e.target.value)}
                   className={`w-full rounded-2xl border px-3.5 py-2 text-xs font-medium transition-colors ${
                     isDark
@@ -310,7 +325,7 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
                 >
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} {w.brokerOrExchange ? `(${w.brokerOrExchange})` : ''} {w.id === selectedWalletId ? '(Origen)' : ''}
+                      {w.name} {w.brokerOrExchange ? `(${w.brokerOrExchange})` : ''} {w.id === effectiveWalletId ? '(Origen)' : ''}
                     </option>
                   ))}
                 </select>
@@ -327,7 +342,7 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
                 Cartera / Subcuenta afectada:
               </label>
               <select
-                value={selectedWalletId}
+                value={effectiveWalletId}
                 onChange={(e) => setSelectedWalletId(e.target.value)}
                 className={`w-full rounded-2xl border px-3.5 py-2 text-xs font-medium transition-colors ${
                   isDark
@@ -335,14 +350,11 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
                     : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:outline-none'
                 }`}
               >
-                {wallets.map((w) => {
-                  const wAvail = getWalletAvailableCapital(w.id);
-                  return (
-                    <option key={w.id} value={w.id}>
-                      {w.name} {w.brokerOrExchange ? `(${w.brokerOrExchange})` : ''}
-                    </option>
-                  );
-                })}
+                {wallets.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} {w.brokerOrExchange ? `(${w.brokerOrExchange})` : ''}
+                  </option>
+                ))}
               </select>
               <span className="text-[11px] text-slate-400 font-sans block mt-1">
                 Saldo disponible actual: <strong className="font-mono text-emerald-400">{formatCurrency(originAvailable)}</strong>
@@ -429,9 +441,9 @@ export function CapitalMovementModal({ isOpen, onClose }: CapitalMovementModalPr
           {/* Submit */}
           <button
             type="submit"
-            disabled={isTransferExceeding || isSameWalletTransfer || isWithdrawalExceeding}
+            disabled={isFormInvalid}
             className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold font-sans transition-all shadow-md ${
-              isTransferExceeding || isSameWalletTransfer || isWithdrawalExceeding
+              isFormInvalid
                 ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400'
                 : type === 'TRANSFER'
                 ? 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
