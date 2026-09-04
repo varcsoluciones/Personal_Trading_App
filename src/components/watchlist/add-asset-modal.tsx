@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AssetType } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel } from '@/lib/ui/badge-styles';
 import { normalizeCryptoSymbol } from '@/lib/utils/symbol-normalizer';
 import { POPULAR_ASSETS_CATALOG, AssetDefinition } from '@/lib/api/default-data';
 import {
@@ -19,6 +19,7 @@ import {
   Loader2,
   PlusCircle,
   Lightbulb,
+  Gem,
 } from 'lucide-react';
 
 interface CatalogAsset {
@@ -31,6 +32,30 @@ interface CatalogAsset {
 
 // Common aliases and typo mappings
 const SEARCH_ALIASES: Record<string, { ticker: string; nameHint: string }> = {
+  // Minerales & Commodities
+  ORO: { ticker: 'GC=F', nameHint: 'Oro (Futuros Gold Comex)' },
+  GOLD: { ticker: 'GC=F', nameHint: 'Oro (Futuros Gold Comex)' },
+  XAU: { ticker: 'GC=F', nameHint: 'Oro (Gold)' },
+  XAUUSD: { ticker: 'GC=F', nameHint: 'Oro (Gold)' },
+  PLATA: { ticker: 'SI=F', nameHint: 'Plata (Futuros Silver)' },
+  SILVER: { ticker: 'SI=F', nameHint: 'Plata (Futuros Silver)' },
+  XAG: { ticker: 'SI=F', nameHint: 'Plata (Silver)' },
+  XAGUSD: { ticker: 'SI=F', nameHint: 'Plata (Silver)' },
+  PETROLEO: { ticker: 'CL=F', nameHint: 'Petróleo Crudo WTI' },
+  OIL: { ticker: 'CL=F', nameHint: 'Petróleo Crudo WTI' },
+  CRUDE: { ticker: 'CL=F', nameHint: 'Petróleo Crudo WTI' },
+  WTI: { ticker: 'CL=F', nameHint: 'Petróleo Crudo WTI' },
+  BRENT: { ticker: 'BZ=F', nameHint: 'Petróleo Brent' },
+  COBRE: { ticker: 'HG=F', nameHint: 'Cobre (Copper Futures)' },
+  COPPER: { ticker: 'HG=F', nameHint: 'Cobre (Copper Futures)' },
+  GAS: { ticker: 'NG=F', nameHint: 'Gas Natural' },
+  'GAS NATURAL': { ticker: 'NG=F', nameHint: 'Gas Natural (Natural Gas)' },
+  PLATINO: { ticker: 'PL=F', nameHint: 'Platino (Platinum Futures)' },
+  PLATINUM: { ticker: 'PL=F', nameHint: 'Platino (Platinum Futures)' },
+  PALADIO: { ticker: 'PA=F', nameHint: 'Paladio (Palladium Futures)' },
+  PALLADIUM: { ticker: 'PA=F', nameHint: 'Paladio (Palladium Futures)' },
+
+  // Acciones & ETFs
   IBRK: { ticker: 'IBKR', nameHint: 'Interactive Brokers Group Inc.' },
   IB: { ticker: 'IBKR', nameHint: 'Interactive Brokers Group Inc.' },
   INTERACTIVE: { ticker: 'IBKR', nameHint: 'Interactive Brokers Group Inc.' },
@@ -285,9 +310,10 @@ export function AddAssetModal({
           )}
 
           {/* Type Filter Pills */}
-          <div className="flex items-center gap-1.5 mt-3">
+          <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-0.5 custom-horizontal-scrollbar">
             {[
               { id: 'all', label: 'Todos' },
+              { id: 'commodity', label: 'Minerales' },
               { id: 'crypto', label: 'Cripto' },
               { id: 'stock', label: 'Acciones' },
               { id: 'etf', label: 'ETFs' },
@@ -296,7 +322,7 @@ export function AddAssetModal({
                 key={f.id}
                 onClick={() => setSelectedTypeFilter(f.id as any)}
                 style={selectedTypeFilter === f.id ? { backgroundColor: accent.hex, color: '#ffffff' } : {}}
-                className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-all ${
                   selectedTypeFilter === f.id
                     ? 'shadow-xs'
                     : isDark
@@ -308,7 +334,7 @@ export function AddAssetModal({
               </button>
             ))}
             {isSearchingBinance && (
-              <span className="flex items-center gap-1 text-[10px] text-blue-400 ml-auto animate-pulse">
+              <span className="flex items-center gap-1 text-[10px] text-blue-400 ml-auto animate-pulse whitespace-nowrap shrink-0">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 <span>Buscando Binance...</span>
               </span>
@@ -322,7 +348,7 @@ export function AddAssetModal({
             matches.map((item) => {
               const added = isSymbolAdded(item.symbol, item.type);
               const typeBadge = getAssetTypeBadgeStyle(item.type, isDark);
-              const TypeIcon = item.type === 'crypto' ? Coins : item.type === 'etf' ? Layers : TrendingUp;
+              const TypeIcon = item.type === 'crypto' ? Coins : item.type === 'etf' ? Layers : item.type === 'commodity' ? Gem : TrendingUp;
 
               return (
                 <div
@@ -356,7 +382,7 @@ export function AddAssetModal({
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm tracking-tight">{item.symbol}</span>
                         <span className={`rounded-md border px-1.5 py-0.2 text-[9px] font-bold uppercase ${typeBadge}`}>
-                          {item.type}
+                          {getAssetTypeLabel(item.type)}
                         </span>
                         {'isBinanceLive' in item && item.isBinanceLive && (
                           <span className="flex items-center gap-1 rounded-md bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 text-[9px] font-bold text-amber-400 font-mono">
@@ -415,9 +441,20 @@ export function AddAssetModal({
                 </span>
               </div>
               <p className={`text-[11px] mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Puedes agregar cualquier acción de Wall Street, ETF de EE.UU. o criptomoneda.
+                Puedes agregar cualquier acción de Wall Street, ETF de EE.UU., mineral/materia prima o criptomoneda.
               </p>
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => handleAddCustom('commodity')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    isDark
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
+                      : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                  }`}
+                >
+                  <Gem className="h-3.5 w-3.5" />
+                  <span>+ Mineral ({cleanQuery})</span>
+                </button>
                 <button
                   onClick={() => handleAddCustom('stock')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
@@ -433,8 +470,8 @@ export function AddAssetModal({
                   onClick={() => handleAddCustom('etf')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                     isDark
-                      ? 'bg-purple-500/15 border-purple-500/30 text-purple-400 hover:bg-purple-500/25'
-                      : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
+                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
                   }`}
                 >
                   <Layers className="h-3.5 w-3.5" />
@@ -444,8 +481,8 @@ export function AddAssetModal({
                   onClick={() => handleAddCustom('crypto')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                     isDark
-                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
-                      : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                      ? 'bg-purple-500/15 border-purple-500/30 text-purple-400 hover:bg-purple-500/25'
+                      : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
                   }`}
                 >
                   <Coins className="h-3.5 w-3.5" />

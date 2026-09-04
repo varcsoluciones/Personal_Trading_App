@@ -8,7 +8,7 @@ import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { ScoreBreakdownTooltip } from '@/components/shared/score-breakdown-tooltip';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel } from '@/lib/ui/badge-styles';
 import {
   Sparkles,
   TrendingUp,
@@ -612,7 +612,7 @@ export function OpportunityScreener({
                             isDark
                           )}`}
                         >
-                          {item.type}
+                          {getAssetTypeLabel(item.type)}
                         </span>
                       </div>
                       <p className={`truncate text-[11px] opacity-75 mt-0.5`}>
@@ -735,14 +735,11 @@ export function OpportunityScreener({
                               <span className={`font-bold font-mono text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>
                                 {asset.symbol}
                               </span>
-                              <span className={`rounded-md border px-1.5 py-0.2 text-[9px] font-bold uppercase ${
-                                asset.type === 'crypto'
-                                  ? isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'
-                                  : asset.type === 'stock'
-                                  ? isDark ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-800'
-                                  : isDark ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-purple-50 border-purple-200 text-purple-800'
-                              }`}>
-                                {asset.type}
+                              <span className={`rounded-md border px-1.5 py-0.2 text-[9px] font-bold uppercase ${getAssetTypeBadgeStyle(
+                                asset.type,
+                                isDark
+                              )}`}>
+                                {getAssetTypeLabel(asset.type)}
                               </span>
                             </div>
                             <p className={`truncate text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>

@@ -40,7 +40,7 @@ export interface AppSettings {
 
   // Persisted Watchlist Filters
   watchlistViewMode?: 'grid' | 'table';
-  watchlistAssetFilter?: 'all' | 'crypto' | 'stock' | 'etf';
+  watchlistAssetFilter?: 'all' | 'crypto' | 'stock' | 'etf' | 'commodity';
 
   // Persisted Screener (Oportunidades) Filters
   screenerCategory?: 'all' | 'trend' | 'volatile' | 'range' | 'stable';

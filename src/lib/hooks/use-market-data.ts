@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Asset, BacktestConfig, BacktestResult, Candle } from '../types/market';
+import { Asset, AssetType, BacktestConfig, BacktestResult, Candle } from '../types/market';
 import { DEFAULT_ASSETS_LIST, AssetDefinition, POPULAR_ASSETS_CATALOG } from '../api/default-data';
 import { analyzeAsset } from '../quant/trend-analyzer';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '../quant/backtest-engine';
@@ -272,7 +272,7 @@ export function useMarketData() {
 
   // Add new asset to watchlist
   const addAsset = useCallback(
-    async (symbol: string, name: string, type: 'crypto' | 'stock' | 'etf') => {
+    async (symbol: string, name: string, type: AssetType) => {
       const cleanId = symbol.replace('/', '').toUpperCase();
       const existing = assets.find((a) => a.id === cleanId || a.symbol === symbol);
       if (existing) {

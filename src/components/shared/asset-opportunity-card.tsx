@@ -7,7 +7,7 @@ import { ConfidenceBadge } from '@/components/ui/confidence-badge';
 import { ScoreBreakdownTooltip } from '@/components/shared/score-breakdown-tooltip';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel } from '@/lib/ui/badge-styles';
 import {
   TrendingUp,
   Trash2,
@@ -143,7 +143,7 @@ export function AssetOpportunityCard({
                   isDark
                 )}`}
               >
-                {asset.type}
+                {getAssetTypeLabel(asset.type)}
               </span>
             </div>
             <p className={`truncate text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>

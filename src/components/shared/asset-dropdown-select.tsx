@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel } from '@/lib/ui/badge-styles';
 import { ChevronDown, Check, Search } from 'lucide-react';
 
 interface AssetDropdownSelectProps {
@@ -79,7 +79,7 @@ export function AssetDropdownSelect({
               isDark
             )}`}
           >
-            {selectedAsset.type}
+            {getAssetTypeLabel(selectedAsset.type)}
           </span>
         </div>
 
@@ -177,7 +177,7 @@ export function AssetDropdownSelect({
                               isDark
                             )}`}
                           >
-                            {asset.type}
+                            {getAssetTypeLabel(asset.type)}
                           </span>
                         </div>
                         <p className={`truncate text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>

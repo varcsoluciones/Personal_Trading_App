@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Asset } from '@/lib/types/market';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { useSettings } from '@/lib/context/settings-context';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel } from '@/lib/ui/badge-styles';
 import {
   X,
   Bell,
@@ -117,7 +117,7 @@ export function PriceAlertsModal({ asset, isOpen, onClose }: PriceAlertsModalPro
                     isDark
                   )}`}
                 >
-                  {asset.type}
+                  {getAssetTypeLabel(asset.type)}
                 </span>
               </div>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>

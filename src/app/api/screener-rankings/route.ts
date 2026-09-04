@@ -4,7 +4,7 @@ import { fetchBinanceKlines } from '@/lib/api/binance';
 import { fetchStockKlines, generateDeterministicCandles } from '@/lib/api/yahoo';
 import { runBacktest, DEFAULT_BACKTEST_CONFIG } from '@/lib/quant/backtest-engine';
 import { STRATEGY_PRESETS } from '@/lib/quant/strategy-rules';
-import { Candle, BacktestConfig } from '@/lib/types/market';
+import { Candle, BacktestConfig, AssetType } from '@/lib/types/market';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ interface RankingEntry {
   symbol: string;
   cleanSymbol: string;
   name: string;
-  type: 'crypto' | 'stock' | 'etf';
+  type: AssetType;
   reliabilityScore: number;
   reliabilityLabel: 'ALTA' | 'MEDIA' | 'BAJA';
   profitFactor: number;
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     let candles: Candle[] = [];
 
     try {
-      if (asset.type === 'crypto') {
+      if (asset.type === 'crypto' || cleanSymbol.endsWith('USDT')) {
         candles = await fetchBinanceKlines(cleanSymbol, '1d', 400);
       } else {
         candles = await fetchStockKlines(asset.symbol, '2y', '1d');

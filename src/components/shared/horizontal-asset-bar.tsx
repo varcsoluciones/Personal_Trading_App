@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel } from '@/lib/ui/badge-styles';
 import { ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 
 interface HorizontalAssetBarProps {
@@ -80,7 +80,7 @@ export function HorizontalAssetBar({
                     isDark
                   )}`}
                 >
-                  {a.type}
+                  {getAssetTypeLabel(a.type)}
                 </span>
                 <span className={`font-mono text-[11px] ${isSelected ? (isDark ? 'text-white' : 'text-blue-950') : isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   {formatCurrency(a.price, 0)}

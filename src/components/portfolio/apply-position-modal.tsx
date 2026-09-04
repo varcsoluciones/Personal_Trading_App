@@ -25,7 +25,7 @@ import {
   History,
   ArrowRight,
 } from 'lucide-react';
-import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel } from '@/lib/ui/badge-styles';
 import { calculatePriceCorrelation } from '@/lib/utils/correlation';
 
 interface ApplyPositionModalProps {
@@ -429,7 +429,7 @@ export function ApplyPositionModal({
                     isDark
                   )}`}
                 >
-                  {assetType}
+                  {getAssetTypeLabel(assetType)}
                 </span>
                 {isClosed && (
                   <span className="rounded-md bg-slate-500/20 border border-slate-500/30 px-1.5 py-0.2 text-[9px] font-bold text-slate-400 uppercase">

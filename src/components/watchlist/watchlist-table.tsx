@@ -4,7 +4,7 @@ import React from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { useAlerts } from '@/lib/context/alerts-context';
-import { getAssetTypeBadgeStyle, getTrendBadgeStyle } from '@/lib/ui/badge-styles';
+import { getAssetTypeBadgeStyle, getAssetTypeLabel, getTrendBadgeStyle } from '@/lib/ui/badge-styles';
 import {
   TrendingUp,
   TrendingDown,
@@ -132,7 +132,7 @@ export function WatchlistTable({
                           isDark
                         )}`}
                       >
-                        {asset.type}
+                        {getAssetTypeLabel(asset.type)}
                       </span>
                     </div>
                     <div className={`text-[11px] truncate max-w-[150px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>

@@ -1,13 +1,29 @@
+import { AssetType } from '../types/market';
+
 export interface AssetDefinition {
   id: string;
   symbol: string;
   name: string;
-  type: 'crypto' | 'stock' | 'etf';
+  type: AssetType;
   defaultCategory: 'stable' | 'range' | 'trend' | 'volatile';
 }
 
 export const POPULAR_ASSETS_CATALOG: AssetDefinition[] = [
-  // Criptomonedas Populares (Binance)
+  // Minerales, Metales & Materias Primas (Commodities)
+  { id: 'GC=F', symbol: 'GC=F', name: 'Oro (Futuros Gold)', type: 'commodity', defaultCategory: 'stable' },
+  { id: 'SI=F', symbol: 'SI=F', name: 'Plata (Futuros Silver)', type: 'commodity', defaultCategory: 'volatile' },
+  { id: 'CL=F', symbol: 'CL=F', name: 'Petróleo Crudo WTI', type: 'commodity', defaultCategory: 'volatile' },
+  { id: 'BZ=F', symbol: 'BZ=F', name: 'Petróleo Brent', type: 'commodity', defaultCategory: 'volatile' },
+  { id: 'HG=F', symbol: 'HG=F', name: 'Cobre (Copper Futures)', type: 'commodity', defaultCategory: 'stable' },
+  { id: 'NG=F', symbol: 'NG=F', name: 'Gas Natural (Natural Gas)', type: 'commodity', defaultCategory: 'volatile' },
+  { id: 'PL=F', symbol: 'PL=F', name: 'Platino (Platinum Futures)', type: 'commodity', defaultCategory: 'stable' },
+  { id: 'PA=F', symbol: 'PA=F', name: 'Paladio (Palladium Futures)', type: 'commodity', defaultCategory: 'volatile' },
+  { id: 'GLD', symbol: 'GLD', name: 'SPDR Gold Trust (Oro)', type: 'commodity', defaultCategory: 'stable' },
+  { id: 'SLV', symbol: 'SLV', name: 'iShares Silver Trust (Plata)', type: 'commodity', defaultCategory: 'volatile' },
+  { id: 'USO', symbol: 'USO', name: 'United States Oil Fund (Petróleo)', type: 'commodity', defaultCategory: 'volatile' },
+  { id: 'PAXGUSDT', symbol: 'PAXG/USDT', name: 'PAX Gold (Oro Tokenizado)', type: 'commodity', defaultCategory: 'stable' },
+
+  // Criptomonedas Populares
   { id: 'BTCUSDT', symbol: 'BTC/USDT', name: 'Bitcoin', type: 'crypto', defaultCategory: 'trend' },
   { id: 'ETHUSDT', symbol: 'ETH/USDT', name: 'Ethereum', type: 'crypto', defaultCategory: 'volatile' },
   { id: 'SOLUSDT', symbol: 'SOL/USDT', name: 'Solana', type: 'crypto', defaultCategory: 'volatile' },
@@ -37,8 +53,6 @@ export const POPULAR_ASSETS_CATALOG: AssetDefinition[] = [
   { id: 'IWM', symbol: 'IWM', name: 'iShares Russell 2000 ETF', type: 'etf', defaultCategory: 'range' },
   { id: 'SMH', symbol: 'SMH', name: 'VanEck Semiconductor ETF', type: 'etf', defaultCategory: 'trend' },
   { id: 'SOXX', symbol: 'SOXX', name: 'iShares Semiconductor ETF', type: 'etf', defaultCategory: 'trend' },
-  { id: 'GLD', symbol: 'GLD', name: 'SPDR Gold Shares', type: 'etf', defaultCategory: 'stable' },
-  { id: 'SLV', symbol: 'SLV', name: 'iShares Silver Trust', type: 'etf', defaultCategory: 'volatile' },
   { id: 'TLT', symbol: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', type: 'etf', defaultCategory: 'stable' },
   { id: 'XLK', symbol: 'XLK', name: 'Technology Select Sector SPDR Fund', type: 'etf', defaultCategory: 'trend' },
   { id: 'XLE', symbol: 'XLE', name: 'Energy Select Sector SPDR Fund', type: 'etf', defaultCategory: 'range' },

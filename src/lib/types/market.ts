@@ -1,4 +1,4 @@
-export type AssetType = 'crypto' | 'stock' | 'etf';
+export type AssetType = 'crypto' | 'stock' | 'etf' | 'commodity';
 
 export interface Candle {
   time: string | number; // 'YYYY-MM-DD' or unix timestamp seconds
