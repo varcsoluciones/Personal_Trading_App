@@ -121,12 +121,12 @@ export const APPLE_ACCENT_PALETTE: {
   {
     id: 'yellow',
     name: 'Amarillo',
-    hex: '#ffcc00',
-    bgClass: 'bg-amber-500',
-    textClass: 'text-amber-500',
-    borderClass: 'border-amber-500',
-    tintBgClass: 'bg-amber-500/15',
-    ringClass: 'ring-amber-500',
+    hex: '#ffd60a',
+    bgClass: 'bg-yellow-400',
+    textClass: 'text-yellow-400',
+    borderClass: 'border-yellow-400',
+    tintBgClass: 'bg-yellow-400/20',
+    ringClass: 'ring-yellow-400',
   },
   {
     id: 'green',

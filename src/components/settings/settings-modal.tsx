@@ -216,7 +216,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     }`}
                   >
                     <span
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full shadow-xs text-white"
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full shadow-xs ${
+                        pal.id === 'yellow' ? 'text-black font-bold' : 'text-white'
+                      }`}
                       style={{ backgroundColor: pal.hex }}
                     >
                       {isSelected && <Check className="h-3 w-3" />}
