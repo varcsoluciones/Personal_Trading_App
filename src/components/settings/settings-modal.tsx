@@ -1,15 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   X,
   Moon,
   Sun,
-  Sparkles,
   RotateCcw,
   Palette,
   Check,
   Zap,
+  Download,
+  Upload,
+  HardDrive,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { useSettings } from '@/lib/context/settings-context';
 import {
@@ -18,6 +22,7 @@ import {
   APPLE_ACCENT_PALETTE,
   AppleAccentColor,
 } from '@/lib/types/settings';
+import { exportAppBackup, importAppBackup } from '@/lib/utils/backup-manager';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,6 +31,9 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, accent, updateSettings } = useSettings();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [exportSuccess, setExportSuccess] = useState(false);
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   if (!isOpen) return null;
 
@@ -33,6 +41,45 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleReset = () => {
     updateSettings(DEFAULT_SETTINGS);
+  };
+
+  const handleExport = () => {
+    try {
+      exportAppBackup();
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 2500);
+    } catch (e: any) {
+      setImportStatus({ type: 'error', message: 'Error al exportar los datos.' });
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (!content) return;
+
+      const result = importAppBackup(content);
+      if (result.success) {
+        setImportStatus({
+          type: 'success',
+          message: `${result.message} Recargando aplicación...`,
+        });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        setImportStatus({
+          type: 'error',
+          message: result.message,
+        });
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -241,38 +288,92 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
           </div>
 
-          {/* 5. ANIMACIONES */}
+          {/* 5. COPIA DE SEGURIDAD Y TRANSFERENCIA DE DATOS */}
           <div
-            className={`flex items-center justify-between rounded-2xl border p-3.5 ${
+            className={`rounded-2xl border p-4 transition-colors ${
               isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-3">
               <div className={`rounded-xl p-2 ${accent.tintBgClass} ${accent.textClass}`}>
-                <Sparkles className="h-4 w-4" />
+                <HardDrive className="h-4 w-4" />
               </div>
               <div>
-                <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Animación de Confeti & Celebración
+                <span className={`text-xs font-bold block ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  5. Copia de Seguridad y Transferencia de Datos
                 </span>
                 <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Disparar efectos al batir el rendimiento de Buy & Hold
+                  Exporta o carga tus datos (configuración, cartera, alertas y lista) para usarlos en otro dispositivo o navegador.
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => updateSettings({ confettiCelebration: !settings.confettiCelebration })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                settings.confettiCelebration ? accent.bgClass : isDark ? 'bg-slate-800' : 'bg-slate-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  settings.confettiCelebration ? 'translate-x-6' : 'translate-x-1'
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {/* Export Button */}
+              <button
+                type="button"
+                onClick={handleExport}
+                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border shadow-xs active:scale-95 cursor-pointer ${
+                  exportSuccess
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                    : isDark
+                    ? 'border-slate-700 bg-[#1c1c1e] text-slate-200 hover:text-white hover:bg-[#27272a] hover:border-slate-600'
+                    : 'border-slate-200 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300'
                 }`}
+              >
+                {exportSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>¡Descargado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-3.5 w-3.5 text-blue-400" />
+                    <span>Exportar Datos (.json)</span>
+                  </>
+                )}
+              </button>
+
+              {/* Import Button */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleFileChange}
+                className="hidden"
               />
-            </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border shadow-xs active:scale-95 cursor-pointer ${
+                  isDark
+                    ? 'border-slate-700 bg-[#1c1c1e] text-slate-200 hover:text-white hover:bg-[#27272a] hover:border-slate-600'
+                    : 'border-slate-200 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-300'
+                }`}
+              >
+                <Upload className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Cargar / Restaurar Datos</span>
+              </button>
+            </div>
+
+            {/* Status Feedback Notification */}
+            {importStatus && (
+              <div
+                className={`mt-3 flex items-center gap-2 rounded-xl p-2.5 text-[11px] font-medium border animate-in fade-in zoom-in-95 ${
+                  importStatus.type === 'success'
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                    : 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                }`}
+              >
+                {importStatus.type === 'success' ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                )}
+                <span>{importStatus.message}</span>
+              </div>
+            )}
           </div>
 
         </div>

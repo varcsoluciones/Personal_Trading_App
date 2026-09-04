@@ -29,7 +29,7 @@ export interface AppSettings {
   currency: CurrencySymbol;
   autoRefresh: boolean;
   refreshInterval: number; // in seconds
-  confettiCelebration: boolean;
+  confettiCelebration?: boolean;
   defaultRiskReward: number;
   defaultView: 'grid' | 'table';
 
