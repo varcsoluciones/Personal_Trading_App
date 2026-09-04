@@ -527,9 +527,9 @@ export function usePortfolio() {
       const pnlUSD = (pnlPct / 100) * pos.capitalAllocated;
 
       const distToSlPct =
-        pos.stopLoss !== null ? ((currentPrice - pos.stopLoss) / pos.stopLoss) * 100 : null;
+        pos.stopLoss !== null && currentPrice > 0 ? ((currentPrice - pos.stopLoss) / currentPrice) * 100 : null;
       const distToTpPct =
-        pos.takeProfit !== null ? ((pos.takeProfit - currentPrice) / currentPrice) * 100 : null;
+        pos.takeProfit !== null && currentPrice > 0 ? ((pos.takeProfit - currentPrice) / currentPrice) * 100 : null;
 
       return {
         currentPrice,

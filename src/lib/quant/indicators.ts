@@ -494,7 +494,9 @@ export function aggregateToWeekly(dailyCandles: Candle[]): Candle[] {
   const weeklyMap = new Map<string, Candle[]>();
 
   for (const candle of dailyCandles) {
-    const d = new Date(candle.time);
+    const d = typeof candle.time === 'number'
+      ? new Date(candle.time * 1000)
+      : new Date(candle.time);
     const day = d.getUTCDay();
     const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
     const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));

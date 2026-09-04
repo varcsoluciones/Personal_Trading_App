@@ -118,9 +118,9 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
         )}
       </div>
 
-      {/* 4 TOP PERFORMANCE METRICS (RESPONSIVE GRID) */}
+      {/* 4 TOP PERFORMANCE METRICS (RESPONSIVE GRID - RISK FIRST) */}
       <div className="relative z-20 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* KPI 1: Win Rate */}
+        {/* KPI 1: Max Drawdown (Riesgo Controlado) */}
         <div
           className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
@@ -128,7 +128,32 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
         >
           <div className="flex items-center justify-between">
             <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              1. Tasa de Acierto
+              1. Caída Máxima (DD)
+            </span>
+            <InfoTooltip
+              text="Pérdida máxima porcentual desde el punto más alto del balance en toda la simulación."
+              title="Max Drawdown"
+            />
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="font-mono text-xl sm:text-3xl font-black text-rose-500">
+              -{result.maxDrawdown.toFixed(2)}%
+            </span>
+          </div>
+          <div className={`mt-2 flex items-center justify-between text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Drawdown $: <strong className="font-mono">-{formatCurrency(result.maxDrawdownUSD)}</strong></span>
+          </div>
+        </div>
+
+        {/* KPI 2: Win Rate */}
+        <div
+          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              2. Tasa de Acierto
             </span>
             <InfoTooltip
               text="Porcentaje de operaciones cerradas con ganancia neta positiva."
@@ -147,31 +172,6 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
           <div className={`mt-2 flex items-center justify-between text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <span>Trades: <strong className="font-mono">{result.totalTrades}</strong></span>
             <span className="text-emerald-500 font-semibold">{result.winningTrades}W / {result.losingTrades}L</span>
-          </div>
-        </div>
-
-        {/* KPI 2: Max Drawdown (Riesgo Controlado) */}
-        <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
-            isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              2. Caída Máxima (DD)
-            </span>
-            <InfoTooltip
-              text="Pérdida máxima porcentual desde el punto más alto del balance en toda la simulación."
-              title="Max Drawdown"
-            />
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="font-mono text-xl sm:text-3xl font-black text-rose-500">
-              -{result.maxDrawdown.toFixed(2)}%
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-[11px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Drawdown $: <strong className="font-mono">-{formatCurrency(result.maxDrawdownUSD)}</strong></span>
           </div>
         </div>
 
