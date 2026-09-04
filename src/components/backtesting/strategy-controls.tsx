@@ -178,7 +178,7 @@ export function StrategyControls({
         </div>
       </div>
 
-      {/* 3 PRESETS GRID - Compact & swipeable on mobile */}
+      {/* 3 PRESETS GRID - Exact same design as Opportunity Screener */}
       <div className="flex sm:grid sm:grid-cols-3 gap-2.5 sm:gap-3.5 overflow-x-auto custom-horizontal-scrollbar pb-1 sm:pb-0">
         {STRATEGY_PRESETS.map((preset) => {
           const isSelected = activePresetId === preset.id;
@@ -193,7 +193,7 @@ export function StrategyControls({
                 isSelected
                   ? isDark
                     ? 'border-blue-500 bg-[#2c2c2e] shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
-                    : 'border-blue-500 bg-blue-50/50 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
+                    : 'border-blue-500 bg-blue-50/70 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/50'
                   : isDark
                   ? 'border-slate-800 bg-[#2c2c2e]/40 hover:border-slate-700 hover:bg-[#2c2c2e]/70'
                   : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-slate-100/70'
@@ -201,43 +201,47 @@ export function StrategyControls({
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 overflow-x-auto custom-horizontal-scrollbar pb-0.5 sm:pb-1 min-w-0">
                     <div
                       className={`flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg sm:rounded-xl ${
                         isSelected
-                          ? 'bg-blue-500 text-white'
+                          ? 'bg-blue-500 text-white shadow-xs'
                           : isDark
-                          ? 'bg-slate-800 text-slate-400'
-                          : 'bg-slate-200 text-slate-600'
+                          ? 'bg-[#1c1c1e] text-slate-400'
+                          : 'bg-white text-slate-600 border border-slate-200'
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </div>
-                    <span className={`text-xs sm:text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {preset.name}
-                    </span>
+                    <div className="min-w-0">
+                      <h4 className={`text-xs sm:text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        {preset.name}
+                      </h4>
+                      <p className={`text-[9px] sm:text-[10px] font-semibold truncate ${isSelected ? 'text-blue-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {preset.tagline}
+                      </p>
+                    </div>
                   </div>
 
-                  {preset.id === 'balanced' && (
+                  {isSelected && (
                     <span className="shrink-0 rounded-full bg-blue-500/15 border border-blue-500/30 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-blue-500">
-                      Recomendado
+                      Activo
                     </span>
                   )}
                 </div>
 
-                <p className={`mt-1.5 sm:mt-2 text-[10px] sm:text-[11px] font-semibold truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  {preset.tagline}
-                </p>
-                <p className={`mt-1 text-[10px] sm:text-[11px] leading-snug sm:leading-relaxed line-clamp-2 sm:line-clamp-none ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`text-[11px] sm:text-xs leading-snug sm:leading-relaxed mt-1 sm:mt-2 line-clamp-2 sm:line-clamp-none ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                   {preset.description}
                 </p>
               </div>
 
-              {/* Quick Metrics Summary */}
-              <div className={`mt-2.5 sm:mt-3 flex items-center justify-between border-t pt-1.5 sm:pt-2 text-[9px] sm:text-[10px] font-mono ${isDark ? 'border-slate-700/50 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
-                <span>Stop: -{preset.config.stopLossPct}%</span>
-                <span>R:B 1:{preset.config.takeProfitRatio}x</span>
-                <span>RSI: {preset.config.rsiOversold}/{preset.config.rsiOverbought}</span>
+              {/* Quick Strategy Blueprint Pill */}
+              <div className={`mt-2.5 sm:mt-3 pt-1.5 sm:pt-2 border-t flex items-center justify-between text-[9px] sm:text-[10px] font-mono font-semibold ${
+                isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+              }`}>
+                <span>SL: -{preset.config.stopLossPct}%</span>
+                <span>TP: 1:{preset.config.takeProfitRatio}x</span>
+                <span>RSI: {preset.config.rsiOversold}-{preset.config.rsiOverbought}</span>
               </div>
             </button>
           );

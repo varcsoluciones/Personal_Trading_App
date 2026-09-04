@@ -351,7 +351,7 @@ export function OpportunityScreener({
 
       {/* 2. CATEGORY SELECTOR & STREAMLINED CONTROLS HEADER */}
       <div
-        className={`rounded-3xl border p-5 shadow-xs transition-colors ${
+        className={`rounded-3xl border p-3.5 sm:p-5 shadow-xs transition-colors ${
           isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white'
         }`}
       >
