@@ -5,6 +5,7 @@ import { Asset, AssetCategory } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { AssetOpportunityCard } from '@/components/shared/asset-opportunity-card';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
+import { ScoreBreakdownTooltip } from '@/components/shared/score-breakdown-tooltip';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
@@ -654,10 +655,16 @@ export function OpportunityScreener({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] font-bold">
-                      <span className="opacity-75">Score:</span>
-                      <strong className="text-emerald-400">{item.analysis?.opportunityScore || 50}</strong>
-                    </div>
+                    <ScoreBreakdownTooltip
+                      score={item.analysis?.opportunityScore || 50}
+                      breakdown={item.analysis?.scoreBreakdown}
+                      align="right"
+                    >
+                      <div className="flex items-center gap-1 text-[11px] font-bold cursor-help hover:opacity-80 transition-opacity">
+                        <span className="opacity-75">Score:</span>
+                        <strong className="text-emerald-400">{item.analysis?.opportunityScore || 50}</strong>
+                      </div>
+                    </ScoreBreakdownTooltip>
                   </div>
                 </div>
               );
@@ -899,28 +906,34 @@ export function OpportunityScreener({
                       </td>
 
                       {/* 7. Score Técnico (Al lado derecho de Confianza) */}
-                      <td className="py-3.5 px-3 text-center font-mono">
-                        <span
-                          className={`inline-block rounded-xl border px-2.5 py-1 text-xs font-black ${
-                            analysis.opportunityScore >= 95
-                              ? isDark
-                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-xs ring-1 ring-emerald-500/40'
-                                : 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-xs ring-1 ring-emerald-500/40'
-                              : analysis.opportunityScore >= 80
-                              ? isDark
-                                ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
-                                : 'bg-blue-50 border-blue-300 text-blue-800'
-                              : analysis.opportunityScore >= 50
-                              ? isDark
-                                ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                                : 'bg-amber-50 border-amber-300 text-amber-800'
-                              : isDark
-                              ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
-                              : 'bg-rose-50 border-rose-300 text-rose-800'
-                          }`}
+                      <td className="py-3.5 px-3 text-center font-mono" onClick={(e) => e.stopPropagation()}>
+                        <ScoreBreakdownTooltip
+                          score={analysis.opportunityScore}
+                          breakdown={analysis.scoreBreakdown}
+                          align="center"
                         >
-                          {analysis.opportunityScore}
-                        </span>
+                          <span
+                            className={`inline-block rounded-xl border px-2.5 py-1 text-xs font-black transition-transform hover:scale-110 cursor-help ${
+                              analysis.opportunityScore >= 95
+                                ? isDark
+                                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-xs ring-1 ring-emerald-500/40'
+                                  : 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-xs ring-1 ring-emerald-500/40'
+                                : analysis.opportunityScore >= 80
+                                ? isDark
+                                  ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                                  : 'bg-blue-50 border-blue-300 text-blue-800'
+                                : analysis.opportunityScore >= 50
+                                ? isDark
+                                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                                  : 'bg-amber-50 border-amber-300 text-amber-800'
+                                : isDark
+                                ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                                : 'bg-rose-50 border-rose-300 text-rose-800'
+                            }`}
+                          >
+                            {analysis.opportunityScore}
+                          </span>
+                        </ScoreBreakdownTooltip>
                       </td>
 
                       {/* 8. Acciones */}

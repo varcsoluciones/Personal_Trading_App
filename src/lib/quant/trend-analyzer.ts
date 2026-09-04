@@ -1,5 +1,5 @@
 import { evaluateEntryCondition, evaluateExitCondition, calculateDynamicOrderSetup, calculateSuggestedEntry, StrategyRulesConfig } from './strategy-rules';
-import { AssetCategory, Candle, RiskLevel, SignalType, TrendAnalysis, TrendDirection, HorizonSuggestion, TradingHorizon } from '../types/market';
+import { AssetCategory, Candle, RiskLevel, SignalType, TrendAnalysis, TrendDirection, HorizonSuggestion, TradingHorizon, ScoreBreakdown, ScoreCriterionBreakdown } from '../types/market';
 import {
   calculateADX,
   calculateATR,
@@ -272,43 +272,203 @@ export function analyzeAsset(candles: Candle[], config?: StrategyRulesConfig): T
     categoryLabel = 'Tendencia Fuerte';
   }
 
-  // Compute composite 0-100 Score
+  // Compute composite 0-100 Score with granular breakdown
   let score = 50;
+  const criteriaBreakdown: ScoreCriterionBreakdown[] = [];
 
-  // Trend component (+/- 25 pts)
-  if (trend === 'BULLISH') score += 20;
-  if (trend === 'BEARISH') score -= 15;
+  // 1. Base Calibración
+  criteriaBreakdown.push({
+    id: 'base',
+    name: 'Punto Base de Calibración',
+    points: 50,
+    maxPoints: 50,
+    status: 'neutral',
+    description: 'Puntuación inicial base del modelo cuantitativo.',
+  });
+
+  // 2. Trend component (+/- 20 pts)
+  let trendPoints = 0;
+  let trendDesc = 'Mercado lateral en consolidación sin dirección dominante';
+  let trendStatus: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (trend === 'BULLISH') {
+    trendPoints = 20;
+    score += 20;
+    trendStatus = 'positive';
+    trendDesc = `Estructura alcista sólida (EMA ${fastPeriod} > EMA ${slowPeriod} y precio sobre EMA ${slowPeriod})`;
+  } else if (trend === 'BEARISH') {
+    trendPoints = -15;
+    score -= 15;
+    trendStatus = 'negative';
+    trendDesc = `Estructura bajista dominante (EMA ${fastPeriod} < EMA ${slowPeriod})`;
+  }
+  criteriaBreakdown.push({
+    id: 'trend',
+    name: `Estructura Tendencial (EMA ${fastPeriod}/${slowPeriod})`,
+    points: trendPoints,
+    maxPoints: 20,
+    status: trendStatus,
+    description: trendDesc,
+  });
 
   const oversold = config?.rsiOversold ?? 38;
   const overbought = config?.rsiOverbought ?? 70;
   const minAdx = config?.adxMin ?? 20;
 
-  // RSI component dynamically calibrated to active strategy profile
-  if (currentRsi >= oversold && currentRsi <= 58) score += 20;
-  else if (currentRsi < oversold && rsiDiv === 'BULLISH') score += 22;
-  else if (currentRsi > overbought) score -= 15;
+  // 3. RSI Pullback & Impulso component
+  let rsiPoints = 0;
+  let rsiDesc = `RSI en nivel neutro (${currentRsi.toFixed(1)}) sin zona de descuento clara`;
+  let rsiStatus: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (currentRsi >= oversold && currentRsi <= 58) {
+    rsiPoints = 20;
+    score += 20;
+    rsiStatus = 'positive';
+    rsiDesc = `RSI en zona óptima de retroceso/soporte (${currentRsi.toFixed(1)} puntos)`;
+  } else if (currentRsi < oversold && rsiDiv === 'BULLISH') {
+    rsiPoints = 22;
+    score += 22;
+    rsiStatus = 'positive';
+    rsiDesc = `Divergencia alcista con RSI en sobreventa (${currentRsi.toFixed(1)})`;
+  } else if (currentRsi > overbought) {
+    rsiPoints = -15;
+    score -= 15;
+    rsiStatus = 'negative';
+    rsiDesc = `Sobrecompra técnica extendida (${currentRsi.toFixed(1)} >= ${overbought})`;
+  }
+  criteriaBreakdown.push({
+    id: 'rsi',
+    name: `Oscilador RSI (${rsiPeriod}p)`,
+    points: rsiPoints,
+    maxPoints: 20,
+    status: rsiStatus,
+    description: rsiDesc,
+  });
 
-  // ADX strength component dynamically calibrated to active strategy profile
-  if (currentAdx >= minAdx && currentPlusDI > currentMinusDI) score += 15;
-  else if (currentAdx < minAdx - 5) score -= 8;
+  // 4. ADX strength component
+  let adxPoints = 0;
+  let adxDesc = `Fuerza tendencial moderada (ADX ${currentAdx.toFixed(1)})`;
+  let adxStatus: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (currentAdx >= minAdx && currentPlusDI > currentMinusDI) {
+    adxPoints = 15;
+    score += 15;
+    adxStatus = 'positive';
+    adxDesc = `Fuerza tendencial sólida (ADX ${currentAdx.toFixed(1)} >= ${minAdx}) con compradores al mando (+DI > -DI)`;
+  } else if (currentAdx < minAdx - 5) {
+    adxPoints = -8;
+    score -= 8;
+    adxStatus = 'negative';
+    adxDesc = `Mercado con baja inercia tendencial o impulso débil (ADX ${currentAdx.toFixed(1)})`;
+  }
+  criteriaBreakdown.push({
+    id: 'adx',
+    name: 'Fuerza e Impulso (ADX/DMI)',
+    points: adxPoints,
+    maxPoints: 15,
+    status: adxStatus,
+    description: adxDesc,
+  });
 
-  // Reversal Risk discount (0 to -20 pts)
-  if (riskLevel === 'BAJO') score += 10;
-  else if (riskLevel === 'ALTO') score -= 20;
+  // 5. Reversal Risk discount
+  let riskPoints = 0;
+  let riskDesc = 'Riesgo de agotamiento moderado';
+  let riskStatus: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (riskLevel === 'BAJO') {
+    riskPoints = 10;
+    score += 10;
+    riskStatus = 'positive';
+    riskDesc = 'Bajo riesgo de reversión (estructura técnica sólida sin agotamiento)';
+  } else if (riskLevel === 'ALTO') {
+    riskPoints = -20;
+    score -= 20;
+    riskStatus = 'negative';
+    riskDesc = `Alto riesgo de reversión o sobreextensión (${reversalReasons[0] || 'Agotamiento detectado'})`;
+  }
+  criteriaBreakdown.push({
+    id: 'risk',
+    name: 'Control de Riesgo de Reversión',
+    points: riskPoints,
+    maxPoints: 10,
+    status: riskStatus,
+    description: riskDesc,
+  });
 
-  // Volume confirmation adjustment
-  if (!volumeConfirmed || volumeRatio < 0.8) score -= 10;
-  else if (volumeRatio >= 1.2) score += 6;
+  // 6. Volume confirmation adjustment
+  let volPoints = 0;
+  let volDesc = `Volumen institucional adecuado (${volumeRatio.toFixed(2)}x del promedio)`;
+  let volStatus: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (!volumeConfirmed || volumeRatio < 0.8) {
+    volPoints = -10;
+    score -= 10;
+    volStatus = 'negative';
+    volDesc = `Volumen reciente insuficiente (${volumeRatio.toFixed(2)}x del promedio de 20p)`;
+  } else if (volumeRatio >= 1.2) {
+    volPoints = 6;
+    score += 6;
+    volStatus = 'positive';
+    volDesc = `Participación institucional fuerte (${volumeRatio.toFixed(2)}x del promedio)`;
+  }
+  criteriaBreakdown.push({
+    id: 'volume',
+    name: 'Confirmación de Volumen',
+    points: volPoints,
+    maxPoints: 6,
+    status: volStatus,
+    description: volDesc,
+  });
 
-  // Multi-timeframe weekly alignment adjustment
-  if (weeklyTrend === 'BULLISH') score += 8;
-  else if (weeklyTrend === 'BEARISH') score -= 15;
+  // 7. Multi-timeframe weekly alignment adjustment
+  let weeklyPoints = 0;
+  let weeklyDesc = 'Tendencia macro semanal neutral/en consolidación';
+  let weeklyStatus: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (weeklyTrend === 'BULLISH') {
+    weeklyPoints = 8;
+    score += 8;
+    weeklyStatus = 'positive';
+    weeklyDesc = 'Tendencia macro semanal alcista alineada a favor';
+  } else if (weeklyTrend === 'BEARISH') {
+    weeklyPoints = -15;
+    score -= 15;
+    weeklyStatus = 'negative';
+    weeklyDesc = 'Tendencia macro semanal en contra (bajista)';
+  }
+  criteriaBreakdown.push({
+    id: 'weekly',
+    name: 'Alineación Macro (Semanal)',
+    points: weeklyPoints,
+    maxPoints: 8,
+    status: weeklyStatus,
+    description: weeklyDesc,
+  });
 
-  // Signal component
-  if (signal === 'OPORTUNIDAD DE ENTRADA') score += 15;
-  if (signal === 'OPORTUNIDAD DE SALIDA') score -= 15;
+  // 8. Signal component
+  let signalPoints = 0;
+  let signalDesc = 'Sin señal activa de disparo (esperando zona de entrada)';
+  let signalStatus: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (signal === 'OPORTUNIDAD DE ENTRADA') {
+    signalPoints = 15;
+    score += 15;
+    signalStatus = 'positive';
+    signalDesc = 'Gatillo de entrada activado en zona de compra';
+  } else if (signal === 'OPORTUNIDAD DE SALIDA') {
+    signalPoints = -15;
+    score -= 15;
+    signalStatus = 'negative';
+    signalDesc = 'Gatillo de salida activado';
+  }
+  criteriaBreakdown.push({
+    id: 'signal',
+    name: 'Gatillo Técnico de Señal',
+    points: signalPoints,
+    maxPoints: 15,
+    status: signalStatus,
+    description: signalDesc,
+  });
 
   const opportunityScore = Math.min(99, Math.max(12, Math.round(score)));
+  const scoreBreakdown: ScoreBreakdown = {
+    baseScore: 50,
+    totalScore: opportunityScore,
+    criteria: criteriaBreakdown,
+  };
 
   const horizonSuggestion = calculateHorizonSuggestion(
     suggestedTakeProfitPct,
@@ -344,6 +504,7 @@ export function analyzeAsset(candles: Candle[], config?: StrategyRulesConfig): T
     signal,
     signalReason,
     opportunityScore,
+    scoreBreakdown,
     opportunityCategory,
     categoryLabel,
     orderSetup: {

@@ -27,6 +27,21 @@ export interface HorizonSuggestion {
   rationale: string;
 }
 
+export interface ScoreCriterionBreakdown {
+  id: string;
+  name: string;
+  points: number;
+  maxPoints: number;
+  status: 'positive' | 'neutral' | 'negative';
+  description: string;
+}
+
+export interface ScoreBreakdown {
+  baseScore: number;
+  totalScore: number;
+  criteria: ScoreCriterionBreakdown[];
+}
+
 export interface TrendAnalysis {
   trend: TrendDirection;
   trendLabel: 'Alcista' | 'Bajista' | 'Lateral';
@@ -54,6 +69,7 @@ export interface TrendAnalysis {
   signal: SignalType;
   signalReason: string;
   opportunityScore: number; // 0 - 100
+  scoreBreakdown?: ScoreBreakdown;
   opportunityCategory: AssetCategory;
   categoryLabel: string;
   orderSetup: {

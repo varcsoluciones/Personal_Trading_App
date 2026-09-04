@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Asset } from '@/lib/types/market';
 import { useSettings } from '@/lib/context/settings-context';
 import { ConfidenceBadge } from '@/components/ui/confidence-badge';
+import { ScoreBreakdownTooltip } from '@/components/shared/score-breakdown-tooltip';
 import { useAlerts } from '@/lib/context/alerts-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
@@ -26,8 +27,8 @@ export interface AssetOpportunityCardProps {
   isSelected?: boolean;
   onSelect?: () => void;
   onRemove?: (e: React.MouseEvent) => void;
-  onOpenChart?: () => void;
-  onOpenBacktest?: () => void;
+  onOpenChart?: (asset: Asset) => void;
+  onOpenBacktest?: (asset: Asset) => void;
   customActionButtons?: React.ReactNode;
 }
 
@@ -71,28 +72,34 @@ export function AssetOpportunityCard({
         <div className="flex items-start justify-between gap-2">
           {/* Unified Score + Confidence Badge */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Opportunity Score Pill */}
-            <span
-              className={`rounded-xl border px-2 py-0.5 text-xs font-black font-mono shadow-xs ${
-                analysis.opportunityScore >= 95
-                  ? isDark
-                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 ring-1 ring-emerald-500/40'
-                    : 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-1 ring-emerald-500/40'
-                  : analysis.opportunityScore >= 80
-                  ? isDark
-                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
-                    : 'bg-blue-50 border-blue-300 text-blue-800'
-                  : analysis.opportunityScore >= 50
-                  ? isDark
-                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                    : 'bg-amber-50 border-amber-300 text-amber-800'
-                  : isDark
-                  ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
-                  : 'bg-rose-50 border-rose-300 text-rose-800'
-              }`}
+            {/* Opportunity Score Pill with Floating Breakdown */}
+            <ScoreBreakdownTooltip
+              score={analysis.opportunityScore}
+              breakdown={analysis.scoreBreakdown}
+              align="left"
             >
-              {analysis.opportunityScore} pts
-            </span>
+              <span
+                className={`rounded-xl border px-2 py-0.5 text-xs font-black font-mono shadow-xs transition-transform hover:scale-105 ${
+                  analysis.opportunityScore >= 95
+                    ? isDark
+                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 ring-1 ring-emerald-500/40'
+                      : 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-1 ring-emerald-500/40'
+                    : analysis.opportunityScore >= 80
+                    ? isDark
+                      ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                      : 'bg-blue-50 border-blue-300 text-blue-800'
+                    : analysis.opportunityScore >= 50
+                    ? isDark
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                      : 'bg-amber-50 border-amber-300 text-amber-800'
+                    : isDark
+                    ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                    : 'bg-rose-50 border-rose-300 text-rose-800'
+                }`}
+              >
+                {analysis.opportunityScore} pts
+              </span>
+            </ScoreBreakdownTooltip>
 
             {/* Confidence Verdict */}
             <ConfidenceBadge
@@ -348,7 +355,7 @@ export function AssetOpportunityCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect?.();
-                  onOpenChart();
+                  onOpenChart(asset);
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 rounded-2xl border py-1.5 text-xs font-bold transition-all ${
                   isDark
@@ -367,7 +374,7 @@ export function AssetOpportunityCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelect?.();
-                  onOpenBacktest();
+                  onOpenBacktest(asset);
                 }}
                 className={`flex-1 flex items-center justify-center gap-1.5 rounded-2xl border py-1.5 text-xs font-bold transition-all ${
                   isDark
