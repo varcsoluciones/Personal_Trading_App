@@ -202,12 +202,22 @@ export function ScoreBreakdownTooltip({
 
                       {/* Points / Max Note Badge */}
                       <span
-                        className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-lg border ${badgeStyle}`}
+                        className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg border ${badgeStyle}`}
                       >
-                        {item.id === 'base'
-                          ? `Base ${item.points}`
-                          : `${item.points > 0 ? '+' : ''}${item.points} / ${item.maxPoints}`}
+                        {item.points} / {item.maxPoints} pts
                       </span>
+                    </div>
+
+                    {/* Mini Progress Bar */}
+                    <div className="w-full bg-slate-700/30 rounded-full h-1 my-1 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          isPositive ? 'bg-emerald-400' : isNegative ? 'bg-rose-400' : 'bg-slate-500'
+                        }`}
+                        style={{
+                          width: `${Math.max(0, Math.min(100, (item.points / item.maxPoints) * 100))}%`,
+                        }}
+                      />
                     </div>
 
                     <p className="text-[10px] text-slate-400 leading-tight">
@@ -228,10 +238,10 @@ export function ScoreBreakdownTooltip({
           <div className="mt-2.5 pt-2 border-t border-slate-700/30 flex items-center justify-between text-[10px] text-slate-400">
             <span className="flex items-center gap-1">
               <Info className="h-3 w-3 text-blue-400" />
-              Suma ponderada de 7 criterios
+              Modelo cuantitativo de 6 criterios
             </span>
-            <span className="font-mono font-semibold text-slate-300">
-              Total: {score} pts
+            <span className="font-mono font-bold text-slate-200">
+              Total: {score} / 100 pts
             </span>
           </div>
         </div>
