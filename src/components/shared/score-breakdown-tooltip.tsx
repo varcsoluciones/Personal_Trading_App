@@ -165,15 +165,28 @@ export function ScoreBreakdownTooltip({
           <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
             {breakdown?.criteria && breakdown.criteria.length > 0 ? (
               breakdown.criteria.map((item) => {
-                const isPositive = item.points > 0;
-                const isNegative = item.points < 0;
-                const isNeutral = item.points === 0;
+                const ratio = item.maxPoints > 0 ? item.points / item.maxPoints : 0;
+                const isHigh = item.status === 'positive' && ratio >= 0.70;
+                const isLow = item.status === 'negative' || ratio < 0.40 || item.points <= 0;
+                const isMedium = !isHigh && !isLow;
 
-                const badgeStyle = isPositive
+                const badgeStyle = isHigh
                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                  : isNegative
-                  ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                  : 'bg-slate-700/30 text-slate-400 border-slate-700/50';
+                  : isMedium
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                  : 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+
+                const barColor = isHigh
+                  ? 'bg-emerald-400'
+                  : isMedium
+                  ? 'bg-amber-400'
+                  : 'bg-rose-400';
+
+                const iconColor = isHigh
+                  ? 'text-emerald-400'
+                  : isMedium
+                  ? 'text-amber-400'
+                  : 'text-rose-400';
 
                 return (
                   <div
@@ -186,15 +199,7 @@ export function ScoreBreakdownTooltip({
                   >
                     <div className="flex items-center justify-between text-[11px] mb-1">
                       <div className="flex items-center gap-1.5 font-semibold">
-                        <span
-                          className={`${
-                            isPositive
-                              ? 'text-emerald-400'
-                              : isNegative
-                              ? 'text-rose-400'
-                              : 'text-slate-400'
-                          }`}
-                        >
+                        <span className={iconColor}>
                           {getCriterionIcon(item.id)}
                         </span>
                         <span className="truncate max-w-[170px]">{item.name}</span>
@@ -202,20 +207,24 @@ export function ScoreBreakdownTooltip({
 
                       {/* Points / Max Note Badge */}
                       <span
-                        className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg border ${badgeStyle}`}
+                        className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 ${badgeStyle}`}
                       >
-                        {item.points} / {item.maxPoints} pts
+                        <span>{item.points} / {item.maxPoints} pts</span>
+                        {isMedium && (
+                          <span className="text-[9px] opacity-80">(Pausa)</span>
+                        )}
+                        {isLow && (
+                          <span className="text-[9px] opacity-80">(Bajo)</span>
+                        )}
                       </span>
                     </div>
 
                     {/* Mini Progress Bar */}
                     <div className="w-full bg-slate-700/30 rounded-full h-1 my-1 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${
-                          isPositive ? 'bg-emerald-400' : isNegative ? 'bg-rose-400' : 'bg-slate-500'
-                        }`}
+                        className={`h-full rounded-full transition-all duration-300 ${barColor}`}
                         style={{
-                          width: `${Math.max(0, Math.min(100, (item.points / item.maxPoints) * 100))}%`,
+                          width: `${Math.max(4, Math.min(100, ratio * 100))}%`,
                         }}
                       />
                     </div>
