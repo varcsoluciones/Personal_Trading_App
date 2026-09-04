@@ -36,6 +36,7 @@ import {
   BarChart2,
   Activity,
   Layers,
+  LogIn,
 } from 'lucide-react';
 
 interface TradingChartProps {
@@ -1219,78 +1220,106 @@ export function TradingChart({ asset, assets, onSelectAsset }: TradingChartProps
         </div>
       )}
 
-      {/* 6. Strategic Price Lines / Order Setup Cards */}
+      {/* 6. Strategic Price Lines / Order Setup Cards (4 Compact Badges) */}
       {analysis && (
-        <div className="grid grid-cols-1 gap-3.5 sm:gap-4 md:grid-cols-3">
-          {/* Stop Loss Card */}
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Card 1: Suggested Entry Card */}
           <div
-            className={`rounded-3xl border p-4 transition-all ${
+            className={`rounded-2xl border p-3 sm:p-3.5 transition-all ${
+              isDark
+                ? 'border-blue-500/20 bg-blue-950/20'
+                : 'border-blue-200 bg-blue-50/70 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 text-blue-500 mb-1">
+              <LogIn className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Entrada Sugerida</span>
+            </div>
+            <div className={`font-mono text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              {formatCurrency(analysis.orderSetup.suggestedEntryPrice)}
+            </div>
+            <div className={`mt-1 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              <span>Estrategia:</span>
+              <span className="font-mono font-bold text-blue-500 truncate max-w-[130px]" title={analysis.orderSetup.entryLabel}>
+                {analysis.orderSetup.entryLabel || 'Punto óptimo'}
+              </span>
+            </div>
+            <div className={`text-[10px] mt-0.5 truncate ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              Nivel de ejecución técnica
+            </div>
+          </div>
+
+          {/* Card 2: Stop Loss Card */}
+          <div
+            className={`rounded-2xl border p-3 sm:p-3.5 transition-all ${
               isDark
                 ? 'border-rose-500/20 bg-rose-950/20'
                 : 'border-rose-200 bg-rose-50/70 shadow-xs'
             }`}
           >
-            <div className="flex items-center gap-2 text-rose-500 mb-1">
-              <Shield className="h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-wider">Stop Loss Dinámico</span>
+            <div className="flex items-center gap-1.5 text-rose-500 mb-1">
+              <Shield className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Stop Loss Dinámico</span>
             </div>
-            <div className={`font-mono text-xl sm:text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`font-mono text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               {formatCurrency(analysis.orderSetup.suggestedStopLoss)}
             </div>
             <div className={`mt-1 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               <span>Distancia de Corte:</span>
               <span className="font-mono font-bold text-rose-500">-{analysis.orderSetup.suggestedStopLossPct}%</span>
             </div>
-            <div className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            <div className={`text-[10px] mt-0.5 truncate ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
               Riesgo por unidad: -{formatCurrency(analysis.orderSetup.potentialRiskUSD)}
             </div>
           </div>
 
-          {/* Take Profit Card */}
+          {/* Card 3: Take Profit Card */}
           <div
-            className={`rounded-3xl border p-4 transition-all ${
+            className={`rounded-2xl border p-3 sm:p-3.5 transition-all ${
               isDark
                 ? 'border-emerald-500/20 bg-emerald-950/20'
                 : 'border-emerald-200 bg-emerald-50/70 shadow-xs'
             }`}
           >
-            <div className="flex items-center gap-2 text-emerald-500 mb-1">
-              <Target className="h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-wider">Take Profit Sugerido</span>
+            <div className="flex items-center gap-1.5 text-emerald-500 mb-1">
+              <Target className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Take Profit Sugerido</span>
             </div>
-            <div className={`font-mono text-xl sm:text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`font-mono text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               {formatCurrency(analysis.orderSetup.suggestedTakeProfit)}
             </div>
             <div className={`mt-1 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <span>Objetivo de Ganancia:</span>
+              <span>Objetivo Ganancia:</span>
               <span className="font-mono font-bold text-emerald-500">+{analysis.orderSetup.suggestedTakeProfitPct}%</span>
             </div>
-            <div className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              Beneficio por unidad: +{formatCurrency(analysis.orderSetup.potentialRewardUSD)}
+            <div className={`text-[10px] mt-0.5 truncate ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              Beneficio / ud: +{formatCurrency(analysis.orderSetup.potentialRewardUSD)}
             </div>
           </div>
 
-          {/* Risk Reward Ratio Card */}
+          {/* Card 4: Risk Reward Ratio Card */}
           <div
-            className={`rounded-3xl border p-4 transition-all ${
+            className={`rounded-2xl border p-3 sm:p-3.5 transition-all ${
               isDark
                 ? `${accent.borderClass} ${accent.tintBgClass}`
                 : `${accent.borderClass} ${accent.tintBgClass} shadow-xs`
             }`}
           >
-            <div className={`flex items-center gap-2 ${accent.textClass} mb-1`}>
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-xs font-bold uppercase tracking-wider">Relación Riesgo / Beneficio</span>
+            <div className={`flex items-center gap-1.5 ${accent.textClass} mb-1`}>
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Relación R / B</span>
             </div>
-            <div className={`font-mono text-xl sm:text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`font-mono text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               1 : {analysis.orderSetup.riskRewardRatio}
             </div>
             <div className={`mt-1 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              <span>Eficiencia Matemática:</span>
-              <span className="font-bold text-emerald-500">Favorable (&gt; 1:2.0)</span>
+              <span>Eficiencia:</span>
+              <span className="font-bold text-emerald-500">
+                {Number(analysis.orderSetup.riskRewardRatio) >= 2.0 ? 'Favorable (> 1:2)' : 'Moderada'}
+              </span>
             </div>
-            <div className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              Gestión de riesgo asimétrica institucional
+            <div className={`text-[10px] mt-0.5 truncate ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              Gestión de riesgo asimétrica
             </div>
           </div>
         </div>
