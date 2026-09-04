@@ -288,7 +288,7 @@ export function AddAssetModal({
           <div className="flex items-center gap-1.5 mt-3">
             {[
               { id: 'all', label: 'Todos' },
-              { id: 'crypto', label: 'Criptos (Binance)' },
+              { id: 'crypto', label: 'Cripto' },
               { id: 'stock', label: 'Acciones' },
               { id: 'etf', label: 'ETFs' },
             ].map((f) => (
@@ -415,7 +415,7 @@ export function AddAssetModal({
                 </span>
               </div>
               <p className={`text-[11px] mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Puedes agregar cualquier acción de Wall Street, ETF de EE.UU. o par cripto de Binance.
+                Puedes agregar cualquier acción de Wall Street, ETF de EE.UU. o criptomoneda.
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <button
