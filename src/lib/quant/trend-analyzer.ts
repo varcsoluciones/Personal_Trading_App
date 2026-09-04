@@ -231,7 +231,8 @@ export function analyzeAsset(candles: Candle[], config?: StrategyRulesConfig): T
     currentAtr,
     trend,
     signal,
-    config?.entryTolerancePct ?? 1.0
+    config?.entryTolerancePct ?? 1.0,
+    fastPeriod
   );
   const suggestedEntryPrice = entryCalc.suggestedEntryPrice;
   const entryType = entryCalc.entryType;

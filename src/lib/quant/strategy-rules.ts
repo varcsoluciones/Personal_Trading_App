@@ -205,18 +205,19 @@ export interface SuggestedEntryResult {
  */
 export function calculateSuggestedEntry(
   currentPrice: number,
-  currentEma20: number,
+  currentEmaFast: number,
   currentAtr: number,
   trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL',
   signal: 'OPORTUNIDAD DE ENTRADA' | 'OPORTUNIDAD DE SALIDA' | 'ESPERAR / MANTENER',
-  tolerancePct: number = 1.0
+  tolerancePct: number = 1.0,
+  fastPeriod: number = 20
 ): SuggestedEntryResult {
   let suggestedEntryPrice = currentPrice;
   let entryType: EntryStrategyType = 'PULLBACK_ESPERADO';
   let entryLabel = 'Esperar retroceso';
 
   const tolerance = tolerancePct / 100;
-  const isWithinZone = currentEma20 > 0 && Math.abs(currentPrice - currentEma20) / currentEma20 <= tolerance;
+  const isWithinZone = currentEmaFast > 0 && Math.abs(currentPrice - currentEmaFast) / currentEmaFast <= tolerance;
 
   if (signal === 'OPORTUNIDAD DE ENTRADA') {
     suggestedEntryPrice = currentPrice;
@@ -225,15 +226,15 @@ export function calculateSuggestedEntry(
       ? `En Zona de Compra (±${tolerancePct.toFixed(1)}%)`
       : 'Comprar en Mercado (Pullback Confirmado)';
   } else if (trend === 'BULLISH') {
-    // In bullish trend, target pullback to EMA 20 dynamic support
-    const pullbackTarget = currentEma20 > 0 && currentPrice > currentEma20
-      ? currentEma20
+    // In bullish trend, target pullback to Fast EMA dynamic support
+    const pullbackTarget = currentEmaFast > 0 && currentPrice > currentEmaFast
+      ? currentEmaFast
       : currentPrice * 0.985;
     suggestedEntryPrice = Math.min(currentPrice, pullbackTarget);
     entryType = 'PULLBACK_ESPERADO';
     entryLabel = isWithinZone
       ? `En Zona de Compra (±${tolerancePct.toFixed(1)}%)`
-      : 'Esperar retroceso a EMA 20';
+      : `Esperar retroceso a EMA ${fastPeriod}`;
   } else if (trend === 'NEUTRAL') {
     // In range/lateral trend, target lower boundary support
     const rangeLowTarget = Math.max(0.0001, currentPrice - currentAtr * 1.2);

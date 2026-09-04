@@ -304,7 +304,8 @@ export function runCoreBacktest(candles: Candle[], config?: Partial<BacktestConf
           currentAtr,
           trend,
           'OPORTUNIDAD DE ENTRADA',
-          cfg.entryTolerancePct ?? 1.0
+          cfg.entryTolerancePct ?? 1.0,
+          cfg.emaFastPeriod
         );
 
         pendingOrder = {
