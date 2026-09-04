@@ -197,135 +197,141 @@ export function PortfolioDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         {/* KPI 1: Aporte Propio Neto */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              1. Aporte Propio Neto
-            </span>
-            <div className="flex items-center gap-1 text-[11px] text-blue-500 font-bold">
-              <DollarSign className="h-3.5 w-3.5" />
-              <span>Depósitos - Retiros</span>
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[24px]">
+              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
+                1. Aporte Propio Neto
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 font-sans">
+                <DollarSign className="h-3 w-3" />
+                <span>Depósitos - Retiros</span>
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline">
+              <span className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {formatCurrency(netContributions)}
+              </span>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className={`font-mono text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              {formatCurrency(netContributions)}
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Movimientos: <strong className="font-mono">{capitalMovements.length}</strong></span>
+          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Movimientos: <strong className="font-mono font-bold text-slate-200">{capitalMovements.length}</strong></span>
             <button
               type="button"
               onClick={() => setIsMovementsExpanded(!isMovementsExpanded)}
-              className="text-blue-500 hover:underline flex items-center gap-0.5 text-[11px] font-semibold cursor-pointer"
+              className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5 text-xs font-bold cursor-pointer"
             >
               <span>{isMovementsExpanded ? 'Ocultar historial' : 'Ver movimientos'}</span>
-              {isMovementsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {isMovementsExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
 
         {/* KPI 2: Ganancia / Pérdida en Operaciones */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              2. Rendimiento en Operaciones
-            </span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                totalTradingPnl >= 0
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-              }`}
-            >
-              {totalTradingPnl >= 0 ? '+' : ''}{returnOnCapitalPct.toFixed(2)}% retorno
-            </span>
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[24px]">
+              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
+                2. Rendimiento en Operaciones
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
+                  totalTradingPnl >= 0
+                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                }`}
+              >
+                {totalTradingPnl >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                <span>{totalTradingPnl >= 0 ? '+' : ''}{returnOnCapitalPct.toFixed(2)}% retorno</span>
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline">
+              <span
+                className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${
+                  totalTradingPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {totalTradingPnl >= 0 ? '+' : ''}{formatCurrency(totalTradingPnl)}
+              </span>
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span
-              className={`font-mono text-2xl sm:text-3xl font-black ${
-                totalTradingPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'
-              }`}
-            >
-              {totalTradingPnl >= 0 ? '+' : ''}{formatCurrency(totalTradingPnl)}
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-[11px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Realizado: <strong className={realizedPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}>{realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl)}</strong></span>
-            <span>Flotante: <strong className={unrealizedPnlTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
+          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Realizado: <strong className={`font-mono font-bold ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl)}</strong></span>
+            <span>Flotante: <strong className={`font-mono font-bold ${unrealizedPnlTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
           </div>
         </div>
 
         {/* KPI 3: Valor Total de la Cartera (Patrimonio Total) */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
             isDark
               ? `${accent.borderClass} ${accent.tintBgClass}`
               : `${accent.borderClass} ${accent.tintBgClass} shadow-xs`
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold uppercase tracking-wider ${accent.textClass}`}>
-              3. Valor Total de la Cartera
-            </span>
-            <div className={`flex items-center gap-1 text-[11px] font-bold ${accent.textClass}`}>
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>Patrimonio Real</span>
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[24px]">
+              <span className={`text-xs font-bold tracking-tight font-sans ${accent.textClass}`}>
+                3. Valor Total de la Cartera
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 font-sans">
+                <TrendingUp className="h-3 w-3" />
+                <span>Patrimonio Real</span>
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline">
+              <span className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {formatCurrency(totalPortfolioValue)}
+              </span>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className={`font-mono text-2xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              {formatCurrency(totalPortfolioValue)}
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Efectivo: <strong className="font-mono text-emerald-400">{formatCurrency(availableCash)}</strong></span>
-            <span>En activos: <strong className="font-mono text-blue-400">{formatCurrency(openPositionsMarketValue)}</strong></span>
+          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>Efectivo: <strong className="font-mono font-bold text-emerald-400">{formatCurrency(availableCash)}</strong></span>
+            <span>En activos: <strong className="font-mono font-bold text-blue-400">{formatCurrency(openPositionsMarketValue)}</strong></span>
           </div>
         </div>
 
         {/* KPI 4: Capital Utilizado & Saldo Disponible en Efectivo */}
         <div
-          className={`relative rounded-3xl border p-4 sm:p-5 transition-all ${
+          className={`relative rounded-3xl border p-4 sm:p-5 flex flex-col justify-between transition-all ${
             isDark ? 'border-slate-800/80 bg-[#1c1c1e]' : 'border-slate-200/80 bg-white shadow-xs'
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              4. Saldo Disponible en Efectivo
-            </span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                availableCash > 0
-                  ? isDark
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : isDark
-                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                  : 'bg-amber-50 text-amber-700 border border-amber-200'
-              }`}
-            >
-              {availableCashPct.toFixed(0)}% libre
-            </span>
+          <div>
+            <div className="flex items-center justify-between gap-2 min-h-[24px]">
+              <span className="text-xs font-bold text-slate-400 tracking-tight font-sans">
+                4. Saldo Disponible en Efectivo
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-sans ${
+                  availableCash > 0
+                    ? isDark
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : isDark
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}
+              >
+                <span>{availableCashPct.toFixed(0)}% libre</span>
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline">
+              <span className={`font-mono text-2xl sm:text-3xl font-black tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                {formatCurrency(availableCash)}
+              </span>
+            </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className={`font-mono text-2xl sm:text-3xl font-black ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-              {formatCurrency(availableCash)}
-            </span>
-            <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              para operar
-            </span>
-          </div>
-          <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>En órdenes: <strong className="font-mono text-amber-500">{formatCurrency(usedCapital)}</strong></span>
-            <span>Flotante: <strong className={`font-mono ${unrealizedPnlTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
+          <div className={`mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span>En órdenes: <strong className="font-mono font-bold text-amber-400">{formatCurrency(usedCapital)}</strong></span>
+            <span>Flotante: <strong className={`font-mono font-bold ${unrealizedPnlTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{unrealizedPnlTotal >= 0 ? '+' : ''}{formatCurrency(unrealizedPnlTotal)}</strong></span>
           </div>
         </div>
       </div>
@@ -338,27 +344,27 @@ export function PortfolioDashboard({
           }`}
         >
           <div className="flex items-center justify-between border-b pb-3 border-slate-800/40">
-            <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-sm font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Historial de Movimientos de Capital
             </h3>
             <button
               type="button"
               onClick={openMovementModal}
-              className="text-xs text-blue-500 hover:underline font-bold"
+              className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-bold font-sans cursor-pointer"
             >
               + Añadir Movimiento
             </button>
           </div>
 
           {capitalMovements.length === 0 ? (
-            <p className={`text-xs py-4 text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className={`text-xs py-4 text-center font-sans ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
               No hay movimientos de capital registrados todavía.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                  <tr className={`border-b text-[11px] font-bold uppercase tracking-wider font-sans ${
                     isDark ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
                   }`}>
                     <th className="py-2.5 px-3">Fecha</th>
@@ -368,27 +374,27 @@ export function PortfolioDashboard({
                     <th className="py-2.5 px-3 text-center">Acción</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/20 font-mono">
+                <tbody className="divide-y divide-slate-800/20">
                   {capitalMovements.map((mov) => (
                     <tr key={mov.id} className={isDark ? 'hover:bg-[#2c2c2e]/30' : 'hover:bg-slate-50'}>
-                      <td className="py-2.5 px-3 text-slate-400">{mov.date}</td>
+                      <td className="py-2.5 px-3 text-slate-400 font-mono text-xs">{mov.date}</td>
                       <td className="py-2.5 px-3 font-sans">
-                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase font-sans ${
                           mov.type === 'DEPOSIT'
-                            ? isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-700'
+                            ? isDark ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700'
                             : mov.type === 'WITHDRAWAL'
-                            ? isDark ? 'bg-rose-500/15 text-rose-400' : 'bg-rose-50 text-rose-700'
-                            : isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-700'
+                            ? isDark ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-rose-50 text-rose-700'
+                            : isDark ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-700'
                         }`}>
                           {mov.type === 'DEPOSIT' ? 'Depósito' : mov.type === 'WITHDRAWAL' ? 'Retiro' : 'Ajuste'}
                         </span>
                       </td>
-                      <td className={`py-2.5 px-3 text-right font-bold ${
-                        mov.amount >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                      <td className={`py-2.5 px-3 text-right font-mono font-bold text-xs ${
+                        mov.amount >= 0 ? 'text-emerald-400' : 'text-rose-400'
                       }`}>
                         {mov.amount >= 0 ? '+' : ''}{formatCurrency(mov.amount)}
                       </td>
-                      <td className="py-2.5 px-3 font-sans text-slate-400 truncate max-w-xs">
+                      <td className="py-2.5 px-3 font-sans text-slate-400 text-xs truncate max-w-xs">
                         {mov.note || '-'}
                       </td>
                       <td className="py-2.5 px-3 text-center">
@@ -399,7 +405,7 @@ export function PortfolioDashboard({
                               removeCapitalMovement(mov.id);
                             }
                           }}
-                          className="text-slate-500 hover:text-rose-400 p-1 transition-colors"
+                          className="text-slate-500 hover:text-rose-400 p-1 transition-colors cursor-pointer"
                           title="Eliminar Movimiento"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -423,12 +429,13 @@ export function PortfolioDashboard({
         <div className="flex items-center justify-between border-b pb-3.5 border-slate-800/40">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-emerald-500" />
-            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-base font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Posiciones Abiertas ({openPositions.length})
             </h3>
           </div>
-          <span className="text-xs text-slate-400 font-mono">
-            Precios actualizados en vivo
+          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Precios en vivo
           </span>
         </div>
 
@@ -437,16 +444,16 @@ export function PortfolioDashboard({
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500">
               <Layers className="h-6 w-6" />
             </div>
-            <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+            <h4 className={`text-sm font-bold font-sans ${isDark ? 'text-white' : 'text-slate-800'}`}>
               No tienes posiciones abiertas
             </h4>
-            <p className={`text-xs max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs max-w-md mx-auto font-sans leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Aplica oportunidades directamente desde el Screener o pulsa el botón &quot;+ Nueva Operación&quot; para registrar tu primera posición.
             </p>
             <button
               type="button"
               onClick={onOpenScreener}
-              className="mt-2 rounded-2xl bg-blue-500 px-4 py-2 text-xs font-bold text-white hover:bg-blue-600 transition-colors shadow-xs"
+              className="mt-2 rounded-2xl bg-blue-500 px-4 py-2 text-xs font-bold text-white hover:bg-blue-600 transition-colors shadow-xs font-sans cursor-pointer"
             >
               Explorar Oportunidades →
             </button>
@@ -469,61 +476,64 @@ export function PortfolioDashboard({
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-base font-black tracking-tight">{pos.symbol}</span>
-                          <span className="rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 text-[9px] font-bold uppercase">
+                          <span className="font-mono text-base font-black tracking-tight text-white">{pos.symbol}</span>
+                          <span className="rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold uppercase font-sans">
                             Abierta
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono">Entrada: {pos.entryDate}</span>
+                        <span className="text-[11px] text-slate-400 font-sans block mt-0.5">
+                          Entrada: <span className="font-mono text-slate-300">{pos.entryDate}</span>
+                        </span>
                       </div>
 
-                      <div className="text-right font-mono">
-                        <div className="text-xs text-slate-400">Precio Actual</div>
-                        <div className="font-bold text-sm">{formatCurrency(live.currentPrice)}</div>
+                      <div className="text-right">
+                        <span className="text-[11px] text-slate-400 font-sans block">Precio Actual</span>
+                        <span className="font-mono font-bold text-sm text-white">{formatCurrency(live.currentPrice)}</span>
                       </div>
                     </div>
 
                     {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 gap-2 text-xs font-mono py-2 border-y border-current/10">
+                    <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-slate-800/40">
                       <div>
-                        <span className="text-[10px] font-sans text-slate-400 block">Capital Invertido:</span>
-                        <span className="font-bold">{formatCurrency(pos.capitalAllocated)}</span>
+                        <span className="text-[11px] font-sans text-slate-400 block">Capital Invertido:</span>
+                        <span className="font-mono font-bold text-slate-200">{formatCurrency(pos.capitalAllocated)}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] font-sans text-slate-400 block">Precio Entrada:</span>
-                        <span className="font-bold">{formatCurrency(pos.entryPrice)}</span>
+                        <span className="text-[11px] font-sans text-slate-400 block">Precio Entrada:</span>
+                        <span className="font-mono font-bold text-slate-200">${pos.entryPrice}</span>
                       </div>
                     </div>
 
                     {/* Live Unrealized PnL */}
-                    <div className="mt-3 flex items-center justify-between rounded-xl border p-2.5 font-mono ${
+                    <div className={`mt-3 flex items-center justify-between rounded-xl border p-2.5 ${
                       isProfit
                         ? isDark ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50'
                         : isDark ? 'border-rose-500/30 bg-rose-500/10' : 'border-rose-200 bg-rose-50'
-                    }">
-                      <div className="text-[11px] font-sans font-bold text-slate-400">
-                        P&L Flotante:
+                    }`}>
+                      <div className="text-xs font-bold text-slate-300 font-sans flex items-center gap-1.5">
+                        {isProfit ? <TrendingUp className="h-3.5 w-3.5 text-emerald-400" /> : <TrendingDown className="h-3.5 w-3.5 text-rose-400" />}
+                        <span>P&L Flotante:</span>
                       </div>
-                      <div className={`font-bold text-sm ${isProfit ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      <div className={`font-mono font-bold text-sm ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {isProfit ? '+' : ''}{formatCurrency(live.unrealizedPnlUSD)} ({isProfit ? '+' : ''}{live.unrealizedPnlPct}%)
                       </div>
                     </div>
 
                     {/* SL & TP Targets & Distances */}
-                    <div className="mt-2.5 space-y-1 text-[11px] font-mono">
+                    <div className="mt-2.5 space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-rose-400 flex items-center gap-1 font-sans">
-                          <Shield className="h-3 w-3" /> Stop Loss:
+                        <span className="text-rose-400 flex items-center gap-1.5 font-sans font-medium">
+                          <Shield className="h-3.5 w-3.5" /> Stop Loss:
                         </span>
-                        <span className="text-slate-300">
+                        <span className="font-mono font-bold text-slate-200">
                           {pos.stopLoss !== null ? `$${pos.stopLoss} (${live.distToSlPct !== null && live.distToSlPct >= 0 ? '+' : ''}${live.distToSlPct}%)` : 'Sin SL'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-emerald-400 flex items-center gap-1 font-sans">
-                          <Target className="h-3 w-3" /> Take Profit:
+                        <span className="text-emerald-400 flex items-center gap-1.5 font-sans font-medium">
+                          <Target className="h-3.5 w-3.5" /> Take Profit:
                         </span>
-                        <span className="text-slate-300">
+                        <span className="font-mono font-bold text-slate-200">
                           {pos.takeProfit !== null ? `$${pos.takeProfit} (${live.distToTpPct !== null && live.distToTpPct >= 0 ? '+' : ''}${live.distToTpPct}%)` : 'Sin TP'}
                         </span>
                       </div>
@@ -531,11 +541,11 @@ export function PortfolioDashboard({
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="mt-4 pt-3 border-t border-current/10 flex items-center justify-between gap-2 text-xs">
+                  <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between gap-2 text-xs">
                     <button
                       type="button"
                       onClick={() => handleQuickClose(pos)}
-                      className="flex-1 rounded-xl bg-blue-500/15 border border-blue-500/30 py-1.5 text-blue-400 hover:bg-blue-500/25 font-bold transition-all text-center"
+                      className="flex-1 rounded-xl bg-blue-500/15 border border-blue-500/30 py-2 text-blue-400 hover:bg-blue-500/25 font-bold transition-all text-center font-sans cursor-pointer"
                     >
                       Cerrar Posición
                     </button>
@@ -543,7 +553,7 @@ export function PortfolioDashboard({
                     <button
                       type="button"
                       onClick={() => openApplyModal(null, pos)}
-                      className="rounded-xl border border-slate-700/80 p-1.5 text-slate-400 hover:text-white transition-colors"
+                      className="rounded-xl border border-slate-700/80 p-2 text-slate-400 hover:text-white transition-colors cursor-pointer"
                       title="Editar Posición"
                     >
                       <Edit2 className="h-3.5 w-3.5" />
@@ -556,7 +566,7 @@ export function PortfolioDashboard({
                           deletePosition(pos.id);
                         }
                       }}
-                      className="rounded-xl border border-slate-700/80 p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
+                      className="rounded-xl border border-slate-700/80 p-2 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
                       title="Eliminar por completo"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -578,24 +588,24 @@ export function PortfolioDashboard({
         <div className="flex items-center justify-between border-b pb-3.5 border-slate-800/40">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-blue-500" />
-            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-base font-bold font-sans tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Historial de Operaciones Cerradas ({closedPositions.length})
             </h3>
           </div>
-          <span className="text-xs font-mono text-slate-400">
-            PnL Realizado Total: <strong className={realizedPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}>{realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl)}</strong>
+          <span className="text-xs font-sans text-slate-400">
+            PnL Realizado Total: <strong className={`font-mono font-bold ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl)}</strong>
           </span>
         </div>
 
         {closedPositions.length === 0 ? (
-          <p className={`text-xs py-6 text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`text-xs py-6 text-center font-sans ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
             Aún no tienes operaciones cerradas registradas.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                <tr className={`border-b text-[11px] font-bold uppercase tracking-wider font-sans ${
                   isDark ? 'border-slate-800 bg-[#2c2c2e]/40 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'
                 }`}>
                   <th className="py-3 px-3">Activo</th>
@@ -607,7 +617,7 @@ export function PortfolioDashboard({
                   <th className="py-3 px-3 text-center">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/20 font-mono">
+              <tbody className="divide-y divide-slate-800/20">
                 {closedPositions.map((pos) => {
                   const pnl = pos.realizedPnl || 0;
                   const pnlPct = pos.realizedPnlPct || 0;
@@ -618,26 +628,26 @@ export function PortfolioDashboard({
                       <td className="py-3 px-3 font-bold text-sm font-mono text-white">
                         {pos.symbol}
                       </td>
-                      <td className="py-3 px-3 text-slate-400 text-[11px] font-sans">
-                        <div>Entrada: {pos.entryDate}</div>
-                        <div>Salida: {pos.exitDate || '-'}</div>
+                      <td className="py-3 px-3 text-slate-400 text-xs font-sans">
+                        <div>Entrada: <span className="font-mono text-slate-300">{pos.entryDate}</span></div>
+                        <div>Salida: <span className="font-mono text-slate-300">{pos.exitDate || '-'}</span></div>
                       </td>
-                      <td className="py-3 px-3 text-right font-bold text-slate-200">
+                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-200 text-xs">
                         {formatCurrency(pos.capitalAllocated)}
                       </td>
-                      <td className="py-3 px-3 text-right text-slate-300">
-                        ${pos.entryPrice} → <strong className="text-white">${pos.exitPrice}</strong>
+                      <td className="py-3 px-3 text-right font-mono text-xs text-slate-300">
+                        ${pos.entryPrice} → <strong className="text-white font-bold">${pos.exitPrice}</strong>
                       </td>
-                      <td className={`py-3 px-3 text-right font-bold text-sm ${
-                        isProfit ? 'text-emerald-500' : 'text-rose-500'
+                      <td className={`py-3 px-3 text-right font-mono font-bold text-sm ${
+                        isProfit ? 'text-emerald-400' : 'text-rose-400'
                       }`}>
                         {isProfit ? '+' : ''}{formatCurrency(pnl)}
-                        <span className="block text-[10px]">
+                        <span className="block text-[10px] font-mono">
                           ({isProfit ? '+' : ''}{pnlPct}%)
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center font-sans">
-                        <span className={`inline-block rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        <span className={`inline-block rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase font-sans ${
                           pos.closeReason === 'TAKE_PROFIT'
                             ? isDark ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700'
                             : pos.closeReason === 'STOP_LOSS'
@@ -652,7 +662,7 @@ export function PortfolioDashboard({
                           <button
                             type="button"
                             onClick={() => openApplyModal(null, pos)}
-                            className="text-slate-400 hover:text-white p-1 transition-colors"
+                            className="text-slate-400 hover:text-white p-1.5 transition-colors cursor-pointer"
                             title="Editar / Corregir datos reales"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
@@ -664,7 +674,7 @@ export function PortfolioDashboard({
                                 deletePosition(pos.id);
                               }
                             }}
-                            className="text-slate-400 hover:text-rose-400 p-1 transition-colors"
+                            className="text-slate-400 hover:text-rose-400 p-1.5 transition-colors cursor-pointer"
                             title="Eliminar registro"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -690,24 +700,24 @@ export function PortfolioDashboard({
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-500/10 text-blue-500 mb-3">
             <Wallet className="h-8 w-8" />
           </div>
-          <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+          <h3 className={`text-lg font-bold font-sans ${isDark ? 'text-white' : 'text-slate-900'}`}>
             Comienza a llevar el control de tu Cartera Real
           </h3>
-          <p className={`text-xs mt-1.5 max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-xs mt-1.5 max-w-md mx-auto font-sans leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             Registra tu aporte inicial de capital o aplica operaciones directamente desde las señales generadas por QuantPulse Pro.
           </p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3 font-sans">
             <button
               type="button"
               onClick={openMovementModal}
-              className="rounded-2xl bg-blue-500 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-600 transition-all"
+              className="rounded-2xl bg-blue-500 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-600 transition-all cursor-pointer"
             >
               + Registrar Primer Aporte
             </button>
             <button
               type="button"
               onClick={onOpenScreener}
-              className={`rounded-2xl border px-4 py-2.5 text-xs font-bold transition-all ${
+              className={`rounded-2xl border px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${
                 isDark
                   ? 'border-slate-700 bg-[#2c2c2e] text-slate-200 hover:bg-[#3a3a3c]'
                   : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
