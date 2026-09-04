@@ -79,11 +79,9 @@ export function evaluateEntryCondition(params: {
   const trendIsBullish = currentEmaFast > currentEmaSlow && currentPrice >= currentEmaSlow;
   const adxFilter = currentAdx >= cfg.adxMin;
 
-  // Proximity to dynamic support (EMA Fast / EMA 20): Tolerance zone ±1% (configurable)
+  // Proximity to dynamic support (EMA Fast / EMA 20): Tolerance zone ±% (configurable)
   const tolerance = (cfg.entryTolerancePct ?? 1.0) / 100;
-  const upperTolerancePrice = currentEmaFast * (1 + tolerance);
-  const lowerTolerancePrice = currentEmaSlow * 0.99; // allows slight test below fast EMA but above/at slow EMA
-  const isNearSupportZone = currentPrice <= upperTolerancePrice && currentPrice >= lowerTolerancePrice;
+  const isNearSupportZone = currentEmaFast > 0 && Math.abs(currentPrice - currentEmaFast) / currentEmaFast <= tolerance;
 
   // 3. Pullback to support in bullish trend with healthy RSI, ADX & Volume confirmation
   // Case A: Standard healthy pullback (RSI 38 - 58)

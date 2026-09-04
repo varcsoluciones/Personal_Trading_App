@@ -172,11 +172,11 @@ export function OpportunityScreener({
   // Top 3 Recommended Assets for the currently selected strategy profile
   const top3Recommended = useMemo(() => {
     return [...dynamicAssets]
-      .filter((a) => a.analysis && a.analysis.opportunityScore >= 50)
+      .filter((a) => a.analysis && a.analysis.opportunityScore >= 50 && typeof a.backtestReliabilityScore === 'number')
       .sort((a, b) => {
         // Combined scoring: 60% Opportunity Score + 40% Walk-Forward Reliability Score
-        const relA = a.backtestReliabilityScore ?? 60;
-        const relB = b.backtestReliabilityScore ?? 60;
+        const relA = a.backtestReliabilityScore!;
+        const relB = b.backtestReliabilityScore!;
         const scoreA = (a.analysis?.opportunityScore || 50) * 0.6 + relA * 0.4;
         const scoreB = (b.analysis?.opportunityScore || 50) * 0.6 + relB * 0.4;
         return scoreB - scoreA;
