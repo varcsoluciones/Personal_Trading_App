@@ -410,8 +410,12 @@ export function ApplyPositionModal({
 
           {/* Asset Dropdown Selector (Only for new operations) */}
           {!isEditing && assets.length > 0 && activeAsset && (
-            <div>
-              <label className={`block text-xs font-semibold mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <div
+              className={`rounded-2xl border p-3.5 space-y-1.5 transition-colors ${
+                isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
+              <label className={`block text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 Seleccionar Activo para la Operación:
               </label>
               <AssetDropdownSelect
@@ -426,7 +430,7 @@ export function ApplyPositionModal({
           {/* Quick Suggested Reference Pills (Auto-calculated for activeAsset) */}
           {!isEditing && order && (
             <div
-              className={`rounded-2xl border p-3 space-y-1.5 ${
+              className={`rounded-2xl border p-3.5 space-y-2 transition-colors ${
                 isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
               }`}
             >
@@ -434,14 +438,19 @@ export function ApplyPositionModal({
                 <span>Parámetros sugeridos para {activeAsset?.symbol}:</span>
                 <span className="text-blue-500 font-bold">Auto-completados</span>
               </div>
-              <div className="flex flex-wrap gap-2 text-[11px] font-mono">
-                <span className="text-blue-400 font-bold">Entrada: ${order.suggestedEntryPrice}</span>
-                <span className="text-emerald-400 font-bold">
-                  TP: ${order.suggestedTakeProfit} (+{order.suggestedTakeProfitPct}%)
-                </span>
-                <span className="text-rose-400 font-bold">
-                  SL: ${order.suggestedStopLoss} (-{order.suggestedStopLossPct}%)
-                </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-mono">
+                <div className="flex items-center justify-between sm:justify-start gap-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 px-2.5 py-1.5 text-blue-400 font-bold">
+                  <span>Entrada:</span>
+                  <span>${order.suggestedEntryPrice}</span>
+                </div>
+                <div className="flex items-center justify-between sm:justify-start gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 text-emerald-400 font-bold">
+                  <span>TP:</span>
+                  <span>${order.suggestedTakeProfit} (+{order.suggestedTakeProfitPct}%)</span>
+                </div>
+                <div className="flex items-center justify-between sm:justify-start gap-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 text-rose-400 font-bold">
+                  <span>SL:</span>
+                  <span>${order.suggestedStopLoss} (-{order.suggestedStopLossPct}%)</span>
+                </div>
               </div>
             </div>
           )}
@@ -467,12 +476,22 @@ export function ApplyPositionModal({
             </div>
           )}
 
-          {/* Row 1: Entry Price & Capital Allocated */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Precio de Entrada ($):
-              </label>
+          {/* Row 1: Entry Price & Capital Allocated (Symmetrical 2-Column Cards) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+            {/* Col 1: Precio de Entrada */}
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2 flex flex-col justify-between transition-colors ${
+                isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center justify-between min-h-[20px]">
+                <label className="text-xs font-bold text-blue-400 flex items-center gap-1">
+                  <DollarSign className="h-3.5 w-3.5" /> Precio Entrada ($)
+                </label>
+                <span className={`text-[10px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Mercado: {formatCurrency(activeAsset?.price || 0)}
+                </span>
+              </div>
               <input
                 type="number"
                 step="any"
@@ -480,18 +499,25 @@ export function ApplyPositionModal({
                 value={entryPrice}
                 onChange={(e) => setEntryPrice(e.target.value)}
                 placeholder="ej. 75000"
-                className={`w-full rounded-2xl border px-3.5 py-2.5 font-mono text-sm font-bold transition-colors ${
+                className={`w-full rounded-xl border px-3 py-2 font-mono text-xs sm:text-sm font-bold transition-colors ${
                   isDark
                     ? 'border-slate-800 bg-[#2c2c2e] text-white focus:border-blue-500 focus:outline-none'
-                    : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:outline-none'
+                    : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500 focus:outline-none'
                 }`}
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className={`block text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Capital Invertido ($ USD):
+            {/* Col 2: Capital Invertido */}
+            <div
+              className={`rounded-2xl border p-3.5 space-y-2 flex flex-col justify-between transition-colors ${
+                isExceedingAvailableCapital || isNoAvailableCapital
+                  ? isDark ? 'border-rose-500/40 bg-rose-500/10' : 'border-rose-300 bg-rose-50/70'
+                  : isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center justify-between min-h-[20px]">
+                <label className="text-xs font-bold text-blue-400 flex items-center gap-1">
+                  <Wallet className="h-3.5 w-3.5" /> Capital a Invertir ($)
                 </label>
                 <span
                   className={`text-[10px] font-mono ${
@@ -502,7 +528,7 @@ export function ApplyPositionModal({
                       : 'text-slate-500'
                   }`}
                 >
-                  Disponible: {formatCurrency(effectiveAvailableCapital)}
+                  Disp: {formatCurrency(effectiveAvailableCapital)}
                 </span>
               </div>
               <input
@@ -512,34 +538,26 @@ export function ApplyPositionModal({
                 value={capitalAllocated}
                 onChange={(e) => setCapitalAllocated(e.target.value)}
                 placeholder="ej. 1000"
-                className={`w-full rounded-2xl border px-3.5 py-2.5 font-mono text-sm font-bold transition-colors ${
+                className={`w-full rounded-xl border px-3 py-2 font-mono text-xs sm:text-sm font-bold transition-colors ${
                   isExceedingAvailableCapital || isNoAvailableCapital
                     ? 'border-rose-500 bg-rose-500/10 text-rose-400 focus:border-rose-500 focus:outline-none'
                     : isDark
                     ? 'border-slate-800 bg-[#2c2c2e] text-white focus:border-blue-500 focus:outline-none'
-                    : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:outline-none'
+                    : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500 focus:outline-none'
                 }`}
               />
-              {(isExceedingAvailableCapital || isNoAvailableCapital) && (
-                <p className="mt-1 text-[10px] font-semibold text-rose-400 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3 shrink-0" />
-                  {isNoAvailableCapital
-                    ? 'Sin saldo disponible para operar'
-                    : `Supera tu saldo disponible (${formatCurrency(effectiveAvailableCapital)})`}
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Row 2: Stop Loss & Take Profit */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Stop Loss with optional toggle */}
+          {/* Row 2: Stop Loss & Take Profit (Symmetrical 2-Column Cards) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+            {/* Col 1: Stop Loss */}
             <div
-              className={`rounded-2xl border p-3 space-y-2 ${
+              className={`rounded-2xl border p-3.5 space-y-2 flex flex-col justify-between transition-colors ${
                 isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[20px]">
                 <label className="text-xs font-bold text-rose-400 flex items-center gap-1">
                   <Shield className="h-3.5 w-3.5" /> Stop Loss ($)
                 </label>
@@ -560,7 +578,7 @@ export function ApplyPositionModal({
                 value={stopLoss}
                 onChange={(e) => setStopLoss(e.target.value)}
                 placeholder={useStopLoss ? 'ej. 71500' : 'Sin Stop Loss'}
-                className={`w-full rounded-xl border px-3 py-2 font-mono text-xs font-bold transition-colors ${
+                className={`w-full rounded-xl border px-3 py-2 font-mono text-xs sm:text-sm font-bold transition-colors ${
                   !useStopLoss
                     ? 'opacity-40 cursor-not-allowed bg-slate-900/50 border-transparent'
                     : isDark
@@ -570,13 +588,13 @@ export function ApplyPositionModal({
               />
             </div>
 
-            {/* Take Profit with optional toggle */}
+            {/* Col 2: Take Profit */}
             <div
-              className={`rounded-2xl border p-3 space-y-2 ${
+              className={`rounded-2xl border p-3.5 space-y-2 flex flex-col justify-between transition-colors ${
                 isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[20px]">
                 <label className="text-xs font-bold text-emerald-400 flex items-center gap-1">
                   <Target className="h-3.5 w-3.5" /> Take Profit ($)
                 </label>
@@ -597,7 +615,7 @@ export function ApplyPositionModal({
                 value={takeProfit}
                 onChange={(e) => setTakeProfit(e.target.value)}
                 placeholder={useTakeProfit ? 'ej. 82000' : 'Sin Take Profit'}
-                className={`w-full rounded-xl border px-3 py-2 font-mono text-xs font-bold transition-colors ${
+                className={`w-full rounded-xl border px-3 py-2 font-mono text-xs sm:text-sm font-bold transition-colors ${
                   !useTakeProfit
                     ? 'opacity-40 cursor-not-allowed bg-slate-900/50 border-transparent'
                     : isDark
@@ -685,19 +703,28 @@ export function ApplyPositionModal({
           </div>
 
           {/* Row 3: Entry Date */}
-          <div>
-            <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Fecha de Entrada:
-            </label>
+          <div
+            className={`rounded-2xl border p-3.5 space-y-2 transition-colors ${
+              isDark ? 'border-slate-800 bg-[#2c2c2e]/40' : 'border-slate-200 bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center justify-between min-h-[20px]">
+              <label className={`text-xs font-bold flex items-center gap-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <Calendar className="h-3.5 w-3.5 text-blue-400" /> Fecha de Entrada
+              </label>
+              <span className={`text-[10px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Registro histórico
+              </span>
+            </div>
             <input
               type="date"
               required
               value={entryDate}
               onChange={(e) => setEntryDate(e.target.value)}
-              className={`w-full rounded-2xl border px-3.5 py-2 font-mono text-xs font-bold transition-colors ${
+              className={`w-full rounded-xl border px-3 py-2 font-mono text-xs sm:text-sm font-bold transition-colors ${
                 isDark
                   ? 'border-slate-800 bg-[#2c2c2e] text-white focus:border-blue-500 focus:outline-none'
-                  : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:outline-none'
+                  : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500 focus:outline-none'
               }`}
             />
           </div>
