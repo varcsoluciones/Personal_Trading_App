@@ -101,17 +101,35 @@ export function ApplyPositionModal({
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Effective Available Capital (for existing open positions, adds back their own allocated capital)
+  const effectiveAvailableCapital = useMemo(() => {
+    if (isEditing && existingPosition && existingPosition.status === 'OPEN') {
+      return availableCapital + (existingPosition.capitalAllocated || 0);
+    }
+    return Math.max(0, availableCapital);
+  }, [isEditing, existingPosition, availableCapital]);
+
+  // Capital numeric validation
+  const capNum = parseFloat(capitalAllocated);
+  const isCapInvalidNumber = isNaN(capNum) || capNum <= 0;
+  const isNoAvailableCapital = effectiveAvailableCapital <= 0;
+  const isExceedingAvailableCapital = !isCapInvalidNumber && capNum > effectiveAvailableCapital;
+  const isCapitalDisallowed = isCapInvalidNumber || isExceedingAvailableCapital || isNoAvailableCapital;
+
   // Position Size calculation by Risk formula
   const epNum = parseFloat(entryPrice);
   const slNum = useStopLoss && stopLoss ? parseFloat(stopLoss) : null;
   const currentRiskNum = parseFloat(riskPct) || 1;
-  const riskInMoney = availableCapital * (currentRiskNum / 100);
+  const riskInMoney = effectiveAvailableCapital * (currentRiskNum / 100);
 
   const suggestedCapital = useMemo(() => {
-    if (!epNum || epNum <= 0 || slNum === null || slNum <= 0 || epNum <= slNum) return null;
+    if (!epNum || epNum <= 0 || slNum === null || slNum <= 0 || epNum <= slNum || effectiveAvailableCapital <= 0) return null;
     const capital = (riskInMoney * epNum) / (epNum - slNum);
     return Number(capital.toFixed(2));
-  }, [epNum, slNum, riskInMoney]);
+  }, [epNum, slNum, riskInMoney, effectiveAvailableCapital]);
+
+  const isEpInvalid = isNaN(epNum) || epNum <= 0;
+  const isSubmitDisabled = isEpInvalid || isCapitalDisallowed;
 
   // Correlation evaluation against currently open positions
   const correlatedPositions = useMemo(() => {
@@ -211,14 +229,15 @@ export function ApplyPositionModal({
         setSelectedAssetId(initialAsset.id);
         applySuggestedValuesForAsset(initialAsset);
       }
-      setCapitalAllocated('1000');
+      const defaultCap = availableCapital > 0 ? (availableCapital >= 1000 ? 1000 : availableCapital) : 0;
+      setCapitalAllocated(defaultCap.toString());
       setEntryDate(new Date().toISOString().split('T')[0]);
       setExitPrice('');
       setExitDate('');
       setCloseReason('MANUAL');
     }
     setSavedSuccess(false);
-  }, [existingPosition, asset, isOpen]);
+  }, [existingPosition, asset, isOpen, availableCapital]);
 
   if (!isOpen) return null;
 
@@ -235,6 +254,7 @@ export function ApplyPositionModal({
     const tp = useTakeProfit && takeProfit ? parseFloat(takeProfit) : null;
 
     if (isNaN(ep) || ep <= 0 || isNaN(cap) || cap <= 0) return;
+    if (cap > effectiveAvailableCapital || effectiveAvailableCapital <= 0) return;
 
     if (isEditing && existingPosition) {
       const changes: Partial<RealPosition> = {
@@ -350,6 +370,44 @@ export function ApplyPositionModal({
             </div>
           )}
 
+          {/* Insufficient Available Capital Alert (Blocking new operations) */}
+          {isNoAvailableCapital && (
+            <div
+              className={`rounded-2xl border p-3.5 flex items-start gap-2.5 text-xs transition-colors ${
+                isDark
+                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                  : 'border-rose-300 bg-rose-50 text-rose-900'
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold">Saldo Insuficiente en Cartera</p>
+                <p className="opacity-90 leading-relaxed text-[11px]">
+                  Tu saldo disponible para operar es de <strong>{formatCurrency(effectiveAvailableCapital)}</strong>. No es posible abrir nuevas operaciones sin capital libre. Registra un depósito o cierra posiciones abiertas para liberar liquidez.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Capital Exceeds Available Balance Alert */}
+          {!isNoAvailableCapital && isExceedingAvailableCapital && (
+            <div
+              className={`rounded-2xl border p-3.5 flex items-start gap-2.5 text-xs transition-colors ${
+                isDark
+                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                  : 'border-rose-300 bg-rose-50 text-rose-900'
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold">Capital a Invertir Excede Saldo Disponible</p>
+                <p className="opacity-90 leading-relaxed text-[11px]">
+                  El monto ingresado (<strong>{formatCurrency(capNum)}</strong>) supera tu saldo disponible (<strong>{formatCurrency(effectiveAvailableCapital)}</strong>). Ajusta el monto para continuar.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Asset Dropdown Selector (Only for new operations) */}
           {!isEditing && assets.length > 0 && activeAsset && (
             <div>
@@ -431,9 +489,22 @@ export function ApplyPositionModal({
             </div>
 
             <div>
-              <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Capital Invertido ($ USD):
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className={`block text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Capital Invertido ($ USD):
+                </label>
+                <span
+                  className={`text-[10px] font-mono ${
+                    isExceedingAvailableCapital || isNoAvailableCapital
+                      ? 'text-rose-400 font-bold'
+                      : isDark
+                      ? 'text-slate-400'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  Disponible: {formatCurrency(effectiveAvailableCapital)}
+                </span>
+              </div>
               <input
                 type="number"
                 step="any"
@@ -442,11 +513,21 @@ export function ApplyPositionModal({
                 onChange={(e) => setCapitalAllocated(e.target.value)}
                 placeholder="ej. 1000"
                 className={`w-full rounded-2xl border px-3.5 py-2.5 font-mono text-sm font-bold transition-colors ${
-                  isDark
+                  isExceedingAvailableCapital || isNoAvailableCapital
+                    ? 'border-rose-500 bg-rose-500/10 text-rose-400 focus:border-rose-500 focus:outline-none'
+                    : isDark
                     ? 'border-slate-800 bg-[#2c2c2e] text-white focus:border-blue-500 focus:outline-none'
                     : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:outline-none'
                 }`}
               />
+              {(isExceedingAvailableCapital || isNoAvailableCapital) && (
+                <p className="mt-1 text-[10px] font-semibold text-rose-400 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  {isNoAvailableCapital
+                    ? 'Sin saldo disponible para operar'
+                    : `Supera tu saldo disponible (${formatCurrency(effectiveAvailableCapital)})`}
+                </p>
+              )}
             </div>
           </div>
 
@@ -562,12 +643,22 @@ export function ApplyPositionModal({
             {suggestedCapital !== null ? (
               <div className="space-y-2 pt-1 border-t border-slate-700/30">
                 <p className={`text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'} leading-relaxed`}>
-                  Con tu capital disponible (${availableCapital}) y un riesgo del {currentRiskNum}%, el tamaño sugerido es{' '}
-                  <strong className="text-emerald-400 font-mono font-bold">{formatCurrency(suggestedCapital)}</strong>.
+                  Con tu capital disponible ({formatCurrency(effectiveAvailableCapital)}) y un riesgo del {currentRiskNum}%, el tamaño sugerido es{' '}
+                  <strong className="text-emerald-400 font-mono font-bold">{formatCurrency(suggestedCapital)}</strong>
+                  {suggestedCapital > effectiveAvailableCapital && (
+                    <span className="text-amber-400 block text-[10px] mt-0.5 font-semibold">
+                      (Nota: el monto sugerido por riesgo supera tu saldo disponible actual de {formatCurrency(effectiveAvailableCapital)})
+                    </span>
+                  )}
+                  .
                 </p>
                 <button
                   type="button"
-                  onClick={() => setCapitalAllocated(suggestedCapital.toString())}
+                  onClick={() =>
+                    setCapitalAllocated(
+                      Math.min(suggestedCapital, effectiveAvailableCapital).toString()
+                    )
+                  }
                   className={`flex items-center justify-center gap-1.5 w-full rounded-xl py-2 px-3 text-xs font-bold transition-all border shadow-xs active:scale-95 cursor-pointer ${
                     isDark
                       ? 'border-blue-500/40 bg-blue-500/15 text-blue-400 hover:bg-blue-500/25'
@@ -575,13 +666,19 @@ export function ApplyPositionModal({
                   }`}
                 >
                   <DollarSign className="h-3.5 w-3.5" />
-                  <span>Usar este monto</span>
+                  <span>
+                    {suggestedCapital > effectiveAvailableCapital
+                      ? `Usar saldo máximo disponible (${formatCurrency(effectiveAvailableCapital)})`
+                      : 'Usar este monto'}
+                  </span>
                 </button>
               </div>
             ) : (
               <div className="pt-1 border-t border-slate-700/30">
                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Define un Stop Loss para calcular el tamaño de posición sugerido por riesgo.
+                  {effectiveAvailableCapital <= 0
+                    ? 'No dispones de saldo disponible para calcular tamaño de posición.'
+                    : 'Define un Stop Loss para calcular el tamaño de posición sugerido por riesgo.'}
                 </p>
               </div>
             )}
@@ -675,15 +772,28 @@ export function ApplyPositionModal({
             </div>
           )}
 
-          {/* Submit Button */}
+          {/* Submit Button with Dynamic Disabled State */}
           <button
             type="submit"
+            disabled={isSubmitDisabled}
             className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold transition-all shadow-md ${
-              accent.bgClass
-            } text-white hover:opacity-90 active:scale-[0.99]`}
+              isSubmitDisabled
+                ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400 border border-slate-600/50'
+                : `${accent.bgClass} text-white hover:opacity-90 active:scale-[0.99]`
+            }`}
           >
             <Wallet className="h-4 w-4" />
-            <span>{isEditing ? 'Guardar Cambios' : 'Registrar Operación en Mi Cartera'}</span>
+            <span>
+              {isNoAvailableCapital
+                ? 'Saldo Disponible Insuficiente ($0)'
+                : isExceedingAvailableCapital
+                ? 'Capital Supera Saldo Disponible'
+                : isEpInvalid || isCapInvalidNumber
+                ? 'Completar Datos Válidos'
+                : isEditing
+                ? 'Guardar Cambios'
+                : 'Registrar Operación en Mi Cartera'}
+            </span>
           </button>
         </form>
       </div>

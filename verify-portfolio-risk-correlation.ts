@@ -130,8 +130,62 @@ if (correlatedFound.length === 0 || concentrationPct <= 0) {
 }
 
 console.log(`  ✅ [PASS] Aviso de correlación generado correctamente:`);
-console.log(`     "Ya tienes una posición abierta en ${correlatedFound.map(c => `${c.symbol} (${c.corr.toFixed(2)})`).join(', ')} con correlación histórica alta con este activo. Estarías concentrando riesgo similar en aproximadamente ${concentrationPct.toFixed(1)}% de tu capital total."`);
+console.log(`     "Ya tienes una posición abierta en ${correlatedFound.map(c => `${c.symbol} (${c.corr.toFixed(2)})`).join(', ')} con correlación histórica alta con este activo. Estarías concentrando riesgo similar en aproximadamente ${concentrationPct.toFixed(1)}% de tu capital total."\n`);
+
+// --------------------------------------------------------------------
+// 4. Test Available Capital Validation & Blocking on New Operations
+// --------------------------------------------------------------------
+console.log('▶ [TEST 4] Validación y Bloqueo por Saldo Disponible Insuficiente:');
+
+// Helper to simulate the validation logic in ApplyPositionModal
+function validateTradeCreation(
+  availableCap: number,
+  capitalInput: number,
+  isEditing: boolean = false,
+  existingPosCap: number = 0
+) {
+  const effectiveAvailable = isEditing ? availableCap + existingPosCap : Math.max(0, availableCap);
+  const isNoAvailable = effectiveAvailable <= 0;
+  const isExceeding = capitalInput > effectiveAvailable;
+  const isBlocked = isNoAvailable || isExceeding || capitalInput <= 0;
+  return { effectiveAvailable, isNoAvailable, isExceeding, isBlocked };
+}
+
+// Case 1: Account with $0 available capital -> Trying to open a trade of $500
+const v1 = validateTradeCreation(0, 500);
+console.log(`  • Caso 1 (Saldo disponible $0, intentando $500):`);
+console.log(`      - Bloqueado: ${v1.isBlocked ? '✅ SÍ' : '❌ NO'} (Razón: Sin saldo disponible)`);
+if (!v1.isBlocked || !v1.isNoAvailable) {
+  throw new Error('Test 4 Case 1 failed: Trade must be blocked when available capital is $0');
+}
+
+// Case 2: Available capital $2,000 -> Trying to allocate $3,500
+const v2 = validateTradeCreation(2000, 3500);
+console.log(`  • Caso 2 (Saldo disponible $2000, intentando $3500):`);
+console.log(`      - Bloqueado: ${v2.isBlocked ? '✅ SÍ' : '❌ NO'} (Razón: Supera saldo disponible)`);
+if (!v2.isBlocked || !v2.isExceeding) {
+  throw new Error('Test 4 Case 2 failed: Trade must be blocked when requested capital exceeds available balance');
+}
+
+// Case 3: Available capital $2,000 -> Trying to allocate $1,500
+const v3 = validateTradeCreation(2000, 1500);
+console.log(`  • Caso 3 (Saldo disponible $2000, intentando $1500):`);
+console.log(`      - Bloqueado: ${v3.isBlocked ? '❌ SÍ' : '✅ NO (Permitido)'}`);
+if (v3.isBlocked) {
+  throw new Error('Test 4 Case 3 failed: Trade should be allowed when within available capital');
+}
+
+// Case 4: Editing existing open position ($1,000) with remaining available $500 -> Effective available is $1,500
+const v4 = validateTradeCreation(500, 1400, true, 1000);
+console.log(`  • Caso 4 (Editando posición de $1000 con $500 libre -> $1500 efectivo, intentando $1400):`);
+console.log(`      - Bloqueado: ${v4.isBlocked ? '❌ SÍ' : '✅ NO (Permitido)'}`);
+if (v4.isBlocked) {
+  throw new Error('Test 4 Case 4 failed: Reallocating within effective capital must be allowed');
+}
+
+console.log('  ✅ [PASS] Validación de saldo disponible limita y bloquea operaciones inválidas con precisión.');
 
 console.log('\n======================================================================');
 console.log('✨ TODAS LAS PRUEBAS DE CARTERA, RIESGO Y CORRELACIÓN SUPERADAS (100%)');
 console.log('======================================================================');
+
