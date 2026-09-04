@@ -7,9 +7,8 @@ const PORTFOLIO_STORAGE_KEY = 'quantpulse_portfolio_v1';
 
 export const DEFAULT_WALLET: PortfolioWallet = {
   id: 'wallet_main',
-  name: 'Cartera Principal',
+  name: 'Cartera 1',
   brokerOrExchange: 'General',
-  isDefault: true,
   createdAt: '2026-01-01',
 };
 
@@ -90,7 +89,6 @@ export function usePortfolio() {
         name: cleanName,
         brokerOrExchange: brokerOrExchange || 'Otro',
         description: description?.trim() || undefined,
-        isDefault: false,
         createdAt: new Date().toISOString().split('T')[0],
       };
 
@@ -218,7 +216,33 @@ export function usePortfolio() {
     [addCapitalMovement]
   );
 
-  // 5. Remove Capital Movement
+  // 5. Update & Remove Capital Movement
+  const updateCapitalMovement = useCallback(
+    (id: string, changes: Partial<CapitalMovement>) => {
+      setCapitalMovements((prev) => {
+        const next = prev.map((m) => {
+          if (m.id !== id) return m;
+          const updated = { ...m, ...changes };
+          if (changes.amount !== undefined || changes.type !== undefined) {
+            const raw = Math.abs(changes.amount !== undefined ? changes.amount : m.amount);
+            const currentType = changes.type || m.type;
+            if (currentType === 'WITHDRAWAL') {
+              updated.amount = -raw;
+            } else if (currentType === 'DEPOSIT' || currentType === 'TRANSFER') {
+              updated.amount = raw;
+            } else if (currentType === 'ADJUSTMENT' && changes.amount !== undefined) {
+              updated.amount = changes.amount;
+            }
+          }
+          return updated;
+        });
+        persistState(wallets, next, positions);
+        return next;
+      });
+    },
+    [persistState, wallets, positions]
+  );
+
   const removeCapitalMovement = useCallback(
     (id: string) => {
       setCapitalMovements((prev) => {
@@ -590,6 +614,7 @@ export function usePortfolio() {
     positions,
     isHydrated,
     addCapitalMovement,
+    updateCapitalMovement,
     transferBetweenWallets,
     removeCapitalMovement,
     openPosition,

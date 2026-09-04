@@ -90,12 +90,12 @@ export function PortfolioDashboard({
 
   const getWalletForPosition = (pos: RealPosition) => {
     const id = pos.portfolioId || 'wallet_main';
-    return walletMap[id] || wallets[0] || { id, name: 'Cartera Principal', color: '#3b82f6' };
+    return walletMap[id] || wallets[0] || { id, name: 'Cartera 1', color: '#3b82f6' };
   };
 
   const getWalletById = (walletId?: string) => {
     const id = walletId || 'wallet_main';
-    return walletMap[id] || wallets[0] || { id, name: 'Cartera Principal', color: '#3b82f6' };
+    return walletMap[id] || wallets[0] || { id, name: 'Cartera 1', color: '#3b82f6' };
   };
 
   // Open & Closed positions lists
@@ -264,7 +264,7 @@ export function PortfolioDashboard({
             {/* Button 2: Registrar Movimiento */}
             <button
               type="button"
-              onClick={openMovementModal}
+              onClick={() => openMovementModal()}
               className={`flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-bold font-sans transition-all shadow-xs cursor-pointer ${
                 isDark
                   ? 'border-slate-700/80 bg-[#2c2c2e] text-white hover:bg-[#3a3a3c]'
@@ -449,7 +449,7 @@ export function PortfolioDashboard({
             </div>
             <button
               type="button"
-              onClick={openMovementModal}
+              onClick={() => openMovementModal()}
               className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-bold font-sans cursor-pointer"
             >
               + Añadir Movimiento
@@ -523,18 +523,28 @@ export function PortfolioDashboard({
                           {mov.note || '-'}
                         </td>
                         <td className="py-2.5 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm('¿Eliminar este movimiento de capital?')) {
-                                removeCapitalMovement(mov.id);
-                              }
-                            }}
-                            className="text-slate-500 hover:text-rose-400 p-1 transition-colors cursor-pointer"
-                            title="Eliminar Movimiento"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openMovementModal(mov)}
+                              className="text-slate-400 hover:text-white p-1 transition-colors cursor-pointer"
+                              title="Editar Movimiento"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm('¿Eliminar este movimiento de capital?')) {
+                                  removeCapitalMovement(mov.id);
+                                }
+                              }}
+                              className="text-slate-500 hover:text-rose-400 p-1 transition-colors cursor-pointer"
+                              title="Eliminar Movimiento"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1037,7 +1047,7 @@ export function PortfolioDashboard({
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3 font-sans">
             <button
               type="button"
-              onClick={openMovementModal}
+              onClick={() => openMovementModal()}
               className="rounded-2xl bg-blue-500 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-600 transition-all cursor-pointer"
             >
               + Registrar Primer Aporte

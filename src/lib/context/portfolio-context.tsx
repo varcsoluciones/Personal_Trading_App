@@ -23,6 +23,7 @@ interface PortfolioContextType {
     portfolioId?: string,
     targetPortfolioId?: string
   ) => CapitalMovement;
+  updateCapitalMovement: (id: string, changes: Partial<CapitalMovement>) => void;
   transferBetweenWallets: (
     fromWalletId: string,
     toWalletId: string,
@@ -74,7 +75,8 @@ interface PortfolioContextType {
   openApplyModal: (asset?: Asset | null, existingPosition?: RealPosition | null) => void;
   closeApplyModal: () => void;
   isMovementModalOpen: boolean;
-  openMovementModal: () => void;
+  editingMovement: CapitalMovement | null;
+  openMovementModal: (movementToEdit?: CapitalMovement | null) => void;
   closeMovementModal: () => void;
   isWalletModalOpen: boolean;
   openWalletModal: () => void;
@@ -88,6 +90,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [applyModalAsset, setApplyModalAsset] = useState<Asset | null>(null);
   const [applyModalPosition, setApplyModalPosition] = useState<RealPosition | null>(null);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<CapitalMovement | null>(null);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   const openApplyModal = (asset?: Asset | null, existingPosition?: RealPosition | null) => {
@@ -100,8 +103,15 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setApplyModalPosition(null);
   };
 
-  const openMovementModal = () => setIsMovementModalOpen(true);
-  const closeMovementModal = () => setIsMovementModalOpen(false);
+  const openMovementModal = (movementToEdit?: CapitalMovement | null) => {
+    setEditingMovement(movementToEdit || null);
+    setIsMovementModalOpen(true);
+  };
+
+  const closeMovementModal = () => {
+    setEditingMovement(null);
+    setIsMovementModalOpen(false);
+  };
 
   const openWalletModal = () => setIsWalletModalOpen(true);
   const closeWalletModal = () => setIsWalletModalOpen(false);
@@ -115,6 +125,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         openApplyModal,
         closeApplyModal,
         isMovementModalOpen,
+        editingMovement,
         openMovementModal,
         closeMovementModal,
         isWalletModalOpen,

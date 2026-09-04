@@ -124,7 +124,7 @@ export function PortfolioWalletsModal({ isOpen, onClose }: PortfolioWalletsModal
     const assignedPos = positions.filter((p) => p.portfolioId === wallet.id);
     const msg =
       assignedPos.length > 0
-        ? `La cartera "${wallet.name}" tiene ${assignedPos.length} operaciones asociadas. ¿Eliminarla y reasignar sus operaciones a tu Cartera Principal?`
+        ? `La cartera "${wallet.name}" tiene ${assignedPos.length} operaciones asociadas. ¿Eliminarla y reasignar sus operaciones a otra cartera activa?`
         : `¿Eliminar la cartera "${wallet.name}"?`;
 
     if (confirm(msg)) {
@@ -376,11 +376,6 @@ export function PortfolioWalletsModal({ isOpen, onClose }: PortfolioWalletsModal
                         {wallet.brokerOrExchange && (
                           <span className="rounded-md bg-slate-500/15 border border-slate-500/30 px-1.5 py-0.2 text-[9px] font-bold text-slate-300 uppercase font-sans">
                             {wallet.brokerOrExchange}
-                          </span>
-                        )}
-                        {wallet.isDefault && (
-                          <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.2 text-[9px] font-bold text-blue-400 uppercase font-sans">
-                            Principal
                           </span>
                         )}
                       </div>

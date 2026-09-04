@@ -1,10 +1,9 @@
 export interface PortfolioWallet {
   id: string; // e.g. 'wallet_main', 'wallet_1712345678_abc'
-  name: string; // e.g. 'Cartera Principal', 'Binance Spot', 'Interactive Brokers'
+  name: string; // e.g. 'Binance Spot', 'Interactive Brokers', 'Cartera 1'
   brokerOrExchange?: string; // 'Binance' | 'Interactive Brokers' | 'Coinbase' | 'Bybit' | 'Robinhood' | 'KuCoin' | 'MetaTrader' | 'Otro'
   color?: string;
   description?: string;
-  isDefault?: boolean;
   createdAt: string;
 }
 
