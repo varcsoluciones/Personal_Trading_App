@@ -12,6 +12,7 @@ import { IndicatorGuideModal } from '@/components/education/indicator-guide-moda
 import { OpportunityScreener } from '@/components/screener/opportunity-screener';
 import { TradingChart } from '@/components/chart/trading-chart';
 import { StrategyControls } from '@/components/backtesting/strategy-controls';
+import { BacktestPodium } from '@/components/backtesting/backtest-podium';
 import { BacktestDashboard } from '@/components/backtesting/backtest-dashboard';
 import { TradeHistoryTable } from '@/components/backtesting/trade-history-table';
 import { PriceAlertsModal } from '@/components/alerts/price-alerts-modal';
@@ -436,6 +437,14 @@ export default function Home() {
               onChange={updateBacktestConfig}
               assets={assets}
               selectedAsset={selectedAsset}
+              onSelectAsset={(id) => setSelectedAssetId(id)}
+            />
+
+            {/* Top 3 Best & Worst Simulated Performance Podiums */}
+            <BacktestPodium
+              assets={assets}
+              config={backtestConfig}
+              selectedAssetId={selectedAsset.id}
               onSelectAsset={(id) => setSelectedAssetId(id)}
             />
 
