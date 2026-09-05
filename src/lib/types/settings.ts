@@ -162,7 +162,7 @@ export const APPLE_ACCENT_PALETTE: {
 ];
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'dark',
+  theme: 'light',
   accentColor: 'blue',
   currency: 'USD',
   autoRefresh: true,
