@@ -6,6 +6,7 @@ import { RealPosition, CapitalMovement, PortfolioWallet } from '@/lib/types/port
 import { useSettings } from '@/lib/context/settings-context';
 import { usePortfolioContext } from '@/lib/context/portfolio-context';
 import { getAssetTypeBadgeStyle } from '@/lib/ui/badge-styles';
+import { ClosePositionModal } from './close-position-modal';
 import {
   Wallet,
   TrendingUp,
@@ -68,6 +69,7 @@ export function PortfolioDashboard({
   } = usePortfolioContext();
 
   const [isMovementsExpanded, setIsMovementsExpanded] = useState(false);
+  const [closingPosition, setClosingPosition] = useState<RealPosition | null>(null);
 
   // Map of current live asset prices
   const currentPrices = useMemo(() => {
@@ -201,13 +203,9 @@ export function PortfolioDashboard({
     wallets,
   ]);
 
-  // Helper for quick closing position
-  const handleQuickClose = (pos: RealPosition) => {
-    const live = getLivePositionMetrics(pos, currentPrices);
-    const exitPrice = live.currentPrice || pos.entryPrice;
-    if (confirm(`¿Cerrar posición en ${pos.symbol} al precio actual de mercado ($${exitPrice})?`)) {
-      closePosition(pos.id, exitPrice, 'MANUAL');
-    }
+  // Helper for opening Close Position modal
+  const handleOpenCloseModal = (pos: RealPosition) => {
+    setClosingPosition(pos);
   };
 
   const hasAnyData = capitalMovements.length > 0 || positions.length > 0;
@@ -860,7 +858,7 @@ export function PortfolioDashboard({
                   <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between gap-1.5 text-xs">
                     <button
                       type="button"
-                      onClick={() => handleQuickClose(pos)}
+                      onClick={() => handleOpenCloseModal(pos)}
                       className="flex-1 rounded-xl bg-blue-500/15 border border-blue-500/30 py-2 text-blue-400 hover:bg-blue-500/25 font-bold transition-all text-center font-sans cursor-pointer"
                     >
                       Cerrar Posición
@@ -1103,6 +1101,32 @@ export function PortfolioDashboard({
           </div>
         </div>
       )}
+      {/* 8. Close Position Modal */}
+      <ClosePositionModal
+        isOpen={closingPosition !== null}
+        onClose={() => setClosingPosition(null)}
+        position={closingPosition}
+        currentPrice={
+          closingPosition
+            ? getLivePositionMetrics(closingPosition, currentPrices).currentPrice || closingPosition.entryPrice
+            : 0
+        }
+        asset={
+          closingPosition
+            ? assets.find(
+                (a) =>
+                  a.id === closingPosition.assetId ||
+                  a.symbol === closingPosition.symbol ||
+                  a.symbol.replace('/', '').replace('-', '').toUpperCase() ===
+                    closingPosition.symbol.replace('/', '').replace('-', '').toUpperCase()
+              ) || null
+            : null
+        }
+        walletName={closingPosition?.portfolioId ? walletMap[closingPosition.portfolioId]?.name : undefined}
+        onConfirmClose={(posId, exitPrice, reason, exitDate) => {
+          closePosition(posId, exitPrice, reason, exitDate);
+        }}
+      />
     </div>
   );
 }
