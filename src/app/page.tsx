@@ -444,7 +444,6 @@ export default function Home() {
             <BacktestPodium
               assets={assets}
               config={backtestConfig}
-              selectedAssetId={selectedAsset.id}
               onSelectAsset={(id) => setSelectedAssetId(id)}
             />
 
