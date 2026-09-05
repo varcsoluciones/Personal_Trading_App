@@ -143,7 +143,7 @@ export function BacktestDashboard({ result, symbol }: BacktestDashboardProps) {
             </div>
           </div>
           <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>DD $: <strong className="font-mono font-bold text-slate-200">-{formatCurrency(result.maxDrawdownUSD)}</strong></span>
+            <span>DD $: <strong className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>-{formatCurrency(result.maxDrawdownUSD)}</strong></span>
           </div>
         </div>
 

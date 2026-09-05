@@ -592,9 +592,9 @@ export function ApplyPositionModal({
               {/* 3 Columns Comparison */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-black/30 border-slate-800' : 'bg-white border-slate-200'}`}>
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Posición Actual</span>
-                  <span className="font-mono font-bold text-slate-200">${preview.currentPrice.toFixed(2)}</span>
-                  <span className="text-[10px] text-slate-400 block font-mono mt-0.5">
+                  <span className={`text-[10px] block mb-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Posición Actual</span>
+                  <span className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>${preview.currentPrice.toFixed(2)}</span>
+                  <span className={`text-[10px] block font-mono mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     ${preview.currentCapital.toFixed(0)} • {preview.currentShares.toFixed(2)} uds
                   </span>
                 </div>

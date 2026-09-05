@@ -387,11 +387,11 @@ export function PortfolioWalletsModal({ isOpen, onClose }: PortfolioWalletsModal
                       )}
 
                       <div className="flex items-center gap-3 mt-2 text-xs">
-                        <span className="font-sans text-slate-400">
+                        <span className={`font-sans ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                           Efectivo disponible: <strong className="font-mono font-bold text-emerald-400">{formatCurrency(available)}</strong>
                         </span>
-                        <span className="font-sans text-slate-400">
-                          Pos. abiertas: <strong className="font-mono font-bold text-slate-200">{openCount}</strong>
+                        <span className={`font-sans ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                          Pos. abiertas: <strong className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{openCount}</strong>
                         </span>
                       </div>
                     </div>

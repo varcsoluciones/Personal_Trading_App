@@ -317,7 +317,7 @@ export function PortfolioDashboard({
             </div>
           </div>
           <div className={`mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[10px] sm:text-xs font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            <span>Mov: <strong className="font-mono font-bold text-slate-200">{capitalMovements.length}</strong></span>
+            <span>Mov: <strong className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{capitalMovements.length}</strong></span>
             <button
               type="button"
               onClick={() => setIsMovementsExpanded(!isMovementsExpanded)}
@@ -625,28 +625,28 @@ export function PortfolioDashboard({
         <div
           className={`rounded-2xl border px-4 py-2.5 flex items-center justify-between flex-wrap gap-x-5 gap-y-2 text-xs transition-colors ${
             isDark
-              ? 'border-slate-800/90 bg-[#232326] text-slate-300'
-              : 'border-slate-200 bg-slate-50 text-slate-700'
+              ? 'border-slate-800/90 bg-[#232326] text-slate-200'
+              : 'border-slate-200 bg-slate-50 text-slate-800'
           }`}
         >
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-sans">
+            <span className={`text-[11px] font-bold uppercase tracking-wider font-sans ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
               {currentSummaryMetrics.name}:
             </span>
           </div>
 
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1 text-xs">
             <div>
-              <span className="text-slate-400 font-sans">Aportes: </span>
-              <strong className="font-mono font-bold text-slate-200">
+              <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Aportes: </span>
+              <strong className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                 {formatCurrency(currentSummaryMetrics.netContributions)}
               </strong>
             </div>
 
-            <div className="hidden sm:inline text-slate-600">•</div>
+            <div className={`hidden sm:inline ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>•</div>
 
             <div>
-              <span className="text-slate-400 font-sans">Rendimiento: </span>
+              <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Rendimiento: </span>
               <strong
                 className={`font-mono font-bold ${
                   currentSummaryMetrics.totalTradingPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -659,37 +659,37 @@ export function PortfolioDashboard({
               </strong>
             </div>
 
-            <div className="hidden sm:inline text-slate-600">•</div>
+            <div className={`hidden sm:inline ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>•</div>
 
             <div>
-              <span className="text-slate-400 font-sans">Patrimonio: </span>
+              <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Patrimonio: </span>
               <strong className={`font-mono font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                 {formatCurrency(currentSummaryMetrics.totalPortfolioValue)}
               </strong>
             </div>
 
-            <div className="hidden sm:inline text-slate-600">•</div>
+            <div className={`hidden sm:inline ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>•</div>
 
             <div>
-              <span className="text-slate-400 font-sans">Saldo Disponible: </span>
+              <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Saldo Disponible: </span>
               <strong className="font-mono font-bold text-emerald-400">
                 {formatCurrency(currentSummaryMetrics.availableCash)}
               </strong>
             </div>
 
-            <div className="hidden sm:inline text-slate-600">•</div>
+            <div className={`hidden sm:inline ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>•</div>
 
             <div>
-              <span className="text-slate-400 font-sans">Posiciones: </span>
-              <strong className="font-mono font-bold text-slate-200">
+              <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Posiciones: </span>
+              <strong className={`font-mono font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                 {currentSummaryMetrics.openCount}
               </strong>
-              <span className="text-slate-400 font-sans text-[11px]"> abiertas</span>
-              <span className="text-slate-500 font-sans"> / </span>
-              <span className="font-mono text-slate-400">
+              <span className={`font-sans text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}> abiertas</span>
+              <span className={`font-sans ${isDark ? 'text-slate-500' : 'text-slate-400'}`}> / </span>
+              <span className={`font-mono font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 {currentSummaryMetrics.closedCount}
               </span>
-              <span className="text-slate-500 font-sans text-[11px]"> cerradas</span>
+              <span className={`font-sans text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}> cerradas</span>
             </div>
           </div>
         </div>
