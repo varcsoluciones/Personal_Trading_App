@@ -185,18 +185,9 @@ export function BacktestPodium({
             const res = item.result;
             const isProfit = res.totalNetProfitPct >= 0;
 
-            const rankColor =
-              idx === 0
-                ? isDark
-                  ? 'border-rose-500/40 bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/30'
-                  : 'border-rose-300 bg-rose-50/80 text-rose-950 ring-1 ring-rose-400/30'
-                : idx === 1
-                ? isDark
-                  ? 'border-slate-600/60 bg-slate-500/10 text-slate-200'
-                  : 'border-slate-300 bg-slate-100 text-slate-800'
-                : isDark
-                ? 'border-slate-700/60 bg-slate-800/40 text-slate-300'
-                : 'border-slate-200 bg-slate-50 text-slate-700';
+            const rankColor = isDark
+              ? 'border-slate-700/60 bg-[#242426]/60 text-slate-300'
+              : 'border-slate-200 bg-slate-50 text-slate-700';
 
             const rankBadge = idx === 0 ? '🔻 #1' : idx === 1 ? '🔻 #2' : '🔻 #3';
 

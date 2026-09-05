@@ -1,6 +1,6 @@
 {
   "name": "quantpulse-pro",
-  "version": "2.8.16",
+  "version": "2.8.17",
   "private": true,
   "scripts": {
     "dev": "next dev",
